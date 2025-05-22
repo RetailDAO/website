@@ -1,0 +1,36 @@
+# .gitignore
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+node_modules/
+dist/
+build/
+coverage/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Next.js specific
+.next/
+out/
+
