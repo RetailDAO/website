@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body { 
+            background: #000; 
+            color: #fff; 
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Test Page</h1>
+    <p>If you can see this, static HTML works.</p>
+    <div id="status">Loading...</div>
+    
+    <script>
+        document.getElementById('status').innerHTML = 'JavaScript works!';
+        
+        // Test API call
+        fetch('http://localhost:8000/health')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').innerHTML += '<br>Backend API works: ' + JSON.stringify(data);
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML += '<br>Backend API failed: ' + error.message;
+            });
+    </script>
+</body>
+</html>
