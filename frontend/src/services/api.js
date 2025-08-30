@@ -298,26 +298,50 @@ class ApiService {
   // Helper method to get real DXY data
   async getRealDXYData() {
     try {
-      const response = await this.getDXYAnalysis('30D');
-      if (response.success) {
+      const response = await this.getDXYAnalysis('7D'); // Use shorter timeframe to reduce load
+      if (response && response.success && response.data) {
         return {
           currentPrice: response.data.current.price,
+          change24h: response.data.current.change24h,
+          analysis: response.data.analysis,
           prices: response.data.historical.map(item => ({
             timestamp: new Date(item.timestamp),
             price: item.price
-          }))
+          })),
+          dataSource: 'Alpha Vantage API'
         };
       }
       // Fallback to mock data if API fails
+      console.warn('DXY API returned no data, using enhanced mock data');
       return {
         currentPrice: 104.25,
-        prices: this.generateDXYMockData()
+        change24h: -0.12,
+        analysis: {
+          strength: 'neutral',
+          trend: 'sideways',
+          dollarImpact: {
+            crypto: 'neutral',
+            description: 'Dollar strength is neutral for crypto prices'
+          }
+        },
+        prices: this.generateDXYMockData(),
+        dataSource: 'Mock Data (API unavailable)'
       };
     } catch (error) {
-      console.warn('Failed to fetch real DXY data, using mock:', error);
+      console.warn('Failed to fetch real DXY data, using enhanced mock:', error.message);
       return {
         currentPrice: 104.25,
-        prices: this.generateDXYMockData()
+        change24h: -0.12,
+        analysis: {
+          strength: 'neutral', 
+          trend: 'sideways',
+          dollarImpact: {
+            crypto: 'neutral',
+            description: 'Dollar strength is neutral for crypto prices'
+          }
+        },
+        prices: this.generateDXYMockData(),
+        dataSource: 'Mock Data (API Error)'
       };
     }
   }
@@ -325,37 +349,44 @@ class ApiService {
   // Helper method to get real ETF data
   async getRealETFData() {
     try {
-      const response = await this.getETFFlows('30D');
-      if (response.success && response.data.flows) {
+      const response = await this.getETFFlows('7D'); // Use shorter timeframe for reliability
+      if (response && response.success && response.data && response.data.flows) {
         const btcFlows = response.data.flows
-          .filter(flow => flow.etf.includes('BTC') || flow.etf === 'IBIT' || flow.etf === 'FBTC')
+          .filter(flow => flow.etf && (flow.etf.includes('BTC') || flow.etf === 'IBIT' || flow.etf === 'FBTC' || flow.etf === 'ARKB'))
           .map(flow => ({
             timestamp: new Date(flow.date),
-            flow: flow.flow
+            flow: flow.flow || 0,
+            etf: flow.etf
           }));
         
         const ethFlows = response.data.flows
-          .filter(flow => flow.etf.includes('ETH'))
+          .filter(flow => flow.etf && flow.etf.includes('ETH'))
           .map(flow => ({
-            timestamp: new Date(flow.date),
-            flow: flow.flow
+            timestamp: new Date(flow.date), 
+            flow: flow.flow || 0,
+            etf: flow.etf
           }));
 
         return {
           btcFlows: btcFlows.length > 0 ? btcFlows : this.generateETFMockData('btc'),
-          ethFlows: ethFlows.length > 0 ? ethFlows : this.generateETFMockData('eth')
+          ethFlows: ethFlows.length > 0 ? ethFlows : this.generateETFMockData('eth'),
+          summary: response.data.summary || null,
+          dataSource: btcFlows.length > 0 ? 'Enhanced Mock with Real Structure' : 'Mock Data'
         };
       }
       // Fallback to mock data if API fails
+      console.warn('ETF API returned no valid data, using enhanced mock data');
       return {
         btcFlows: this.generateETFMockData('btc'),
-        ethFlows: this.generateETFMockData('eth')
+        ethFlows: this.generateETFMockData('eth'),
+        dataSource: 'Mock Data (API unavailable)'
       };
     } catch (error) {
-      console.warn('Failed to fetch real ETF data, using mock:', error);
+      console.warn('Failed to fetch real ETF data, using enhanced mock:', error.message);
       return {
         btcFlows: this.generateETFMockData('btc'),
-        ethFlows: this.generateETFMockData('eth')
+        ethFlows: this.generateETFMockData('eth'),
+        dataSource: 'Mock Data (API Error)'
       };
     }
   }
@@ -364,44 +395,62 @@ class ApiService {
   async getRealFundingRates() {
     try {
       const response = await this.getFundingRates('BTC');
-      if (response.success && response.data.rates.length > 0) {
+      if (response && response.success && response.data && response.data.rates && response.data.rates.length > 0) {
         const btcRate = response.data.rates[0];
         return {
           btc: {
-            rate: btcRate.fundingRate,
-            trend: btcRate.fundingRate > 0 ? 'bullish' : 'bearish',
-            exchange: btcRate.exchange,
-            price: btcRate.price,
-            nextFundingTime: btcRate.nextFundingTime
+            rate: btcRate.fundingRate || 0,
+            trend: (btcRate.fundingRate || 0) > 0 ? 'bullish' : 'bearish',
+            exchange: btcRate.exchange || 'Binance',
+            price: btcRate.price || 0,
+            nextFundingTime: btcRate.nextFundingTime,
+            symbol: btcRate.symbol || 'BTCUSDT'
           },
           eth: {
             rate: 0.0015, // Default for now, can be enhanced later
-            trend: 'bullish'
-          }
+            trend: 'bullish',
+            exchange: 'Binance',
+            symbol: 'ETHUSDT'
+          },
+          statistics: response.data.statistics || null,
+          dataSource: 'Binance API'
         };
       }
       // Fallback to mock data if API fails
+      console.warn('Funding rates API returned no valid data, using mock data');
       return {
         btc: {
           rate: 0.0008,
-          trend: 'bullish'
+          trend: 'bullish',
+          exchange: 'Mock',
+          price: 116000,
+          symbol: 'BTCUSDT'
         },
         eth: {
           rate: 0.0015,
-          trend: 'bullish'
-        }
+          trend: 'bullish',
+          exchange: 'Mock',
+          symbol: 'ETHUSDT'
+        },
+        dataSource: 'Mock Data (API unavailable)'
       };
     } catch (error) {
-      console.warn('Failed to fetch real funding rates, using mock:', error);
+      console.warn('Failed to fetch real funding rates, using mock:', error.message);
       return {
         btc: {
           rate: 0.0008,
-          trend: 'bullish'
+          trend: 'bullish',
+          exchange: 'Mock',
+          price: 116000,
+          symbol: 'BTCUSDT'
         },
         eth: {
           rate: 0.0015,
-          trend: 'bullish'
-        }
+          trend: 'bullish', 
+          exchange: 'Mock',
+          symbol: 'ETHUSDT'
+        },
+        dataSource: 'Mock Data (API Error)'
       };
     }
   }
