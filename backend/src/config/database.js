@@ -8,30 +8,61 @@ const redisConfig = {
   lazyConnect: true,
   keepAlive: 30000,
   connectTimeout: 10000,
-  commandTimeout: 5000
+  commandTimeout: 5000,
+  reconnectOnError: (err) => {
+    const targetError = "READONLY";
+    if (err.message.includes(targetError)) {
+      return true;
+    }
+    return false;
+  },
+  retryDelayOnClusterDown: 300,
+  enableReadyCheck: false,
+  maxRetriesPerRequest: null,
+  tls: config.REDIS_URL && config.REDIS_URL.includes('rediss://') ? {} : null
 };
 
 let redisClient = null;
 
 const createRedisConnection = () => {
   if (!redisClient) {
-    redisClient = new Redis(redisConfig);
-    
-    redisClient.on('error', (err) => {
-      console.error('Redis connection error:', err);
-    });
+    // Check if Redis URL is properly configured
+    if (!config.REDIS_URL || config.REDIS_URL === 'redis://localhost:6379') {
+      console.log('🔶 Redis URL not configured for production - using fallback mock cache');
+      return null;
+    }
 
-    redisClient.on('connect', () => {
-      console.log(' Redis connected successfully');
-    });
+    try {
+      console.log('🔄 Attempting to connect to Redis:', config.REDIS_URL.replace(/\/\/.*@/, '//***@'));
+      redisClient = new Redis(redisConfig);
+      
+      redisClient.on('error', (err) => {
+        console.error('❌ Redis connection error:', err.message);
+        if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED') {
+          console.log('🔶 Redis unavailable - application will use mock cache mode');
+        }
+      });
 
-    redisClient.on('close', () => {
-      console.log('L Redis connection closed');
-    });
+      redisClient.on('connect', () => {
+        console.log('✅ Redis connected successfully');
+      });
 
-    redisClient.on('reconnecting', () => {
-      console.log('= Redis reconnecting...');
-    });
+      redisClient.on('close', () => {
+        console.log('🔌 Redis connection closed');
+      });
+
+      redisClient.on('reconnecting', (ms) => {
+        console.log(`🔄 Redis reconnecting in ${ms}ms...`);
+      });
+
+      redisClient.on('ready', () => {
+        console.log('🚀 Redis client ready for operations');
+      });
+
+    } catch (error) {
+      console.error('❌ Failed to create Redis client:', error.message);
+      return null;
+    }
   }
   
   return redisClient;
@@ -39,23 +70,42 @@ const createRedisConnection = () => {
 
 const closeRedisConnection = async () => {
   if (redisClient) {
-    await redisClient.quit();
-    redisClient = null;
-    console.log('Redis connection closed gracefully');
+    try {
+      await redisClient.quit();
+      redisClient = null;
+      console.log('✅ Redis connection closed gracefully');
+    } catch (error) {
+      console.error('❌ Error closing Redis connection:', error.message);
+    }
   }
 };
 
 const testRedisConnection = async () => {
   try {
     const client = createRedisConnection();
+    if (!client) {
+      console.log('🔶 Redis not configured - test skipped');
+      return false;
+    }
+    
     await client.ping();
-    console.log('Redis connection test: SUCCESS');
+    console.log('✅ Redis connection test: SUCCESS');
     return true;
   } catch (error) {
-    console.error('Redis connection test: FAILED', error.message);
+    console.error('❌ Redis connection test: FAILED', error.message);
     return false;
   }
 };
+
+// Graceful shutdown handler
+const gracefulRedisShutdown = async () => {
+  console.log('🛑 Shutting down Redis connection...');
+  await closeRedisConnection();
+};
+
+// Handle process termination
+process.on('SIGTERM', gracefulRedisShutdown);
+process.on('SIGINT', gracefulRedisShutdown);
 
 module.exports = {
   redisConfig,
