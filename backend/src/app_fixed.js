@@ -26,12 +26,18 @@ app.use(helmet());
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:3000',
+    'https://retaildaoanalyticsdashboard.vercel.app',
+    'https://retaildaoanalyticsdash-git-91969a-tripl3tr3s-gmailcoms-projects.vercel.app',
+    'https://retaildaoanalyticsdashboard-kzo9w9srs.vercel.app',
     'https://retaildaoanalyticsdashboard-1yeoabr5m.vercel.app',
     'http://localhost:3001',
     'http://localhost:3002'
   ],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['X-Total-Count']
 }));
 
 // General middleware
