@@ -3,11 +3,10 @@ const app = require('./src/app_fixed');
 const WebSocket = require('ws');
 const websocketService = require('./src/services/websocket/websocketService');
 
-const PORT = process.env.PORT || 8000;
-const HOST = process.env.HOST || 'localhost';
+const PORT = process.env.PORT || 3001;
 
-const server = app.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Crypto Dashboard API v${process.env.npm_package_version}`);
 });
 
