@@ -206,7 +206,7 @@ export function useCryptoPriceWebSocket(onPriceUpdate) {
   // Use Vite proxied WebSocket endpoint in development
   const wsUrl = import.meta.env.DEV 
     ? 'ws://localhost:3000/ws/prices'  // Vite dev server with proxy
-    : 'ws://localhost:8000/ws/prices'; // Direct connection in production
+    : 'wss://website-production-8f8a.up.railway.app/ws/prices'; // Railway production URL
     
   const wsConnection = useWebSocket(wsUrl, {
     onMessage: handleMessage,

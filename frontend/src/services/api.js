@@ -1,5 +1,5 @@
 // API Service for handling all backend requests
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://website-production-8f8a.up.railway.app';
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
 
 class ApiService {
