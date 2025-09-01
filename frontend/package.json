@@ -1,7 +1,7 @@
 {
   "name": "rd_crypto_dashboard_frontend",
   "version": "1.0.0",
-  "description": "this is a crypto dashboard project's frontend part",
+  "description": "Retail DAO Terminal - Real-time cryptocurrency analytics and trading terminal frontend",
   "private": true,
   "type": "module",
   "scripts": {

@@ -84,7 +84,7 @@ const RetailDAOLoader = ({ size = 100, message = "Loading market data..." }) => 
         {/* Status Text */}
         <div className={`${colors.text.muted} text-sm animate-pulse text-center max-w-sm`}>
           <span className="inline-block animate-pulse">🚀</span>
-          <span className="ml-2">Initializing RetailDAO Analytics Dashboard</span>
+          <span className="ml-2">Initializing RetailDAO Terminal</span>
         </div>
         
         {/* Subtle progress indicator */}
@@ -1066,7 +1066,7 @@ const PriceCards = () => {
   if (loading && !marketData) {
     return (
       <div className={`min-h-screen ${colors.bg.primary} flex items-center justify-center transition-colors duration-300`}>
-        <RetailDAOLoader size={100} message="Loading RetailDAO Analytics Dashboard" />
+        <RetailDAOLoader size={100} message="Loading RetailDAO Terminal" />
       </div>
     );
   }
@@ -1115,7 +1115,7 @@ const PriceCards = () => {
         {/* Header */}
         <div className="text-center mb-6 md:mb-8 mt-12 md:mt-0">
           <h1 className={`text-3xl md:text-4xl font-bold ${colors.text.primary} mb-2 transition-colors duration-300`}>
-            <span className={`${colors.text.primary}`}>Retail DAO</span> Analytics Dashboard
+            <span className={`${colors.text.primary}`}>Retail DAO</span> Terminal
           </h1>
           <p className={`${colors.text.muted} text-sm md:text-base transition-colors duration-300`}>Real-time crypto market insights and analysis</p>
         </div>
@@ -1329,7 +1329,7 @@ const PriceCards = () => {
 
         {/* Footer */}
         <div className={`text-center ${colors.text.muted} text-sm mt-8 pb-4 transition-colors duration-300`}>
-          <p>RetailDAO Analytics Dashboard | Last updated: {new Date().toLocaleString()}</p>
+          <p>RetailDAO Terminal | Last updated: {new Date().toLocaleString()}</p>
           <p className="mt-2 text-xs">
             Data sources: {useRealAPI ? 'CoinGecko API (Real-time)' : 'Mock Data (Demo)'} • 
             Real-time price updates via WebSocket • 

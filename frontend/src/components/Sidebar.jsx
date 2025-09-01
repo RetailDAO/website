@@ -310,8 +310,8 @@ const Sidebar = ({
           {/* Footer Info */}
           <div className="px-4 py-3 border-t border-gray-700 mt-auto">
             <div className={`text-center ${colors.text.muted}`}>
-              <div className="text-xs mb-2">RetailDAO Analytics</div>
-              <div className="text-xs opacity-60">v1.0.0 • Dashboard</div>
+              <div className="text-xs mb-2">RetailDAO Terminal</div>
+              <div className="text-xs opacity-60">v1.0.0 • Terminal</div>
               <div className="text-xs opacity-60 mt-1">
                 Built by Triple Tres with React 
               </div>

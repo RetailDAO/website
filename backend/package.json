@@ -1,7 +1,7 @@
 {
   "name": "crypto-dashboard-api",
   "version": "1.0.0",
-  "description": "Node.js backend for crypto analytics dashboard",
+  "description": "Node.js backend for Retail DAO Terminal",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
