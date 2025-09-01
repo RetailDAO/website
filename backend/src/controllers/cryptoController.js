@@ -95,65 +95,67 @@ class CryptoController {
         return res.json({ success: true, data: cachedData, source: 'cache' });
       }
 
+      // Use batch method to reduce API calls
+      const batchData = await cryptoDataService.getBatchCryptoData(symbolArray, timeframe);
       const results = {};
       
-      // Process each symbol
+      // Process each symbol with analysis
       for (const symbol of symbolArray) {
-        try {
-          const cryptoData = await cryptoDataService.getCryptoData(symbol, timeframe);
-
-          let analysisData = { ...cryptoData };
-
-          if (includeAnalysis === 'true' && cryptoData.historical && cryptoData.historical.length > 0) {
-            const prices = cryptoData.historical.map(item => item.price);
-            
-            // Calculate RSI for multiple periods
-            const rsiData = {};
-            [14, 21, 30].forEach(period => {
-              const rsiValues = calculateRSI(prices, period);
-              if (rsiValues.length > 0) {
-                rsiData[period] = rsiValues.map((value, index) => ({
-                  timestamp: cryptoData.historical[cryptoData.historical.length - rsiValues.length + index].timestamp,
-                  value: Math.round(value * 100) / 100
-                }));
-              }
-            });
-
-            // Calculate Moving Averages
-            const movingAverages = {};
-            [20, 50, 100, 200].forEach(period => {
-              const maValues = calculateMovingAverage(prices, period);
-              if (maValues.length > 0) {
-                movingAverages[period] = maValues.map((value, index) => ({
-                  timestamp: cryptoData.historical[cryptoData.historical.length - maValues.length + index].timestamp,
-                  value: Math.round(value * 100) / 100
-                }));
-              }
-            });
-
-            analysisData.rsi = rsiData;
-            analysisData.movingAverages = movingAverages;
-            
-            // Add current RSI status
-            if (rsiData[14] && rsiData[14].length > 0) {
-              const currentRSI = rsiData[14][rsiData[14].length - 1].value;
-              analysisData.rsiStatus = {
-                current: currentRSI,
-                status: currentRSI > 70 ? 'Overbought' : currentRSI < 30 ? 'Oversold' : 'Normal',
-                signal: currentRSI > 70 ? 'SELL' : currentRSI < 30 ? 'BUY' : 'HOLD'
-              };
-            }
-          }
-
-          results[symbol.toLowerCase()] = analysisData;
-
-        } catch (error) {
-          console.error(`Error fetching data for ${symbol}:`, error);
-          results[symbol.toLowerCase()] = {
+        const symbolKey = symbol.toLowerCase();
+        
+        if (!batchData[symbol]) {
+          results[symbolKey] = {
             error: `Failed to fetch ${symbol} data`,
-            message: error.message
+            message: 'Symbol not available in batch response'
           };
+          continue;
         }
+
+        const cryptoData = batchData[symbol];
+        let analysisData = { ...cryptoData };
+
+        if (includeAnalysis === 'true' && cryptoData.historical && cryptoData.historical.length > 0) {
+          const prices = cryptoData.historical.map(item => item.price);
+          
+          // Calculate RSI for multiple periods
+          const rsiData = {};
+          [14, 21, 30].forEach(period => {
+            const rsiValues = calculateRSI(prices, period);
+            if (rsiValues.length > 0) {
+              rsiData[period] = rsiValues.map((value, index) => ({
+                timestamp: cryptoData.historical[cryptoData.historical.length - rsiValues.length + index].timestamp,
+                value: Math.round(value * 100) / 100
+              }));
+            }
+          });
+
+          // Calculate Moving Averages
+          const movingAverages = {};
+          [20, 50, 100, 200].forEach(period => {
+            const maValues = calculateMovingAverage(prices, period);
+            if (maValues.length > 0) {
+              movingAverages[period] = maValues.map((value, index) => ({
+                timestamp: cryptoData.historical[cryptoData.historical.length - maValues.length + index].timestamp,
+                value: Math.round(value * 100) / 100
+              }));
+            }
+          });
+
+          analysisData.rsi = rsiData;
+          analysisData.movingAverages = movingAverages;
+          
+          // Add current RSI status
+          if (rsiData[14] && rsiData[14].length > 0) {
+            const currentRSI = rsiData[14][rsiData[14].length - 1].value;
+            analysisData.rsiStatus = {
+              current: currentRSI,
+              status: currentRSI > 70 ? 'Overbought' : currentRSI < 30 ? 'Oversold' : 'Normal',
+              signal: currentRSI > 70 ? 'SELL' : currentRSI < 30 ? 'BUY' : 'HOLD'
+            };
+          }
+        }
+
+        results[symbolKey] = analysisData;
       }
 
       // Cache the result for 5 minutes

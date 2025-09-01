@@ -7,7 +7,7 @@ class RateLimitedApiService {
   // Rate limits per API provider (milliseconds between requests)
   getRateLimit(provider) {
     const limits = {
-      'coingecko': 1200, // ~50 calls/minute for free tier
+      'coingecko': 1500, // More conservative: ~40 calls/minute for free tier
       'coingecko-pro': 200, // ~300 calls/minute for pro tier  
       'alpha-vantage': 12000, // 5 calls/minute
       'binance': 100 // Very generous limits

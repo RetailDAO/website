@@ -179,6 +179,110 @@ class CryptoDataService {
     return mapping[timeframe] || 1;
   }
 
+  // Batch method for multiple cryptocurrency data requests
+  async getBatchCryptoData(symbols, timeframe = '1D') {
+    const symbolMap = {
+      'BTC': 'bitcoin',
+      'ETH': 'ethereum',
+      'SOL': 'solana',
+      'BITCOIN': 'bitcoin',
+      'ETHEREUM': 'ethereum',
+      'SOLANA': 'solana'
+    };
+    
+    const validSymbols = symbols.filter(symbol => symbolMap[symbol.toUpperCase()]);
+    if (validSymbols.length === 0) {
+      throw new Error(`No supported cryptocurrencies in: ${symbols.join(', ')}`);
+    }
+
+    const coinIds = validSymbols.map(symbol => symbolMap[symbol.toUpperCase()]);
+    const coinIdsString = coinIds.join(',');
+    const cacheKey = `batch_crypto_data_${validSymbols.join('_')}_${timeframe}`;
+    
+    // Try cache first
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    try {
+      // Single batch request for all current prices
+      const currentData = await rateLimitedApi.coinGeckoRequest(async () => {
+        const response = await this.coinGeckoClient.get('/simple/price', {
+          params: {
+            ids: coinIdsString,
+            vs_currencies: 'usd',
+            include_24hr_change: true,
+            include_24hr_vol: true,
+            include_market_cap: true
+          }
+        });
+        return response.data;
+      });
+
+      // Get historical data for each coin individually (still rate limited)
+      const requestedDays = this.timeframeToDays(timeframe);
+      const minDaysForCalculations = Math.max(requestedDays, 250);
+      
+      const results = {};
+      
+      for (const symbol of validSymbols) {
+        const coinId = symbolMap[symbol.toUpperCase()];
+        
+        try {
+          const historicalData = await rateLimitedApi.coinGeckoRequest(async () => {
+            const response = await this.coinGeckoClient.get(`/coins/${coinId}/market_chart`, {
+              params: {
+                vs_currency: 'usd',
+                days: minDaysForCalculations,
+                interval: minDaysForCalculations <= 1 ? 'hourly' : 'daily'
+              }
+            });
+            return response.data;
+          });
+
+          results[symbol] = {
+            current: {
+              price: currentData[coinId].usd,
+              change24h: currentData[coinId].usd_24h_change,
+              volume24h: currentData[coinId].usd_24h_vol,
+              marketCap: currentData[coinId].usd_market_cap
+            },
+            historical: historicalData.prices.map(([timestamp, price]) => ({
+              timestamp: new Date(timestamp).toISOString(),
+              price
+            }))
+          };
+
+        } catch (error) {
+          console.error(`❌ [CoinGecko] Error fetching ${symbol} historical data, using mock:`, error.message);
+          
+          // Use mock data for this symbol if API fails
+          const mockData = this.generateMockCryptoData(symbol, timeframe);
+          results[symbol] = mockData;
+        }
+      }
+
+      // Cache successful results for 5 minutes
+      await cacheService.set(cacheKey, results, 300);
+      console.log(`✅ [CoinGecko] Successfully fetched batch data for ${validSymbols.join(', ')} (${timeframe})`);
+      return results;
+
+    } catch (error) {
+      console.error(`❌ [CoinGecko] Error fetching batch data, using fallback:`, error.message);
+      
+      // Generate mock data for all symbols
+      const results = {};
+      for (const symbol of validSymbols) {
+        results[symbol] = this.generateMockCryptoData(symbol, timeframe);
+      }
+      
+      await cacheService.set(cacheKey, results, 60); // 1 minute cache for mock data
+      console.log(`🎭 [Mock] Serving batch mock data for ${validSymbols.join(', ')} (${timeframe})`);
+      return results;
+    }
+  }
+
   // Generic cryptocurrency data method
   async getCryptoData(symbol, timeframe = '1D') {
     const symbolMap = {
