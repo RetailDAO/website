@@ -637,9 +637,9 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA
       let data = [];
 
       if (exchange === 'binance' || exchange === 'all') {
-        // Get real funding rate from Binance Futures API
+        // Get real funding rate from Binance Futures API for BTC and ETH
         try {
-          const [priceResponse, fundingResponse] = await Promise.all([
+          const [btcPriceResponse, btcFundingResponse, ethPriceResponse, ethFundingResponse] = await Promise.all([
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'BTCUSDT' }
             }),
@@ -648,20 +648,40 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA
                 symbol: 'BTCUSDT',
                 limit: 1
               }
+            }),
+            this.binanceClient.get('/v3/ticker/price', {
+              params: { symbol: 'ETHUSDT' }
+            }),
+            this.binanceFuturesClient.get('/v1/fundingRate', {
+              params: { 
+                symbol: 'ETHUSDT',
+                limit: 1
+              }
             })
           ]);
 
-          const fundingRateData = fundingResponse.data[0];
-          const binanceRates = [{
-            symbol: priceResponse.data.symbol,
-            fundingRate: parseFloat(fundingRateData.fundingRate),
-            nextFundingTime: new Date(fundingRateData.fundingTime + 8 * 60 * 60 * 1000).toISOString(),
-            exchange: 'Binance',
-            price: parseFloat(priceResponse.data.price)
-          }];
+          const btcFundingRateData = btcFundingResponse.data[0];
+          const ethFundingRateData = ethFundingResponse.data[0];
+          
+          const binanceRates = [
+            {
+              symbol: btcPriceResponse.data.symbol,
+              fundingRate: parseFloat(btcFundingRateData.fundingRate),
+              nextFundingTime: new Date(btcFundingRateData.fundingTime + 8 * 60 * 60 * 1000).toISOString(),
+              exchange: 'Binance',
+              price: parseFloat(btcPriceResponse.data.price)
+            },
+            {
+              symbol: ethPriceResponse.data.symbol,
+              fundingRate: parseFloat(ethFundingRateData.fundingRate),
+              nextFundingTime: new Date(ethFundingRateData.fundingTime + 8 * 60 * 60 * 1000).toISOString(),
+              exchange: 'Binance',
+              price: parseFloat(ethPriceResponse.data.price)
+            }
+          ];
           
           data = [...data, ...binanceRates];
-          console.log('✅ [Binance] Real funding rate fetched:', fundingRateData.fundingRate);
+          console.log('✅ [Binance] Real funding rates fetched - BTC:', btcFundingRateData.fundingRate, 'ETH:', ethFundingRateData.fundingRate);
           
         } catch (binanceError) {
           console.warn('⚠️ [Binance] Funding rate API failed, using fallback:', binanceError.message);
@@ -686,20 +706,54 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA
 
       // Add other exchanges here...
 
-      await cacheService.setFrequent(cacheKey, data); // 30 minutes cache
-      return data;
+      // Transform array to expected frontend structure
+      const transformedData = {
+        btc: data.find(item => item.symbol === 'BTCUSDT') ? {
+          rate: data.find(item => item.symbol === 'BTCUSDT').fundingRate,
+          trend: data.find(item => item.symbol === 'BTCUSDT').fundingRate > 0 ? 'positive' : 'negative',
+          nextFundingTime: data.find(item => item.symbol === 'BTCUSDT').nextFundingTime,
+          exchange: 'Binance'
+        } : null,
+        eth: data.find(item => item.symbol === 'ETHUSDT') ? {
+          rate: data.find(item => item.symbol === 'ETHUSDT').fundingRate,
+          trend: data.find(item => item.symbol === 'ETHUSDT').fundingRate > 0 ? 'positive' : 'negative',
+          nextFundingTime: data.find(item => item.symbol === 'ETHUSDT').nextFundingTime,
+          exchange: 'Binance'
+        } : null,
+        raw: data // Keep raw data for debugging
+      };
+
+      await cacheService.setFrequent(cacheKey, transformedData); // 30 minutes cache
+      return transformedData;
 
     } catch (error) {
       console.error('❌ Error fetching funding rates:', error.message);
       
-      // Complete fallback with mock data
-      const mockData = [{
-        symbol: 'BTCUSDT',
-        fundingRate: (Math.random() - 0.5) * 0.002,
-        nextFundingTime: new Date(Date.now() + (8 - new Date().getHours() % 8) * 60 * 60 * 1000).toISOString(),
-        exchange: 'Binance',
-        price: 116000 + Math.random() * 2000
-      }];
+      // Complete fallback with mock data in expected structure
+      const btcRate = (Math.random() - 0.5) * 0.002;
+      const ethRate = (Math.random() - 0.5) * 0.0015;
+      
+      const mockData = {
+        btc: {
+          rate: btcRate,
+          trend: btcRate > 0 ? 'positive' : 'negative',
+          nextFundingTime: new Date(Date.now() + (8 - new Date().getHours() % 8) * 60 * 60 * 1000).toISOString(),
+          exchange: 'Mock'
+        },
+        eth: {
+          rate: ethRate,
+          trend: ethRate > 0 ? 'positive' : 'negative',
+          nextFundingTime: new Date(Date.now() + (8 - new Date().getHours() % 8) * 60 * 60 * 1000).toISOString(),
+          exchange: 'Mock'
+        },
+        raw: [{
+          symbol: 'BTCUSDT',
+          fundingRate: btcRate,
+          nextFundingTime: new Date(Date.now() + (8 - new Date().getHours() % 8) * 60 * 60 * 1000).toISOString(),
+          exchange: 'Mock',
+          price: 116000 + Math.random() * 2000
+        }]
+      };
       
       await cacheService.setRealtime(cacheKey, mockData); // 1 minute cache for mock
       console.log('🎭 [Mock] Using complete mock funding rates');
