@@ -2,6 +2,7 @@ require('dotenv').config();
 const app = require('./src/app_fixed');
 const WebSocket = require('ws');
 const websocketService = require('./src/services/websocket/websocketService');
+const { indicatorStreamController } = require('./src/controllers/indicatorStreamController');
 
 const PORT = process.env.PORT || 3001;
 
@@ -88,10 +89,51 @@ websocketService.handleBinanceData = async function(data) {
 
 console.log('📡 WebSocket server initialized on /ws/prices');
 
+// ========== INDICATOR STREAMING WEBSOCKET SERVER ==========
+
+// WebSocket Server for indicator streaming
+const indicatorWss = new WebSocket.Server({ 
+  server,
+  path: '/ws/indicators'
+});
+
+indicatorWss.on('connection', (ws, req) => {
+  console.log('📊 New indicator streaming client connected');
+  indicatorStreamController.handleIndicatorWebSocket(ws, req);
+});
+
+console.log('📊 Indicator streaming WebSocket server initialized on /ws/indicators');
+
+// Initialize indicator streaming on startup
+setTimeout(async () => {
+  try {
+    console.log('🚀 Initializing indicator streaming...');
+    await indicatorStreamController.initializeStreaming();
+    console.log('✅ Indicator streaming started successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize indicator streaming:', error);
+  }
+}, 5000); // Wait 5 seconds for Binance connection to stabilize
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
+  
+  // Shutdown indicator streaming
+  indicatorStreamController.shutdown();
+  websocketService.closeAllConnections();
+  
   server.close(() => {
     console.log('Process terminated');
   });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
+  
+  // Shutdown indicator streaming
+  indicatorStreamController.shutdown();
+  websocketService.closeAllConnections();
+  
+  process.exit(0);
 });

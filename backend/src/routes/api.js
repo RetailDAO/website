@@ -7,6 +7,7 @@ const { etfController } = require('../controllers/etfController');
 const { fundingController } = require('../controllers/fundingController');
 const { rsiController } = require('../controllers/rsiController');
 const { cryptoController } = require('../controllers/cryptoController');
+const { indicatorStreamController } = require('../controllers/indicatorStreamController');
 
 const router = express.Router();
 
@@ -153,6 +154,33 @@ router.get('/crypto-data',
   }
 );
 
+// ========== INDICATOR STREAMING ROUTES ==========
+
+// Get streaming status
+router.get('/indicators/stream/status', indicatorStreamController.getStreamingStatus);
+
+// Control streaming (start/stop)
+router.post('/indicators/stream/control', 
+  [
+    query('action').isIn(['start', 'stop']).withMessage('Action must be start or stop'),
+    query('symbol').optional().isLength({ min: 6, max: 10 })
+  ],
+  validateRequest,
+  indicatorStreamController.controlStreaming
+);
+
+// Get cached indicators for all symbols
+router.get('/indicators/cached', indicatorStreamController.getCachedIndicators);
+
+// Get cached indicators for specific symbol
+router.get('/indicators/cached/:symbol',
+  [
+    query('symbol').isLength({ min: 3, max: 10 }).withMessage('Invalid symbol format')
+  ],
+  validateRequest,
+  indicatorStreamController.getCachedIndicators
+);
+
 // Cache management routes
 router.delete('/cache', (req, res) => {
   // Clear all cache
@@ -172,6 +200,49 @@ router.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
+});
+
+// Test endpoint to verify indicator streaming functionality
+router.get('/test/indicators', async (req, res) => {
+  try {
+    const websocketService = require('../services/websocket/websocketService');
+    const testResults = {};
+    
+    // Test price history for each symbol
+    const symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+    
+    for (const symbol of symbols) {
+      const priceHistory = websocketService.priceHistory?.get?.(symbol);
+      const cachedIndicators = await websocketService.getCurrentIndicators(symbol);
+      
+      testResults[symbol] = {
+        priceHistoryLength: priceHistory?.length || 0,
+        hasIndicators: !!cachedIndicators,
+        lastUpdate: cachedIndicators?.timestamp || null,
+        dataPoints: cachedIndicators?.dataPoints || 0
+      };
+    }
+    
+    const connectionStatus = websocketService.getConnectionStatus();
+    
+    res.json({
+      success: true,
+      message: 'Indicator streaming test results',
+      data: {
+        symbols: testResults,
+        connection: connectionStatus,
+        clientConnections: websocketService.clientConnections?.size || 0
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Test failed',
+      error: error.message
+    });
+  }
 });
 
 module.exports = router;

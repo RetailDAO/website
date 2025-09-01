@@ -265,3 +265,307 @@ export function useConnectionStatus() {
     checkApiHealth
   };
 }
+
+// Hook for indicator streaming WebSocket with enhanced data management
+export function useIndicatorStream(options = {}) {
+  const [indicators, setIndicators] = useState({});
+  const [streamStatus, setStreamStatus] = useState({
+    connected: false,
+    subscriptions: [],
+    lastUpdate: null,
+    health: 'unknown'
+  });
+  const [historicalData, setHistoricalData] = useState({});
+  
+  const {
+    autoSubscribe = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
+    enableDataMerging = true,
+    fallbackToAPI = true
+  } = options;
+
+  // API fallback for when WebSocket is disconnected
+  const fetchIndicatorsFromAPI = useCallback(async (symbol) => {
+    if (!fallbackToAPI) return null;
+    
+    try {
+      const endpoint = symbol 
+        ? `/api/v1/indicators/cached/${symbol}`
+        : '/api/v1/indicators/cached';
+      
+      const response = await fetch(endpoint);
+      if (response.ok) {
+        const data = await response.json();
+        return data.data;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch indicators from API:', error);
+    }
+    return null;
+  }, [fallbackToAPI]);
+
+  // Enhanced message handler with data merging
+  const handleMessage = useCallback((data) => {
+    switch (data.type) {
+      case 'connection_established':
+        setStreamStatus(prev => ({
+          ...prev,
+          connected: true,
+          clientId: data.clientId,
+          supportedSymbols: data.supportedSymbols,
+          health: 'connected'
+        }));
+        
+        // Auto-subscribe to symbols if specified
+        if (autoSubscribe && autoSubscribe.length > 0) {
+          setTimeout(() => {
+            autoSubscribe.forEach(symbol => {
+              wsConnection.sendMessage({
+                type: 'subscribe_symbol',
+                symbol: symbol
+              });
+            });
+          }, 100);
+        }
+        break;
+
+      case 'indicator_update':
+        const { symbol, data: indicatorData } = data;
+        
+        setIndicators(prev => {
+          const existing = prev[symbol] || {};
+          
+          // Merge with existing data if enableDataMerging is true
+          const mergedData = enableDataMerging ? {
+            ...existing,
+            ...indicatorData,
+            received: new Date(),
+            cached: data.cached || false,
+            source: data.cached ? 'cache' : 'realtime'
+          } : {
+            ...indicatorData,
+            received: new Date(),
+            cached: data.cached || false,
+            source: data.cached ? 'cache' : 'realtime'
+          };
+
+          return {
+            ...prev,
+            [symbol]: mergedData
+          };
+        });
+
+        setStreamStatus(prev => ({
+          ...prev,
+          lastUpdate: new Date(),
+          health: 'connected'
+        }));
+        break;
+
+      case 'subscription_confirmed':
+        setStreamStatus(prev => ({
+          ...prev,
+          subscriptions: [...new Set([...prev.subscriptions, data.symbol])]
+        }));
+        console.log(`✅ Subscribed to ${data.symbol} indicators`);
+        break;
+
+      case 'unsubscription_confirmed':
+        setStreamStatus(prev => ({
+          ...prev,
+          subscriptions: prev.subscriptions.filter(s => s !== data.symbol)
+        }));
+        console.log(`❌ Unsubscribed from ${data.symbol} indicators`);
+        break;
+
+      case 'current_indicators':
+        // Handle bulk indicator data
+        if (data.data) {
+          setIndicators(prev => ({
+            ...prev,
+            [data.symbol]: {
+              ...data.data,
+              received: new Date(),
+              cached: true,
+              source: 'cache'
+            }
+          }));
+        }
+        break;
+
+      case 'error':
+        console.error('Indicator streaming error:', data.message);
+        setStreamStatus(prev => ({
+          ...prev,
+          health: 'error',
+          lastError: data.message
+        }));
+        break;
+
+      case 'pong':
+        setStreamStatus(prev => ({
+          ...prev,
+          health: 'connected',
+          lastPong: new Date()
+        }));
+        break;
+
+      default:
+        console.log('Unknown indicator message type:', data.type, data);
+        break;
+    }
+  }, [autoSubscribe, enableDataMerging, wsConnection]);
+
+  // Use Vite proxied WebSocket endpoint in development
+  const wsUrl = import.meta.env.DEV 
+    ? 'ws://localhost:3000/ws/indicators'
+    : 'wss://website-production-8f8a.up.railway.app/ws/indicators';
+    
+  const wsConnection = useWebSocket(wsUrl, {
+    onMessage: handleMessage,
+    maxReconnectAttempts: 5,
+    reconnectInterval: 3000
+  });
+
+  // Enhanced subscription management
+  const subscribeToSymbol = useCallback((symbol) => {
+    if (wsConnection.isConnected) {
+      wsConnection.sendMessage({
+        type: 'subscribe_symbol',
+        symbol: symbol
+      });
+    } else {
+      console.warn(`Cannot subscribe to ${symbol} - WebSocket not connected`);
+      // Fetch from API as fallback
+      fetchIndicatorsFromAPI(symbol).then(data => {
+        if (data) {
+          setIndicators(prev => ({
+            ...prev,
+            [symbol]: {
+              ...data,
+              received: new Date(),
+              cached: true,
+              source: 'api_fallback'
+            }
+          }));
+        }
+      });
+    }
+  }, [wsConnection, fetchIndicatorsFromAPI]);
+
+  const unsubscribeFromSymbol = useCallback((symbol) => {
+    if (wsConnection.isConnected) {
+      wsConnection.sendMessage({
+        type: 'unsubscribe_symbol',
+        symbol: symbol
+      });
+    }
+  }, [wsConnection]);
+
+  const getCurrentIndicators = useCallback((symbol = null) => {
+    if (wsConnection.isConnected) {
+      wsConnection.sendMessage({
+        type: 'get_current_indicators',
+        ...(symbol && { symbol })
+      });
+    } else {
+      // Fallback to API
+      fetchIndicatorsFromAPI(symbol).then(data => {
+        if (data) {
+          if (symbol) {
+            setIndicators(prev => ({
+              ...prev,
+              [symbol]: {
+                ...data,
+                received: new Date(),
+                cached: true,
+                source: 'api_fallback'
+              }
+            }));
+          } else {
+            // Handle multiple symbols from API
+            Object.entries(data).forEach(([sym, indicatorData]) => {
+              setIndicators(prev => ({
+                ...prev,
+                [sym]: {
+                  ...indicatorData,
+                  received: new Date(),
+                  cached: true,
+                  source: 'api_fallback'
+                }
+              }));
+            });
+          }
+        }
+      });
+    }
+  }, [wsConnection, fetchIndicatorsFromAPI]);
+
+  // Health check with ping
+  const pingConnection = useCallback(() => {
+    if (wsConnection.isConnected) {
+      wsConnection.sendMessage({
+        type: 'ping',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [wsConnection]);
+
+  // Periodic health checks
+  useEffect(() => {
+    const healthInterval = setInterval(() => {
+      if (wsConnection.isConnected) {
+        pingConnection();
+      } else {
+        setStreamStatus(prev => ({
+          ...prev,
+          health: wsConnection.connectionStatus
+        }));
+      }
+    }, 30000); // Every 30 seconds
+
+    return () => clearInterval(healthInterval);
+  }, [wsConnection.isConnected, wsConnection.connectionStatus, pingConnection]);
+
+  // Get indicator for specific symbol and type
+  const getIndicator = useCallback((symbol, type, period = null) => {
+    const symbolData = indicators[symbol];
+    if (!symbolData) return null;
+
+    switch (type) {
+      case 'rsi':
+        return period ? symbolData.rsi?.[period] : symbolData.rsi;
+      case 'ma':
+      case 'movingAverages':
+        return period ? symbolData.movingAverages?.[period] : symbolData.movingAverages;
+      case 'price':
+        return symbolData.current || symbolData.price;
+      default:
+        return symbolData[type];
+    }
+  }, [indicators]);
+
+  // Check if indicator data is fresh (less than 10 minutes old)
+  const isDataFresh = useCallback((symbol) => {
+    const symbolData = indicators[symbol];
+    if (!symbolData || !symbolData.received) return false;
+    
+    const age = Date.now() - new Date(symbolData.received).getTime();
+    return age < 10 * 60 * 1000; // 10 minutes
+  }, [indicators]);
+
+  return {
+    ...wsConnection,
+    indicators,
+    streamStatus,
+    subscribeToSymbol,
+    unsubscribeFromSymbol,
+    getCurrentIndicators,
+    getIndicator,
+    isDataFresh,
+    pingConnection,
+    // Utility methods
+    isHealthy: streamStatus.health === 'connected',
+    hasData: Object.keys(indicators).length > 0,
+    supportedSymbols: streamStatus.supportedSymbols || []
+  };
+}
