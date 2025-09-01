@@ -135,6 +135,31 @@ app.use((req, res) => {
 // Global error handler
 app.use(errorHandler);
 
+// Handle WebSocket upgrade requests that might be hitting HTTP endpoints
+app.use('/ws', (req, res) => {
+  // Check if this is a WebSocket upgrade request
+  if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === 'websocket') {
+    // Don't handle WebSocket upgrades in Express - let the WebSocket server handle them
+    res.status(426).json({
+      error: 'Upgrade Required',
+      message: 'This endpoint requires WebSocket connection',
+      upgrade: 'websocket'
+    });
+    return;
+  }
+  
+  // For non-upgrade requests, provide information about available WebSocket endpoints
+  res.json({
+    success: false,
+    message: 'WebSocket endpoints require upgrade',
+    endpoints: {
+      prices: '/ws/prices',
+      indicators: '/ws/indicators'
+    },
+    instructions: 'Use WebSocket client to connect to these endpoints'
+  });
+});
+
 // WebSocket status endpoint
 app.get('/api/v1/websocket/status', (_req, res) => {
   const status = websocketService.getConnectionStatus();

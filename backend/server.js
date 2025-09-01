@@ -6,15 +6,65 @@ const { indicatorStreamController } = require('./src/controllers/indicatorStream
 
 const PORT = process.env.PORT || 3001;
 
+// Ensure proper server configuration for WebSocket upgrade handling
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Crypto Dashboard API v${process.env.npm_package_version}`);
 });
 
-// WebSocket Server for real-time price updates
+// WebSocket Server for real-time price updates - Create before upgrade handler
 const wss = new WebSocket.Server({ 
-  server,
-  path: '/ws/prices'
+  noServer: true, // Don't attach to server automatically - we'll handle upgrades manually
+  verifyClient: (info) => {
+    // Log connection attempts for debugging
+    console.log(`🔍 WebSocket connection attempt to: ${info.req.url}`);
+    console.log(`🔍 Headers:`, {
+      upgrade: info.req.headers.upgrade,
+      connection: info.req.headers.connection,
+      'sec-websocket-version': info.req.headers['sec-websocket-version'],
+      'sec-websocket-key': info.req.headers['sec-websocket-key']
+    });
+    return true; // Accept all valid WebSocket connections
+  }
+});
+
+// WebSocket Server for indicator streaming - Create before upgrade handler
+const indicatorWss = new WebSocket.Server({ 
+  noServer: true, // Don't attach to server automatically - we'll handle upgrades manually
+  verifyClient: (info) => {
+    // Log connection attempts for debugging
+    console.log(`🔍 Indicator WebSocket connection attempt to: ${info.req.url}`);
+    console.log(`🔍 Headers:`, {
+      upgrade: info.req.headers.upgrade,
+      connection: info.req.headers.connection,
+      'sec-websocket-version': info.req.headers['sec-websocket-version'],
+      'sec-websocket-key': info.req.headers['sec-websocket-key']
+    });
+    return true; // Accept all valid WebSocket connections
+  }
+});
+
+// Handle server upgrade events for WebSocket connections
+server.on('upgrade', (request, socket, head) => {
+  console.log(`⬆️ HTTP Upgrade request received for: ${request.url}`);
+  console.log(`⬆️ Upgrade header: ${request.headers.upgrade}`);
+  console.log(`⬆️ Connection header: ${request.headers.connection}`);
+  
+  // Let the WebSocket servers handle the upgrade
+  if (request.url === '/ws/prices') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      console.log('✅ Successfully upgraded to WebSocket for /ws/prices');
+      wss.emit('connection', ws, request);
+    });
+  } else if (request.url === '/ws/indicators') {
+    indicatorWss.handleUpgrade(request, socket, head, (ws) => {
+      console.log('✅ Successfully upgraded to WebSocket for /ws/indicators');
+      indicatorWss.emit('connection', ws, request);
+    });
+  } else {
+    console.log(`❌ Unknown WebSocket path: ${request.url}`);
+    socket.destroy();
+  }
 });
 
 const clients = new Set();
@@ -90,12 +140,6 @@ websocketService.handleBinanceData = async function(data) {
 console.log('📡 WebSocket server initialized on /ws/prices');
 
 // ========== INDICATOR STREAMING WEBSOCKET SERVER ==========
-
-// WebSocket Server for indicator streaming
-const indicatorWss = new WebSocket.Server({ 
-  server,
-  path: '/ws/indicators'
-});
 
 indicatorWss.on('connection', (ws, req) => {
   console.log('📊 New indicator streaming client connected');
