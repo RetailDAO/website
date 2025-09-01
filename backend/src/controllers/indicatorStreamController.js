@@ -233,7 +233,7 @@ class IndicatorStreamController {
   }
 
   // REST endpoint to get streaming status
-  async getStreamingStatus(req, res) {
+  getStreamingStatus = async (req, res) => {
     try {
       const connectionStatus = websocketService.getConnectionStatus();
       const clientCount = websocketService.clientConnections?.size || 0;
@@ -243,7 +243,7 @@ class IndicatorStreamController {
           active: this.isStreamingActive,
           supportedSymbols: this.supportedSymbols,
           connectedClients: clientCount,
-          updateInterval: websocketService.indicatorUpdateInterval
+          updateInterval: websocketService.indicatorUpdateInterval || 300000
         },
         binanceConnection: {
           connected: connectionStatus.isConnected,
@@ -280,7 +280,7 @@ class IndicatorStreamController {
   }
 
   // REST endpoint to start/stop streaming for specific symbols
-  async controlStreaming(req, res) {
+  controlStreaming = async (req, res) => {
     try {
       const { action, symbol } = req.body;
       
@@ -333,7 +333,7 @@ class IndicatorStreamController {
   }
 
   // REST endpoint to get cached indicators
-  async getCachedIndicators(req, res) {
+  getCachedIndicators = async (req, res) => {
     try {
       const { symbol } = req.params;
       

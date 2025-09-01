@@ -115,6 +115,42 @@ setTimeout(async () => {
   }
 }, 5000); // Wait 5 seconds for Binance connection to stabilize
 
+// Global error handling to prevent crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Promise Rejection:', reason);
+  console.error('Promise:', promise);
+  // Don't exit in production, just log the error
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Stack trace:', reason.stack);
+  }
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error('Stack trace:', error.stack);
+  
+  // Perform graceful shutdown
+  console.log('🚨 Performing graceful shutdown due to uncaught exception...');
+  
+  try {
+    indicatorStreamController.shutdown();
+    websocketService.closeAllConnections();
+  } catch (shutdownError) {
+    console.error('❌ Error during shutdown:', shutdownError);
+  }
+  
+  server.close(() => {
+    console.log('Process terminated due to uncaught exception');
+    process.exit(1);
+  });
+  
+  // Force exit if graceful shutdown takes too long
+  setTimeout(() => {
+    console.log('⏰ Forced exit due to timeout');
+    process.exit(1);
+  }, 10000);
+});
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
