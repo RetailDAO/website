@@ -413,7 +413,7 @@ export function useIndicatorStream(options = {}) {
         console.log('Unknown indicator message type:', data.type, data);
         break;
     }
-  }, [autoSubscribe, enableDataMerging, wsConnection]);
+  }, [autoSubscribe, enableDataMerging]);
 
   // Use Vite proxied WebSocket endpoint in development
   const wsUrl = import.meta.env.DEV 
