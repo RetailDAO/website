@@ -15,7 +15,7 @@ class RateLimitedApiService {
     return limits[provider] || 1000;
   }
 
-  async makeRequest(provider, requestFn) {
+  async makeRequest(provider, requestFn, retries = 3) {
     const rateLimit = this.getRateLimit(provider);
     const lastRequest = this.lastRequestTime.get(provider) || 0;
     const timeSinceLastRequest = Date.now() - lastRequest;
@@ -27,13 +27,24 @@ class RateLimitedApiService {
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
-    try {
-      this.lastRequestTime.set(provider, Date.now());
-      const result = await requestFn();
-      return result;
-    } catch (error) {
-      console.error(`[${provider}] API request failed:`, error.message);
-      throw error;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        this.lastRequestTime.set(provider, Date.now());
+        const result = await requestFn();
+        return result;
+      } catch (error) {
+        // Check if it's a rate limit error (429) and we have retries left
+        if ((error.response?.status === 429 || error.code === 'ECONNRESET') && attempt < retries) {
+          // Exponential backoff: 2^attempt * base delay (2, 4, 8 seconds)
+          const backoffDelay = Math.pow(2, attempt + 1) * 1000;
+          console.log(`[${provider}] Rate limit hit (attempt ${attempt + 1}/${retries + 1}), backing off for ${backoffDelay}ms`);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          continue;
+        }
+        
+        console.error(`[${provider}] API request failed:`, error.message);
+        throw error;
+      }
     }
   }
 

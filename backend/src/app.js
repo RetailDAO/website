@@ -16,6 +16,9 @@ const websocketService = require('./services/websocket/websocketService');
 
 const app = express();
 
+// Trust proxy for rate limiting accuracy in production
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({

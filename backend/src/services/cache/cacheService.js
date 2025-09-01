@@ -7,6 +7,13 @@ class CacheService {
     this.memoryCache = new Map(); // Fallback memory cache
     this.initRedis();
 
+    // Cache metrics for monitoring
+    this.metrics = {
+      hits: 0,
+      misses: 0,
+      errors: 0
+    };
+
     // Tiered caching strategy TTL values
     this.cacheTiers = {
       tier1_realtime: 60,      // 1 min - real-time data
@@ -66,16 +73,33 @@ class CacheService {
 
   async get(key) {
     try {
+      let data = null;
       if (this.isRedisAvailable()) {
-        const data = await this.redis.get(key);
-        return data ? JSON.parse(data) : null;
+        data = await this.redis.get(key);
+        data = data ? JSON.parse(data) : null;
       } else {
-        return this.getMemoryCache(key);
+        data = this.getMemoryCache(key);
       }
+      
+      // Track cache metrics
+      if (data !== null) {
+        this.metrics.hits++;
+      } else {
+        this.metrics.misses++;
+      }
+      
+      return data;
     } catch (error) {
+      this.metrics.errors++;
       console.error('❌ Cache get error:', error.message);
       // Try memory cache as fallback
-      return this.getMemoryCache(key);
+      const fallbackData = this.getMemoryCache(key);
+      if (fallbackData !== null) {
+        this.metrics.hits++;
+      } else {
+        this.metrics.misses++;
+      }
+      return fallbackData;
     }
   }
 
@@ -212,17 +236,90 @@ class CacheService {
     }
   }
 
+  // Cache-aside pattern helper for API responses
+  async getOrFetch(key, fetchFunction, ttl = null, tier = 'tier2_frequent') {
+    try {
+      // Try to get from cache first
+      let data = await this.get(key);
+      
+      if (data !== null) {
+        return data;
+      }
+      
+      // If not in cache, fetch the data
+      data = await fetchFunction();
+      
+      // Store in cache for future requests
+      if (data !== null && data !== undefined) {
+        if (ttl) {
+          await this.set(key, data, ttl);
+        } else {
+          await this.setTiered(key, data, tier);
+        }
+      }
+      
+      return data;
+    } catch (error) {
+      this.metrics.errors++;
+      console.error('❌ Cache-aside pattern error:', error.message);
+      // Still try to fetch the data even if caching fails
+      try {
+        return await fetchFunction();
+      } catch (fetchError) {
+        console.error('❌ Fallback fetch also failed:', fetchError.message);
+        throw fetchError;
+      }
+    }
+  }
+
+  // Get cache metrics and performance stats
+  getMetrics() {
+    const total = this.metrics.hits + this.metrics.misses;
+    const hitRate = total > 0 ? (this.metrics.hits / total * 100).toFixed(2) : '0.00';
+    
+    return {
+      ...this.metrics,
+      hitRate: `${hitRate}%`,
+      total: total,
+      memoryEntries: this.memoryCache.size,
+      redisAvailable: this.isRedisAvailable()
+    };
+  }
+
+  // Reset metrics (useful for monitoring intervals)
+  resetMetrics() {
+    this.metrics.hits = 0;
+    this.metrics.misses = 0;
+    this.metrics.errors = 0;
+  }
+
   // Health check method
   async healthCheck() {
     try {
+      const metrics = this.getMetrics();
+      
       if (this.isRedisAvailable()) {
         await this.redis.ping();
-        return { status: 'healthy', type: 'redis' };
+        return { 
+          status: 'healthy', 
+          type: 'redis',
+          metrics: metrics
+        };
       } else {
-        return { status: 'healthy', type: 'memory', entries: this.memoryCache.size };
+        return { 
+          status: 'healthy', 
+          type: 'memory', 
+          entries: this.memoryCache.size,
+          metrics: metrics
+        };
       }
     } catch (error) {
-      return { status: 'degraded', type: 'memory', entries: this.memoryCache.size };
+      return { 
+        status: 'degraded', 
+        type: 'memory', 
+        entries: this.memoryCache.size,
+        error: error.message
+      };
     }
   }
 }
