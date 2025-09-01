@@ -1,6 +1,8 @@
 
+import { useState, useEffect } from 'react';
 import Tooltip, { CryptoTooltips } from './Tooltip';
 import { useTheme } from '../context/ThemeContext';
+import { useSymbolIndicators } from '../hooks/useIndicatorData';
 
 const RSIGauge = ({ 
   rsiValue, 
@@ -144,7 +146,163 @@ const RSIGauge = ({
   );
 };
 
-// Multi-RSI Display Component
+// Real-time RSI Component using WebSocket data
+export const LiveRSIDisplay = ({ symbol = 'BTC', theme = 'orange', showDataSource = true }) => {
+  const { colors: themeColors } = useTheme();
+  const {
+    rsi,
+    rsiStatus,
+    current,
+    loading,
+    wsConnected,
+    getDataInfo
+  } = useSymbolIndicators(symbol, {
+    enableRealTimeUpdates: true,
+    fallbackToApi: true
+  });
+
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+
+  useEffect(() => {
+    if (rsi && Object.keys(rsi).length > 0) {
+      setLastUpdateTime(new Date());
+    }
+  }, [rsi]);
+
+  const colorThemes = {
+    orange: {
+      primary: 'text-orange-500',
+      accent: 'text-orange-400',
+      bg: 'bg-orange-900',
+      glow: 'shadow-orange-500/30'
+    },
+    blue: {
+      primary: 'text-blue-500',
+      accent: 'text-blue-400', 
+      bg: 'bg-blue-900',
+      glow: 'shadow-blue-500/30'
+    },
+    green: {
+      primary: 'text-green-500',
+      accent: 'text-green-400',
+      bg: 'bg-green-900',
+      glow: 'shadow-green-500/30'
+    }
+  };
+
+  const colors = colorThemes[theme] || colorThemes.orange;
+  const dataInfo = getDataInfo(symbol);
+
+  if (loading) {
+    return (
+      <div className="animate-pulse">
+        <div className={`h-8 ${themeColors.bg.secondary} rounded mb-2`}></div>
+        <div className="flex justify-center items-end space-x-12 py-4">
+          {[14, 21, 30].map(period => (
+            <div key={period} className="text-center">
+              <div className={`w-20 h-48 ${themeColors.bg.tertiary} rounded-full mb-2`}></div>
+              <div className={`h-4 w-16 ${themeColors.bg.secondary} rounded`}></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <h3 className={`text-lg font-semibold ${colors.primary}`}>
+          {symbol} RSI Indicators
+        </h3>
+        
+        {/* Data Source Indicator */}
+        {showDataSource && dataInfo.available && (
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs ${themeColors.bg.tertiary}`}>
+            <div className={`w-2 h-2 rounded-full ${
+              wsConnected && dataInfo.fresh ? 'bg-green-400' : 
+              dataInfo.source === 'api_fallback' ? 'bg-yellow-400' : 
+              'bg-gray-400'
+            }`}></div>
+            <span className={themeColors.text.muted}>
+              {wsConnected && dataInfo.fresh ? 'Live' : 
+               dataInfo.source === 'api_fallback' ? 'API' : 
+               'Cached'}
+            </span>
+          </div>
+        )}
+
+        <Tooltip
+          title={CryptoTooltips.RSI.title}
+          content={CryptoTooltips.RSI.content}
+          educational={true}
+          position="top"
+          maxWidth="480px"
+        >
+          <div className={`w-5 h-5 ${themeColors.bg.secondary} ${themeColors.text.tertiary} rounded-full flex items-center justify-center text-xs font-bold cursor-help ${themeColors.bg.hover}`}>
+            ?
+          </div>
+        </Tooltip>
+      </div>
+      
+      <div className="flex justify-center items-end space-x-12 py-4">
+        {[14, 21, 30].map(period => {
+          const rsiValue = rsi[period]?.current || 50;
+          const status = rsi[period]?.status || 'Unknown';
+          
+          return (
+            <div key={period} className="text-center">
+              <RSIGauge 
+                rsiValue={rsiValue} 
+                period={period}
+                symbol={symbol}
+                size="md"
+                showLabel={true}
+              />
+              
+              {/* Enhanced status info */}
+              <div className={`mt-2 text-xs ${themeColors.text.muted}`}>
+                Status: <span className={`font-semibold ${
+                  status === 'Overbought' ? 'text-red-400' :
+                  status === 'Oversold' ? 'text-green-400' :
+                  'text-yellow-400'
+                }`}>
+                  {status}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Real-time update info */}
+      {lastUpdateTime && (
+        <div className={`mt-4 text-center text-xs ${themeColors.text.muted} flex items-center justify-center gap-2`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+          <span>
+            Last update: {lastUpdateTime.toLocaleTimeString()}
+            {current?.price && ` • ${symbol} Price: $${current.price.toLocaleString()}`}
+          </span>
+        </div>
+      )}
+
+      {/* Educational info */}
+      <div className={`mt-4 text-center text-xs ${themeColors.text.muted}`}>
+        <div>
+          <span className="text-green-400">Green Zone (0-30)</span> = Oversold (Buy Signal)
+        </div>
+        <div>
+          <span className="text-yellow-400">Yellow Zone (30-70)</span> = Normal (Hold)
+        </div>
+        <div>
+          <span className="text-red-400">Red Zone (70-100)</span> = Overbought (Sell Signal)
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Multi-RSI Display Component (Legacy - for backward compatibility)
 export const MultiRSIDisplay = ({ rsiData, symbol = 'BTC', theme = 'orange' }) => {
   const { colors: themeColors } = useTheme();
   if (!rsiData) return null;

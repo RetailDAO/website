@@ -1,7 +1,204 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMARibbon } from '../hooks/useApi';
+import { useSymbolIndicators } from '../hooks/useIndicatorData';
 import Tooltip, { CryptoTooltips } from './Tooltip';
 
+// Live MA Ribbon using WebSocket data
+export function LiveMARibbonChart({ symbol = 'BTC', theme = 'bitcoin' }) {
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  const {
+    movingAverages,
+    current,
+    loading,
+    wsConnected,
+    getDataInfo
+  } = useSymbolIndicators(symbol, {
+    enableRealTimeUpdates: true,
+    fallbackToApi: true
+  });
+
+  useEffect(() => {
+    if (movingAverages && Object.keys(movingAverages).length > 0) {
+      setLastUpdateTime(new Date());
+    }
+  }, [movingAverages]);
+
+  const formatPrice = (price) => {
+    if (!price) return 'N/A';
+    return `$${price.toLocaleString(undefined, { 
+      minimumFractionDigits: 0, 
+      maximumFractionDigits: 0 
+    })}`;
+  };
+
+  const getMAPillColor = (period, isAbove) => {
+    const colors = {
+      20: isAbove ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300',
+      50: isAbove ? 'bg-blue-100 text-blue-800 border-blue-300' : 'bg-orange-100 text-orange-800 border-orange-300',
+      100: isAbove ? 'bg-purple-100 text-purple-800 border-purple-300' : 'bg-pink-100 text-pink-800 border-pink-300',
+      200: isAbove ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-gray-100 text-gray-800 border-gray-300'
+    };
+    return colors[period] || 'bg-gray-100 text-gray-800 border-gray-300';
+  };
+
+  const calculateTrendScore = () => {
+    if (!movingAverages || !current?.price) return { score: 0, maxScore: 4, description: 'Unknown' };
+    
+    let bullishCount = 0;
+    const periods = [20, 50, 100, 200];
+    
+    periods.forEach(period => {
+      if (movingAverages[period]?.pricePosition === 'above') {
+        bullishCount++;
+      }
+    });
+
+    const description = bullishCount >= 3 ? 'Strong Bullish' : 
+                       bullishCount >= 2 ? 'Bullish' :
+                       bullishCount >= 1 ? 'Mixed' : 'Bearish';
+    
+    return { score: bullishCount, maxScore: 4, description };
+  };
+
+  const dataInfo = getDataInfo(symbol);
+  const trendAnalysis = calculateTrendScore();
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 animate-pulse">
+        <div className="flex items-center justify-between mb-4">
+          <div className="h-6 bg-gray-200 rounded w-48"></div>
+          <div className="h-4 bg-gray-200 rounded w-20"></div>
+        </div>
+        <div className="h-8 bg-gray-200 rounded mb-4 w-32"></div>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="h-12 bg-gray-200 rounded"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold">{symbol} MA Ribbon (Live)</h2>
+          
+          {/* Data Source Indicator */}
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs bg-gray-100`}>
+            <div className={`w-2 h-2 rounded-full ${
+              wsConnected && dataInfo.fresh ? 'bg-green-400 animate-pulse' : 
+              dataInfo.source === 'api_fallback' ? 'bg-yellow-400' : 
+              'bg-gray-400'
+            }`}></div>
+            <span className="text-gray-600">
+              {wsConnected && dataInfo.fresh ? 'Live Data' : 
+               dataInfo.source === 'api_fallback' ? 'API Data' : 
+               'Cached Data'}
+            </span>
+          </div>
+
+          <Tooltip
+            title={CryptoTooltips.MovingAverages.title}
+            content={CryptoTooltips.MovingAverages.content}
+            educational={true}
+            position="right"
+          >
+            <div className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold cursor-help">
+              ?
+            </div>
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* Current price and trend */}
+      <div className="mb-6">
+        <div className="text-2xl font-bold text-bitcoin-orange mb-2">
+          {formatPrice(current?.price)}
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className={`font-medium ${
+            trendAnalysis.description.includes('Bullish') ? 'text-green-600' : 
+            trendAnalysis.description === 'Mixed' ? 'text-yellow-600' : 
+            'text-red-600'
+          }`}>
+            {trendAnalysis.description} ({trendAnalysis.score}/{trendAnalysis.maxScore})
+          </span>
+          {current?.change24h && (
+            <span className={`${current.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {current.change24h >= 0 ? '+' : ''}{current.change24h.toFixed(2)}%
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* MA Pills Grid */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {[20, 50, 100, 200].map(period => {
+          const ma = movingAverages[period];
+          const isAbove = ma?.pricePosition === 'above';
+          const deviation = ma?.deviation || 0;
+          
+          return (
+            <div key={period} className={`p-3 rounded-lg border-2 ${getMAPillColor(period, isAbove)}`}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-semibold">MA{period}</span>
+                <span className={`text-xs px-2 py-1 rounded ${
+                  isAbove ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                }`}>
+                  {isAbove ? 'ABOVE' : 'BELOW'}
+                </span>
+              </div>
+              <div className="text-lg font-bold">
+                {formatPrice(ma?.current)}
+              </div>
+              <div className="text-xs opacity-75">
+                {deviation > 0 ? '+' : ''}{deviation.toFixed(2)}% from price
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Real-time update info */}
+      {lastUpdateTime && (
+        <div className="mt-4 pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center gap-2">
+              <div className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span>Last update: {lastUpdateTime.toLocaleTimeString()}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {dataInfo.age && (
+                <span>Data age: {Math.round(dataInfo.age / 60)}m</span>
+              )}
+              <span className={`px-2 py-1 rounded text-xs ${
+                wsConnected ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {wsConnected ? 'Connected' : 'Offline'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trading signals */}
+      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+        <h4 className="text-sm font-semibold mb-2">Quick Analysis:</h4>
+        <div className="text-xs text-gray-600 space-y-1">
+          <div>• Price above all MAs = Strong uptrend</div>
+          <div>• Price crossing above MA20 = Potential entry</div>
+          <div>• MA20 &gt; MA50 &gt; MA100 &gt; MA200 = Perfect alignment</div>
+          <div>• Current score: {trendAnalysis.score}/4 MAs bullish</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Original component (legacy)
 function BitcoinMARibbonChart() {
   const [timeframe, setTimeframe] = useState('30D');
   const [isExpanded, setIsExpanded] = useState(false);

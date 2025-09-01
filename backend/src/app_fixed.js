@@ -15,6 +15,7 @@ const { fundingController } = require('./controllers/fundingController');
 const { etfController } = require('./controllers/etfController');
 const { rsiController } = require('./controllers/rsiController');
 const { cryptoController } = require('./controllers/cryptoController');
+const { indicatorStreamController } = require('./controllers/indicatorStreamController');
 
 // Import services that need to be initialized
 const websocketService = require('./services/websocket/websocketService');
@@ -90,6 +91,12 @@ app.get('/api/v1/rsi', rsiController.getRSI);
 app.get('/api/v1/crypto/analysis', cryptoController.getCryptoAnalysis);
 app.get('/api/v1/crypto/multi-analysis', cryptoController.getMultipleCryptoAnalysis);
 app.get('/api/v1/crypto/price', cryptoController.getCurrentPrice);
+
+// Indicator streaming routes
+app.get('/api/v1/indicators/stream/status', indicatorStreamController.getStreamingStatus);
+app.post('/api/v1/indicators/stream/control', indicatorStreamController.controlStreaming);
+app.get('/api/v1/indicators/cached', indicatorStreamController.getCachedIndicators);
+app.get('/api/v1/indicators/cached/:symbol', indicatorStreamController.getCachedIndicators);
 
 // Test endpoint
 app.get('/api/v1/test', (req, res) => {
