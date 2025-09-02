@@ -7,7 +7,11 @@ const fundingController = {
     try {
       const { exchange = 'all', symbol } = req.query;
 
-      let fundingData = await cryptoService.getFundingRates(exchange);
+      const fundingResponse = await cryptoService.getFundingRates(exchange);
+      
+      // The service returns an object with btc, eth, and raw properties
+      // Use the raw array for filtering and statistics
+      let fundingData = fundingResponse.raw || [];
 
       // Filter by symbol if provided
       if (symbol) {
@@ -22,7 +26,8 @@ const fundingController = {
       // Calculate statistics
       const stats = {
         totalPairs: fundingData.length,
-        averageFundingRate: fundingData.reduce((sum, item) => sum + item.fundingRate, 0) / fundingData.length,
+        averageFundingRate: fundingData.length > 0 ? 
+          fundingData.reduce((sum, item) => sum + item.fundingRate, 0) / fundingData.length : 0,
         highestRate: fundingData[0]?.fundingRate || 0,
         lowestRate: fundingData[fundingData.length - 1]?.fundingRate || 0,
         positiveRates: fundingData.filter(item => item.fundingRate > 0).length,
@@ -34,6 +39,10 @@ const fundingController = {
         data: {
           rates: fundingData,
           statistics: stats,
+          structured: {
+            btc: fundingResponse.btc,
+            eth: fundingResponse.eth
+          },
           metadata: {
             exchange,
             lastUpdate: new Date().toISOString()

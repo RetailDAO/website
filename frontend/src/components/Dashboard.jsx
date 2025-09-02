@@ -8,8 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Tooltip, { CryptoTooltips } from './Tooltip';
-import { MetricCardSkeleton, ETFFlowsSkeleton, ProgressiveLoader } from './SkeletonLoader';
-import { LoadingToast } from './LoadingToast'; 
+import { MetricCardSkeleton, ETFFlowsSkeleton, ProgressiveLoader } from './SkeletonLoader'; 
 
 // Custom RetailDAO Loading Animation Component
 const RetailDAOLoader = ({ size = 100, message = "Loading market data..." }) => {
@@ -107,21 +106,16 @@ const CryptoDashboard = () => {
   const [rsiScenario, setRsiScenario] = useState('normal');
   const [useRealAPI, setUseRealAPI] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [cardLoading, setCardLoading] = useState({
-    prices: true,
-    btc: true,
-    dxy: true,
-    etf: true,
-    rsi: true,
-    funding: true
+  
+  const [dataUpdated, setDataUpdated] = useState({
+    prices: false,
+    btc: false,
+    dxy: false,
+    etf: false,
+    rsi: false,
+    funding: false
   });
   
-  const [loadingProgress, setLoadingProgress] = useState({
-    show: false,
-    message: '',
-    progress: 0,
-    type: 'info'
-  });
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -159,29 +153,21 @@ const CryptoDashboard = () => {
     try {
       setLoading(true);
       
+      // Always load mock data first for instant UX
+      const mockData = await mockDataService.getAllMarketData();
+      console.log('🎭 Initial mock data loaded for instant UX');
+      setMarketData(mockData);
+      setLoading(false); // Show UI immediately with mock data
+      
       if (useRealAPI) {
-        // Progressive loading with real API
+        // Progressive loading with real API over mock data
         await fetchProgressiveData();
-      } else {
-        // Mock data - still load everything at once for simplicity
-        const data = await mockDataService.getAllMarketData();
-        console.log('🎭 Mock data loaded successfully');
-        setMarketData(data);
-        setCardLoading({
-          prices: false,
-          btc: false,
-          dxy: false,
-          etf: false,
-          rsi: false,
-          funding: false
-        });
       }
       
       setError(null);
     } catch (err) {
       setError('Failed to fetch market data');
       console.error(err);
-    } finally {
       setLoading(false);
     }
   }, [useRealAPI]);
@@ -189,34 +175,25 @@ const CryptoDashboard = () => {
   // Progressive data loading function
   const fetchProgressiveData = useCallback(async () => {
     try {
-      setLoadingProgress({
-        show: true,
-        message: 'Loading market data...',
-        progress: 0,
-        type: 'info'
-      });
+      console.log('🚀 Starting progressive data loading over mock data...');
 
       // Step 1: Fetch fast data first (prices, basic crypto data)
-      console.log('📈 Fetching price data...');
-      setLoadingProgress(prev => ({ ...prev, message: 'Fetching live prices...', progress: 10 }));
-      setCardLoading(prev => ({ ...prev, prices: true }));
+      console.log('📈 Fetching live price data...');
       
       const initialData = await apiService.getBTCPrice();
       if (initialData) {
-        setMarketData({
-          bitcoin: { currentPrice: initialData.price },
-          ethereum: { currentPrice: 0 }, // Will be updated by WebSocket
-          solana: { currentPrice: 0 }
-        });
-        setCardLoading(prev => ({ ...prev, prices: false }));
-        setLoadingProgress(prev => ({ ...prev, message: 'Live prices loaded ✅', progress: 20 }));
-        console.log('✅ Price data loaded');
+        setMarketData(prev => ({
+          ...prev,
+          bitcoin: { ...prev.bitcoin, currentPrice: initialData.price }
+        }));
+        // Trigger pulsing animation for price cards
+        setDataUpdated(prev => ({ ...prev, prices: true }));
+        setTimeout(() => setDataUpdated(prev => ({ ...prev, prices: false })), 2000);
+        console.log('✅ Live price data loaded and updated');
       }
 
       // Step 2: Fetch BTC analysis (medium speed)
       console.log('📊 Fetching BTC analysis...');
-      setLoadingProgress(prev => ({ ...prev, message: 'Loading BTC analysis...', progress: 30 }));
-      setCardLoading(prev => ({ ...prev, btc: true }));
       
       try {
         const btcAnalysis = await apiService.getBTCAnalysis();
@@ -225,20 +202,17 @@ const CryptoDashboard = () => {
             ...prev,
             bitcoin: { ...prev?.bitcoin, ...btcAnalysis }
           }));
-          setCardLoading(prev => ({ ...prev, btc: false }));
-          setLoadingProgress(prev => ({ ...prev, message: 'BTC analysis loaded ✅', progress: 40 }));
-          console.log('✅ BTC analysis loaded');
+          // Trigger pulsing animation for BTC chart
+          setDataUpdated(prev => ({ ...prev, btc: true }));
+          setTimeout(() => setDataUpdated(prev => ({ ...prev, btc: false })), 2000);
+          console.log('✅ BTC analysis loaded and updated');
         }
       } catch (error) {
-        console.warn('⚠️ BTC analysis failed, showing available data:', error);
-        setCardLoading(prev => ({ ...prev, btc: false }));
-        setLoadingProgress(prev => ({ ...prev, message: 'BTC analysis failed, using fallback ⚠️', progress: 40 }));
+        console.warn('⚠️ BTC analysis failed, keeping mock data:', error);
       }
 
       // Step 3: Fetch RSI and DXY data (parallel)
       console.log('📈 Fetching RSI and DXY data...');
-      setLoadingProgress(prev => ({ ...prev, message: 'Loading technical indicators...', progress: 50 }));
-      setCardLoading(prev => ({ ...prev, rsi: true, dxy: true }));
       
       const [rsiData, dxyData] = await Promise.allSettled([
         apiService.getRSI('BTC'),
@@ -250,24 +224,25 @@ const CryptoDashboard = () => {
           ...prev,
           rsi: rsiData.value
         }));
-        console.log('✅ RSI data loaded');
+        // Trigger pulsing animation for RSI cards
+        setDataUpdated(prev => ({ ...prev, rsi: true }));
+        setTimeout(() => setDataUpdated(prev => ({ ...prev, rsi: false })), 2000);
+        console.log('✅ RSI data loaded and updated');
       }
-      setCardLoading(prev => ({ ...prev, rsi: false }));
 
       if (dxyData.status === 'fulfilled') {
         setMarketData(prev => ({
           ...prev,
           dxy: dxyData.value
         }));
-        console.log('✅ DXY data loaded');
+        // Trigger pulsing animation for DXY chart
+        setDataUpdated(prev => ({ ...prev, dxy: true }));
+        setTimeout(() => setDataUpdated(prev => ({ ...prev, dxy: false })), 2000);
+        console.log('✅ DXY data loaded and updated');
       }
-      setCardLoading(prev => ({ ...prev, dxy: false }));
-      setLoadingProgress(prev => ({ ...prev, message: 'Technical indicators loaded ✅', progress: 60 }));
 
       // Step 4: Fetch funding rates (medium speed)
       console.log('💰 Fetching funding rates...');
-      setLoadingProgress(prev => ({ ...prev, message: 'Loading funding rates...', progress: 70 }));
-      setCardLoading(prev => ({ ...prev, funding: true }));
       
       try {
         const fundingData = await apiService.getFundingRates();
@@ -276,19 +251,17 @@ const CryptoDashboard = () => {
             ...prev,
             fundingRates: fundingData
           }));
-          console.log('✅ Funding rates loaded');
-          setLoadingProgress(prev => ({ ...prev, message: 'Funding rates loaded ✅', progress: 80 }));
+          // Trigger pulsing animation for funding rates card
+          setDataUpdated(prev => ({ ...prev, funding: true }));
+          setTimeout(() => setDataUpdated(prev => ({ ...prev, funding: false })), 2000);
+          console.log('✅ Funding rates loaded and updated');
         }
       } catch (error) {
-        console.warn('⚠️ Funding rates failed, showing available data:', error);
-        setLoadingProgress(prev => ({ ...prev, message: 'Funding rates failed, using fallback ⚠️', progress: 80 }));
+        console.warn('⚠️ Funding rates failed, keeping mock data:', error);
       }
-      setCardLoading(prev => ({ ...prev, funding: false }));
 
       // Step 5: Fetch ETF data (slowest, load last)
       console.log('🏦 Fetching ETF flow data (may take up to 60s)...');
-      setLoadingProgress(prev => ({ ...prev, message: 'Loading ETF data (may take 60s)...', progress: 85 }));
-      setCardLoading(prev => ({ ...prev, etf: true }));
       
       try {
         const etfData = await apiService.getETFFlows();
@@ -297,43 +270,22 @@ const CryptoDashboard = () => {
             ...prev,
             etfFlows: etfData
           }));
-          console.log('✅ ETF data loaded');
-          setLoadingProgress(prev => ({ ...prev, message: 'ETF data loaded ✅', progress: 100, type: 'success' }));
+          // Trigger pulsing animation for ETF chart
+          setDataUpdated(prev => ({ ...prev, etf: true }));
+          setTimeout(() => setDataUpdated(prev => ({ ...prev, etf: false })), 2000);
+          console.log('✅ ETF data loaded and updated');
         }
       } catch (error) {
-        console.warn('⚠️ ETF data failed, using mock data:', error);
-        // Provide fallback ETF data
-        const mockETF = await mockDataService.getETFFlows();
-        setMarketData(prev => ({
-          ...prev,
-          etfFlows: mockETF.data
-        }));
-        console.log('🎭 ETF fallback data loaded');
-        setLoadingProgress(prev => ({ ...prev, message: 'ETF data failed, using mock data 🎭', progress: 100, type: 'warning' }));
+        console.warn('⚠️ ETF data failed, keeping mock data:', error);
+        // Keep the existing mock data, no update needed
       }
-      setCardLoading(prev => ({ ...prev, etf: false }));
 
-      console.log('🎉 All data loading completed!');
-      
-      // Hide progress after a short delay
-      setTimeout(() => {
-        setLoadingProgress(prev => ({ ...prev, show: false }));
-      }, 3000);
+      console.log('🎉 All progressive data loading completed!');
 
     } catch (error) {
       console.error('❌ Progressive data loading failed:', error);
-      // Fallback to mock data if all else fails
-      const fallbackData = await mockDataService.getAllMarketData();
-      setMarketData(fallbackData);
-      setCardLoading({
-        prices: false,
-        btc: false,
-        dxy: false,
-        etf: false,
-        rsi: false,
-        funding: false
-      });
-      console.log('🎭 Fallback to mock data completed');
+      // Mock data is already loaded, so we're good
+      console.log('🎭 Continuing with mock data due to API failure');
     }
   }, []);
 
@@ -392,7 +344,7 @@ const CryptoDashboard = () => {
 
   // Enhanced Bitcoin chart with Moving Averages - Professional Trader Grade
   const getBitcoinChartOptions = () => {
-    if (!marketData?.bitcoin?.prices || cardLoading.btc) {
+    if (!marketData?.bitcoin?.prices) {
       return {
         series: [],
         options: getLoadingOptions('BTC Price with Moving Averages')
@@ -558,7 +510,7 @@ const CryptoDashboard = () => {
 
 //  DXY Chart 
 const getDXYChartOptions = () => {
-  if (!marketData?.dxy?.prices || cardLoading.dxy) {
+  if (!marketData?.dxy?.prices) {
     return {
       series: [],
       options: {
@@ -672,7 +624,7 @@ const getDXYChartOptions = () => {
 
   // BTC ETF Flows Chart - Bar Chart with Negative Values
   const getETFFlowsOptions = () => {
-    if (!marketData?.etfFlows?.btcFlows || cardLoading.etf) {
+    if (!marketData?.etfFlows?.btcFlows) {
       return {
         series: [],
         options: {
@@ -1063,11 +1015,13 @@ const FundingRatesCard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
         {/* BTC RSI with Progressive Loading */}
         <ProgressiveLoader
-          isLoading={cardLoading.rsi}
+          isLoading={false}
           hasData={marketData?.bitcoin?.rsi || marketData?.rsi}
           skeleton={<MetricCardSkeleton />}
         >
-          <div className={`${colors.bg.card} rounded-lg p-6 border ${colors.border.primary} hover:border-[#fbc318] transition-all duration-300 hover:shadow-lg hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform`}>
+          <div className={`${colors.bg.card} rounded-lg p-6 border ${colors.border.primary} hover:border-[#fbc318] transition-all duration-300 hover:shadow-lg hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform ${
+            dataUpdated.rsi ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
+          }`}>
             <MultiRSIDisplay 
               rsiData={marketData?.bitcoin?.rsi || marketData?.rsi} 
               symbol="BTC"
@@ -1078,11 +1032,13 @@ const FundingRatesCard = () => {
         
         {/* ETH RSI with Progressive Loading */}
         <ProgressiveLoader
-          isLoading={cardLoading.rsi}
+          isLoading={false}
           hasData={marketData?.ethereum?.rsi}
           skeleton={<MetricCardSkeleton />}
         >
-          <div className={`${colors.bg.card} rounded-lg p-6 border ${colors.border.primary} hover:border-blue-500 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform`}>
+          <div className={`${colors.bg.card} rounded-lg p-6 border ${colors.border.primary} hover:border-blue-500 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform ${
+            dataUpdated.rsi ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
+          }`}>
             <MultiRSIDisplay 
               rsiData={marketData?.ethereum?.rsi} 
               symbol="ETH"
@@ -1166,7 +1122,9 @@ const PriceCards = () => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
       {/* Bitcoin Card */}
-      <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-[#fbc318] transition-all duration-300 ${colors.shadow.card} hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform`}>
+      <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-[#fbc318] transition-all duration-300 ${colors.shadow.card} hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform ${
+        dataUpdated.prices ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
+      }`}>
         <div className="flex items-center space-x-3 mb-3">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
             <div className="text-orange-500 text-2xl font-bold">₿</div>
@@ -1186,7 +1144,9 @@ const PriceCards = () => {
       </div>
 
       {/* Ethereum Card */}
-      <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-blue-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform`}>
+      <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-blue-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform ${
+        dataUpdated.prices ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
+      }`}>
         <div className="flex items-center space-x-3 mb-3">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
             <div className="text-blue-500 text-2xl font-bold">Ξ</div>
@@ -1206,7 +1166,9 @@ const PriceCards = () => {
       </div>
 
       {/* Solana Card */}
-      <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-purple-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-purple-500/20 hover:scale-[1.01] transition-transform`}>
+      <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-purple-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-purple-500/20 hover:scale-[1.01] transition-transform ${
+        dataUpdated.prices ? 'animate-pulse ring-4 ring-purple-500/50 shadow-2xl shadow-purple-500/30' : ''
+      }`}>
         <div className="flex items-center space-x-3 mb-3">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
             <div className="text-purple-500 text-2xl font-bold">◎</div>
@@ -1246,15 +1208,6 @@ const PriceCards = () => {
 
   return (
     <div className={`min-h-screen ${colors.bg.primary} ${colors.text.primary} flex flex-col md:flex-row transition-colors duration-300`}>
-      {/* Loading Progress Toast */}
-      <LoadingToast
-        isVisible={loadingProgress.show}
-        message={loadingProgress.message}
-        progress={loadingProgress.progress}
-        type={loadingProgress.type}
-        onClose={() => setLoadingProgress(prev => ({ ...prev, show: false }))}
-        duration={0} // Manual close only
-      />
       {/* Enhanced Sidebar */}
       <Sidebar 
         isOpen={isSidebarOpen} 
@@ -1303,7 +1256,9 @@ const PriceCards = () => {
           {/* Column 1: Bitcoin Chart + RSI Indicators */}
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
             {/* Bitcoin Chart */}
-            <div className={`${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-[#fbc318] transition-all duration-300 ${colors.shadow.card} hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform`}>
+            <div className={`${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-[#fbc318] transition-all duration-300 ${colors.shadow.card} hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform ${
+              dataUpdated.btc ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
+            }`}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className={`text-lg font-semibold ${colors.text.primary}`}>BTC Price with Moving Averages</h3>
                 <Tooltip
@@ -1336,7 +1291,9 @@ const PriceCards = () => {
          {/* Column 2: DXY + Funding Rates + Volume Analysis */}
   <div className="space-y-4 md:space-y-6">
     {/* DXY Chart */}
-    <div className={`${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-green-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-green-500/20 hover:scale-[1.01] transition-transform flex flex-col`}>
+    <div className={`${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-green-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-green-500/20 hover:scale-[1.01] transition-transform flex flex-col ${
+      dataUpdated.dxy ? 'animate-pulse ring-4 ring-green-500/50 shadow-2xl shadow-green-500/30' : ''
+    }`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className={`text-lg font-semibold ${colors.text.primary}`}>US Dollar Index (DXY)</h3>
         <Tooltip
@@ -1375,8 +1332,12 @@ const PriceCards = () => {
     </div>
 
     {/* Perpetual Funding Rates Card */}
-    <div className="hover:scale-[1.01] transition-transform duration-300">
-      <FundingRatesCard />
+    <div className={`hover:scale-[1.01] transition-transform duration-300 ${
+      dataUpdated.funding ? 'animate-pulse' : ''
+    }`}>
+      <div className={dataUpdated.funding ? 'ring-4 ring-cyan-500/50 shadow-2xl shadow-cyan-500/30 rounded-lg' : ''}>
+        <FundingRatesCard />
+      </div>
     </div>
   </div>
         </div>
@@ -1384,15 +1345,14 @@ const PriceCards = () => {
         {/* ETF Flows and Volume Analysis Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
           {/* ETF Flows Chart - Takes 2 columns with Progressive Loading */}
-          {cardLoading.etf ? (
-            <ETFFlowsSkeleton />
-          ) : (
-            <ProgressiveLoader
-              isLoading={cardLoading.etf}
-              hasData={marketData?.etfFlows?.btcFlows}
-              skeleton={<ETFFlowsSkeleton />}
-            >
-              <div className={`lg:col-span-2 ${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-blue-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform`}>
+          <ProgressiveLoader
+            isLoading={false}
+            hasData={marketData?.etfFlows?.btcFlows}
+            skeleton={<ETFFlowsSkeleton />}
+          >
+              <div className={`lg:col-span-2 ${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-blue-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform ${
+                dataUpdated.etf ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
+              }`}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className={`text-lg font-semibold ${colors.text.primary}`}>BTC Spot ETF Net Flows</h3>
                   <Tooltip
@@ -1438,7 +1398,6 @@ const PriceCards = () => {
                 </div>
               </div>
             </ProgressiveLoader>
-          )}
 
           {/* Volume Analysis Card - Takes 1 column */}
           <div className={`${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-purple-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-purple-500/20 hover:scale-[1.01] transition-transform`}>
