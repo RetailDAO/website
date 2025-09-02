@@ -278,9 +278,13 @@ const CryptoDashboard = () => {
         const etfData = await apiService.getETFFlows();
         console.log('🔍 ETF API response:', etfData);
         if (etfData) {
+          // Extract data from API response structure  
+          const etfProcessed = etfData?.success && etfData?.data ? etfData.data : etfData;
+          console.log('🔍 ETF processed data:', etfProcessed);
+          
           setMarketData(prev => ({
             ...prev,
-            etfFlows: etfData
+            etfFlows: etfProcessed
           }));
           // Trigger pulsing animation for ETF chart
           setDataUpdated(prev => ({ ...prev, etf: true }));
@@ -547,7 +551,10 @@ const CryptoDashboard = () => {
 //  DXY Chart 
 const getDXYChartOptions = () => {
   console.log('🔍 DXY Chart - marketData.dxy:', marketData?.dxy);
-  if (!marketData?.dxy?.prices) {
+  // Check for different data structures: mock data has .prices, API has .historical
+  const dxyPrices = marketData?.dxy?.prices || marketData?.dxy?.historical;
+  console.log('🔍 DXY prices array:', dxyPrices);
+  if (!dxyPrices || !Array.isArray(dxyPrices) || dxyPrices.length === 0) {
     return {
       series: [],
       options: {
@@ -564,9 +571,9 @@ const getDXYChartOptions = () => {
   return {
     series: [{
       name: 'DXY',
-      data: marketData.dxy.prices.map(item => [
-        item.timestamp.getTime(),
-        item.price
+      data: dxyPrices.map(item => [
+        new Date(item.timestamp || item.date).getTime(),
+        item.price || item.value
       ])
     }],
     options: {
@@ -662,7 +669,10 @@ const getDXYChartOptions = () => {
   // BTC ETF Flows Chart - Bar Chart with Negative Values
   const getETFFlowsOptions = () => {
     console.log('🔍 ETF Chart - marketData.etfFlows:', marketData?.etfFlows);
-    if (!marketData?.etfFlows?.btcFlows) {
+    // Check for different data structures: mock has direct .btcFlows, API might have nested structure
+    const btcFlows = marketData?.etfFlows?.btcFlows || marketData?.etfFlows?.btc_flows || marketData?.etfFlows?.flows?.btc;
+    console.log('🔍 ETF btcFlows array:', btcFlows);
+    if (!btcFlows || !Array.isArray(btcFlows) || btcFlows.length === 0) {
       return {
         series: [],
         options: {
@@ -676,9 +686,9 @@ const getDXYChartOptions = () => {
       };
     }
 
-    const btcData = marketData.etfFlows.btcFlows.map(item => ({
-      x: item.timestamp.getTime(),
-      y: Math.round(item.flow / 1000000) // Convert to millions
+    const btcData = btcFlows.map(item => ({
+      x: new Date(item.timestamp || item.date).getTime(),
+      y: Math.round((item.flow || item.value || item.amount) / 1000000) // Convert to millions
     }));
 
     return {
@@ -1345,7 +1355,7 @@ const PriceCards = () => {
         <div className="flex justify-between">
           <span className={`${colors.text.muted}`}>Current Value:</span>
           <span className={`${colors.text.primary} font-mono`}>
-            {marketData?.dxy?.currentPrice?.toFixed(2) || '102.61'}
+            {(marketData?.dxy?.currentPrice || marketData?.dxy?.current?.value)?.toFixed(2) || '102.61'}
           </span>
         </div>
         <div className="flex justify-between">
