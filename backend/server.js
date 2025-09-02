@@ -70,7 +70,7 @@ server.on('upgrade', (request, socket, head) => {
 const clients = new Set();
 
 wss.on('connection', (ws) => {
-  console.log('📡 New WebSocket client connected');
+  console.log('📡 New WebSocket client connected to /ws/prices');
   clients.add(ws);
 
   // Send initial connection message
@@ -80,8 +80,56 @@ wss.on('connection', (ws) => {
     timestamp: new Date().toISOString()
   }));
 
+  // Handle incoming messages from clients
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log('📨 Price WebSocket message received:', data);
+      
+      switch (data.type) {
+        case 'subscribe':
+          // For the price WebSocket, we don't need explicit subscription
+          // All connected clients automatically receive price updates
+          const response = {
+            type: 'subscription_confirmed',
+            symbols: data.symbols || ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
+            timestamp: new Date().toISOString()
+          };
+          ws.send(JSON.stringify(response));
+          console.log('✅ Price subscription confirmed for symbols:', data.symbols);
+          break;
+          
+        case 'ping':
+          const pong = {
+            type: 'pong',
+            timestamp: new Date().toISOString()
+          };
+          ws.send(JSON.stringify(pong));
+          break;
+          
+        default:
+          console.warn(`⚠️ Unknown message type in price WebSocket: ${data.type}`);
+          const errorResponse = {
+            type: 'error',
+            message: `Price WebSocket: Message type '${data.type}' is not supported. All clients automatically receive price updates.`,
+            timestamp: new Date().toISOString()
+          };
+          ws.send(JSON.stringify(errorResponse));
+          break;
+      }
+    } catch (parseError) {
+      console.error('❌ Error parsing price WebSocket message:', parseError);
+      const errorResponse = {
+        type: 'error',
+        message: 'Invalid message format',
+        timestamp: new Date().toISOString()
+      };
+      ws.send(JSON.stringify(errorResponse));
+    }
+  });
+
   ws.on('close', () => {
-    console.log('📡 WebSocket client disconnected');
+    console.log('📡 WebSocket client disconnected from /ws/prices');
     clients.delete(ws);
   });
 

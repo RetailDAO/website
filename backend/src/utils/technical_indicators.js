@@ -32,11 +32,14 @@ function calculateRSI(prices, period = 14) {
   rsiValues.push(rsi);
 
   // Calculate subsequent RSI values using smoothed averages
+  let currentAvgGain = avgGain;
+  let currentAvgLoss = avgLoss;
+  
   for (let i = period; i < gains.length; i++) {
-    const smoothedAvgGain = (avgGain * (period - 1) + gains[i]) / period;
-    const smoothedAvgLoss = (avgLoss * (period - 1) + losses[i]) / period;
+    currentAvgGain = (currentAvgGain * (period - 1) + gains[i]) / period;
+    currentAvgLoss = (currentAvgLoss * (period - 1) + losses[i]) / period;
     
-    rs = smoothedAvgGain / smoothedAvgLoss;
+    rs = currentAvgLoss === 0 ? 100 : currentAvgGain / currentAvgLoss;
     rsi = 100 - (100 / (1 + rs));
     rsiValues.push(rsi);
   }
