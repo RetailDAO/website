@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Tooltip, { CryptoTooltips } from './Tooltip';
 import { useTheme } from '../context/ThemeContext';
 import { useSymbolIndicators } from '../hooks/useIndicatorData';
@@ -158,7 +158,7 @@ export const LiveRSIDisplay = ({
   const { colors: themeColors } = useTheme();
   
   // Use passed RSI data instead of hook
-  const rsi = rsiData || {};
+  const rsi = useMemo(() => rsiData || {}, [rsiData]);
 
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
 
