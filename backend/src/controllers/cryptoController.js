@@ -85,7 +85,7 @@ class CryptoController {
 
   async getMultipleCryptoAnalysis(req, res) {
     try {
-      const { symbols = 'BTC,ETH,SOL', timeframe = '30D', includeAnalysis = 'true' } = req.query;
+      const { symbols = 'BTC,ETH', timeframe = '30D', includeAnalysis = 'true' } = req.query;
       const symbolArray = symbols.split(',').map(s => s.trim().toUpperCase());
       const cacheKey = `multi_crypto_analysis_${symbols}_${timeframe}_${includeAnalysis}`;
 

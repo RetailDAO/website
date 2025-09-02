@@ -109,8 +109,8 @@ class ApiService {
     return this.request(`/api/v1/btc/ma-ribbon?symbol=${symbol}&timeframe=${timeframe}`);
   }
 
-  // Multi-crypto Analysis (BTC, ETH, SOL)
-  async getMultiCryptoAnalysis(symbols = 'BTC,ETH,SOL', timeframe = '30D', includeAnalysis = 'true') {
+  // Multi-crypto Analysis (BTC, ETH) - SOL price comes from WebSocket only
+  async getMultiCryptoAnalysis(symbols = 'BTC,ETH', timeframe = '30D', includeAnalysis = 'true') {
     const params = new URLSearchParams({ symbols, timeframe, includeAnalysis });
     return this.request(`/api/v1/crypto/multi-analysis?${params}`);
   }

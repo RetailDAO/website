@@ -197,15 +197,14 @@ class CryptoDataService {
     return mapping[timeframe] || 1;
   }
 
-  // Batch method for multiple cryptocurrency data requests with intelligent batching
+  // Optimized batch method - BTC (100D for MAs) and ETH (30D for RSI) only
   async getBatchCryptoData(symbols, timeframe = '1D') {
     const symbolMap = {
       'BTC': 'bitcoin',
       'ETH': 'ethereum',
-      'SOL': 'solana',
       'BITCOIN': 'bitcoin',
-      'ETHEREUM': 'ethereum',
-      'SOLANA': 'solana'
+      'ETHEREUM': 'ethereum'
+      // Removed SOL to reduce API calls
     };
     
     const validSymbols = symbols.filter(symbol => symbolMap[symbol.toUpperCase()]);
@@ -269,26 +268,25 @@ class CryptoDataService {
         return response.data;
       }, `batch_prices_${fetchCoinIdsString}_${timeframe}`);
 
-      // Prepare historical data requests for intelligent batching
-      const requestedDays = this.timeframeToDays(timeframe);
-      // Smart hybrid approach: get 90 days from API, extend with mock data for MAs
-const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free tier limit
-// Removed: requiredDaysForMAs - now using optimized 90-day limit
-      // Limit days to avoid CoinGecko API errors (max 365 days for free tier)
-      const safeDaysLimit = Math.min(minDaysForCalculations, 90); // CoinGecko free tier max
+      // Optimized: Use specific timeframes per asset (BTC: 90d, ETH: 30d)
       
       const historicalRequests = symbolsToFetch.map(symbol => {
         const coinId = symbolMap[symbol.toUpperCase()];
+        
+        // Optimized timeframes: BTC needs 90 days (for 100-day MAs), ETH needs 30 days (for RSI)
+        const optimizedDays = symbol.toUpperCase() === 'BTC' ? 90 : 30;
+        console.log(`📊 Optimized request: ${symbol} using ${optimizedDays} days`);
+        
         return {
-          key: `historical_${coinId}_${timeframe}`,
+          key: `historical_${coinId}_${optimizedDays}d`,
           symbol: symbol,
           coinId: coinId,
           fn: async () => {
             const response = await this.coinGeckoClient.get(`/coins/${coinId}/market_chart`, {
               params: {
                 vs_currency: 'usd',
-                days: safeDaysLimit,
-                interval: safeDaysLimit <= 1 ? 'hourly' : 'daily'
+                days: optimizedDays,
+                interval: optimizedDays <= 1 ? 'hourly' : 'daily'
               }
             });
             return response.data;
