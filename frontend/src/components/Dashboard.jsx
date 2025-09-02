@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import Chart from 'react-apexcharts';
 import mockDataService from '../services/mockDataService';
 import apiService from '../services/api';
-import { MultiRSIDisplay } from './RSIGauge';
+import { LiveRSIDisplay } from './RSIGauge';
 import { useCryptoPriceWebSocket } from '../hooks/useWebSocket';
 import { useTheme } from '../context/ThemeContext';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Tooltip, { CryptoTooltips } from './Tooltip';
-import { MetricCardSkeleton, ETFFlowsSkeleton, ProgressiveLoader } from './SkeletonLoader'; 
+import { ETFFlowsSkeleton, ProgressiveLoader } from './SkeletonLoader'; 
 
 // Custom RetailDAO Loading Animation Component
 const RetailDAOLoader = ({ size = 100, message = "Loading market data..." }) => {
@@ -170,7 +170,7 @@ const CryptoDashboard = () => {
       console.error(err);
       setLoading(false);
     }
-  }, [useRealAPI]);
+  }, [useRealAPI, fetchProgressiveData]);
 
   // Progressive data loading function
   const fetchProgressiveData = useCallback(async () => {
@@ -309,7 +309,7 @@ const CryptoDashboard = () => {
     const interval = setInterval(fetchMarketData, 300000); // Update every 5 minutes
     fetchMarketData();
     return () => clearInterval(interval);
-  }, [useRealAPI, fetchMarketData]); // Re-fetch when API mode changes
+  }, [fetchMarketData]); // Re-fetch when API mode changes
 
   const testRSIScenario = async (scenario) => {
     try {
@@ -1025,46 +1025,6 @@ const FundingRatesCard = () => {
   );
 };
 
-  // Enhanced RSI Indicators with pill-shaped gauges (Unchanged as per request)
-  const EnhancedRSIIndicators = () => {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        {/* BTC RSI with Progressive Loading */}
-        <ProgressiveLoader
-          isLoading={false}
-          hasData={marketData?.bitcoin?.rsi || marketData?.rsi}
-          skeleton={<MetricCardSkeleton />}
-        >
-          <div className={`${colors.bg.card} rounded-lg p-6 border ${colors.border.primary} hover:border-[#fbc318] transition-all duration-300 hover:shadow-lg hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform ${
-            dataUpdated.rsi ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
-          }`}>
-            <MultiRSIDisplay 
-              rsiData={marketData?.bitcoin?.rsi || marketData?.rsi} 
-              symbol="BTC"
-              theme="orange"
-            />
-          </div>
-        </ProgressiveLoader>
-        
-        {/* ETH RSI with Progressive Loading */}
-        <ProgressiveLoader
-          isLoading={false}
-          hasData={marketData?.ethereum?.rsi}
-          skeleton={<MetricCardSkeleton />}
-        >
-          <div className={`${colors.bg.card} rounded-lg p-6 border ${colors.border.primary} hover:border-blue-500 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform ${
-            dataUpdated.rsi ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
-          }`}>
-            <MultiRSIDisplay 
-              rsiData={marketData?.ethereum?.rsi} 
-              symbol="ETH"
-              theme="blue"
-            />
-          </div>
-        </ProgressiveLoader>
-      </div>
-    );
-  };
 
   // Price Cards 
 const PriceCards = () => {
@@ -1298,9 +1258,29 @@ const PriceCards = () => {
               />
             </div>
             
-            {/* RSI Indicators */}
-            <div>
-              <EnhancedRSIIndicators />
+            {/* RSI Indicators - Using Live WebSocket Data */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+              {/* BTC RSI */}
+              <div className={`${colors.bg.card} rounded-lg p-6 border ${colors.border.primary} hover:border-[#fbc318] transition-all duration-300 hover:shadow-lg hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform ${
+                dataUpdated.rsi ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
+              }`}>
+                <LiveRSIDisplay 
+                  symbol="BTCUSDT" 
+                  theme="orange"
+                  showDataSource={true}
+                />
+              </div>
+              
+              {/* ETH RSI */}
+              <div className={`${colors.bg.card} rounded-lg p-6 border ${colors.border.primary} hover:border-blue-500 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform ${
+                dataUpdated.rsi ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
+              }`}>
+                <LiveRSIDisplay 
+                  symbol="ETHUSDT" 
+                  theme="blue"
+                  showDataSource={true}
+                />
+              </div>
             </div>
           </div>
           
@@ -1361,12 +1341,13 @@ const PriceCards = () => {
         {/* ETF Flows and Volume Analysis Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
           {/* ETF Flows Chart - Takes 2 columns with Progressive Loading */}
-          <ProgressiveLoader
-            isLoading={false}
-            hasData={marketData?.etfFlows?.btcFlows}
-            skeleton={<ETFFlowsSkeleton />}
-          >
-              <div className={`lg:col-span-2 ${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-blue-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform ${
+          <div className="lg:col-span-2">
+            <ProgressiveLoader
+              isLoading={false}
+              hasData={marketData?.etfFlows?.btcFlows}
+              skeleton={<ETFFlowsSkeleton />}
+            >
+              <div className={`${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-blue-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform ${
                 dataUpdated.etf ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
               }`}>
                 <div className="flex items-center justify-between mb-4">
@@ -1414,6 +1395,7 @@ const PriceCards = () => {
                 </div>
               </div>
             </ProgressiveLoader>
+          </div>
 
           {/* Volume Analysis Card - Takes 1 column */}
           <div className={`${colors.bg.card} rounded-xl p-4 md:p-6 ${colors.border.primary} border hover:border-purple-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-purple-500/20 hover:scale-[1.01] transition-transform`}>

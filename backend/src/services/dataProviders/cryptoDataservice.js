@@ -3,6 +3,7 @@ const config = require('../../config/environment');
 const cacheService = require('../cache/cacheService');
 const rateLimitedApi = require('../rateLimitedApi');
 const websocketService = require('../websocket/websocketService');
+const intelligentMockService = require('../cache/intelligentMockService');
 // const { formatCryptoData } = require('../../utils/formatters');
 
 class CryptoDataService {
@@ -30,12 +31,32 @@ class CryptoDataService {
 
   async getBTCData(timeframe = '1D') {
     const cacheKey = `btc_data_${timeframe}`;
+    const dataType = `btc_${timeframe}`;
     
-    // Try cache first
-    const cachedData = await cacheService.get(cacheKey);
-    if (cachedData) {
-      return cachedData;
+    // Use enhanced cache with golden dataset integration
+    const result = await cacheService.getOrFetchWithGolden(
+      cacheKey,
+      () => this.fetchBTCDataFromAPI(timeframe),
+      {
+        dataType: dataType,
+        tier: 'tier2_frequent'
+      }
+    );
+
+    if (result.data) {
+      // Add metadata about data source for transparency
+      result.data.dataSource = result.source;
+      result.data.fresh = result.fresh;
+      if (result.metadata) {
+        result.data.cacheMetadata = result.metadata;
+      }
     }
+
+    return result.data;
+  }
+
+  // Separated API fetching logic for cleaner code
+  async fetchBTCDataFromAPI(timeframe = '1D') {
 
     // Try WebSocket real-time data first for current price
     let currentData = null;
@@ -100,14 +121,6 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA // Always fetch a
         }))
       };
 
-      // Use tiered caching based on timeframe
-      if (timeframe === '1D') {
-        await cacheService.setFrequent(cacheKey, data); // 30 min for intraday
-      } else if (timeframe === '7D') {
-        await cacheService.setStable(cacheKey, data); // 4 hours for weekly
-      } else {
-        await cacheService.setHistorical(cacheKey, data); // 24 hours for longer timeframes
-      }
       console.log(`✅ [CoinGecko] Successfully fetched BTC data for ${timeframe} (${data.historical.length} points)`);
       return data;
 
@@ -117,16 +130,18 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA // Always fetch a
       // Try Binance as fallback for historical data
       try {
         const binanceData = await this.getBTCDataFromBinance(timeframe);
-        await cacheService.setFrequent(cacheKey, binanceData);
         console.log(`✅ [Binance] Serving BTC data for ${timeframe} (${binanceData.historical.length} points)`);
         return binanceData;
       } catch (binanceError) {
         console.error('❌ [Binance] Fallback also failed, using mock data:', binanceError.message);
         
-        // Final fallback to enhanced mock data
-        const mockData = await this.generateEnhancedMockData('BTC', timeframe);
-        await cacheService.set(cacheKey, mockData, 60); // 1 minute cache for mock data
-        console.log(`🎭 [Mock] Serving enhanced mock BTC data for ${timeframe} (${mockData.historical.length} points)`);
+        // Final fallback to intelligent mock data based on golden dataset
+        const mockData = await intelligentMockService.generateIntelligentMockData('BTC', timeframe, {
+          includeRSI: true,
+          includeMA: true,
+          includeVolume: true
+        });
+        console.log(`🧠 [IntelligentMock] Serving realistic mock BTC data for ${timeframe} (${mockData.historical.length} points, confidence: ${mockData.confidence}%)`);
         return mockData;
       }
     }
@@ -324,10 +339,14 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA
             console.log(`📊 Using recent cached data for ${symbol}`);
             results[symbol] = recentCache;
           } else {
-            // Generate enhanced mock data based on any available cached data
-            const mockData = await this.generateEnhancedMockData(symbol, timeframe);
+            // Generate intelligent mock data based on golden dataset
+            const mockData = await intelligentMockService.generateIntelligentMockData(symbol, timeframe, {
+              includeRSI: true,
+              includeMA: true,
+              includeVolume: true
+            });
             results[symbol] = mockData;
-            console.log(`🎭 [Mock] Generated enhanced mock data for ${symbol}`);
+            console.log(`🧠 [IntelligentMock] Generated realistic mock data for ${symbol} (confidence: ${mockData.confidence}%)`);
           }
         }
       }
@@ -343,7 +362,11 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA
       // Generate mock data for any symbols we don't have
       for (const symbol of symbolsToFetch) {
         if (!results[symbol]) {
-          results[symbol] = await this.generateEnhancedMockData(symbol, timeframe);
+          results[symbol] = await intelligentMockService.generateIntelligentMockData(symbol, timeframe, {
+            includeRSI: true,
+            includeMA: true,
+            includeVolume: true
+          });
         }
       }
       
@@ -432,10 +455,14 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA
     } catch (error) {
       console.error(`❌ [CoinGecko] Error fetching ${symbol} data, using fallback:`, error.message);
       
-      // Generate enhanced mock data based on recent cached data
-      const mockData = await this.generateEnhancedMockData(symbol, timeframe);
+      // Generate intelligent mock data based on golden dataset
+      const mockData = await intelligentMockService.generateIntelligentMockData(symbol, timeframe, {
+        includeRSI: true,
+        includeMA: true,
+        includeVolume: true
+      });
       await cacheService.set(cacheKey, mockData, 60); // 1 minute cache for mock data
-      console.log(`🎭 [Mock] Serving enhanced mock ${symbol} data for ${timeframe} (${mockData.historical.length} points)`);
+      console.log(`🧠 [IntelligentMock] Serving realistic mock ${symbol} data for ${timeframe} (${mockData.historical.length} points, confidence: ${mockData.confidence}%)`);
       return mockData;
     }
   }
@@ -521,11 +548,15 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA
   
   // Legacy method for backward compatibility
   async generateMockCryptoData(symbol, timeframe) {
-    // Call enhanced version with proper async handling
+    // Call intelligent mock service with proper async handling
     try {
-      return await this.generateEnhancedMockData(symbol, timeframe);
+      return await intelligentMockService.generateIntelligentMockData(symbol, timeframe, {
+        includeRSI: true,
+        includeMA: true,
+        includeVolume: true
+      });
     } catch (error) {
-      console.error(`Error generating enhanced mock data for ${symbol}, falling back to simple mock:`, error.message);
+      console.error(`Error generating intelligent mock data for ${symbol}, falling back to simple mock:`, error.message);
       
       // Simple fallback mock generation
       const priceMap = {

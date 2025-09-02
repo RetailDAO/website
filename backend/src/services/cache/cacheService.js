@@ -1,5 +1,6 @@
 const { createRedisConnection } = require('../../config/database');
 const config = require('../../config/environment');
+const goldenDatasetService = require('./goldenDatasetService');
 
 class CacheService {
   constructor() {
@@ -291,6 +292,184 @@ class CacheService {
     this.metrics.hits = 0;
     this.metrics.misses = 0;
     this.metrics.errors = 0;
+  }
+
+  // Enhanced cache-aside pattern with golden dataset integration
+  async getOrFetchWithGolden(key, fetchFunction, options = {}) {
+    const {
+      ttl = null,
+      tier = 'tier2_frequent',
+      dataType = null, // For golden dataset storage
+      enableGolden = true
+    } = options;
+
+    try {
+      // 1. Try regular cache first (fastest)
+      let data = await this.get(key);
+      if (data !== null) {
+        return { data, source: 'cache', fresh: true };
+      }
+
+      // 2. Try golden dataset if enabled and dataType provided
+      if (enableGolden && dataType) {
+        const goldenResult = await goldenDatasetService.retrieve(dataType, ['fresh', 'stale']);
+        if (goldenResult) {
+          // Store golden data in regular cache for faster future access
+          if (ttl) {
+            await this.set(key, goldenResult.data, ttl);
+          } else {
+            await this.setTiered(key, goldenResult.data, tier);
+          }
+          
+          console.log(`🥇 Serving from golden dataset: ${dataType} (${goldenResult.metadata.tier} tier)`);
+          return {
+            data: goldenResult.data,
+            source: 'golden',
+            fresh: goldenResult.metadata.tier === 'fresh',
+            metadata: goldenResult.metadata
+          };
+        }
+      }
+
+      // 3. Fetch fresh data from API
+      console.log(`🌐 Fetching fresh data for key: ${key}`);
+      data = await fetchFunction();
+
+      if (data !== null && data !== undefined) {
+        // Store in regular cache
+        if (ttl) {
+          await this.set(key, data, ttl);
+        } else {
+          await this.setTiered(key, data, tier);
+        }
+
+        // Store in golden dataset if enabled
+        if (enableGolden && dataType) {
+          await goldenDatasetService.store(dataType, data, 'fresh');
+        }
+
+        return { data, source: 'api', fresh: true };
+      }
+
+      // 4. Fallback to archived golden dataset if available
+      if (enableGolden && dataType) {
+        const archivedResult = await goldenDatasetService.retrieve(dataType, ['archived', 'fallback']);
+        if (archivedResult) {
+          console.log(`📦 Fallback to archived golden dataset: ${dataType} (${archivedResult.metadata.tier} tier)`);
+          return {
+            data: archivedResult.data,
+            source: 'golden_fallback',
+            fresh: false,
+            metadata: archivedResult.metadata
+          };
+        }
+      }
+
+      return { data: null, source: 'none', fresh: false };
+
+    } catch (error) {
+      this.metrics.errors++;
+      console.error('❌ Enhanced cache-aside pattern error:', error.message);
+      
+      // Emergency fallback to any available golden data
+      if (enableGolden && dataType) {
+        try {
+          const emergencyResult = await goldenDatasetService.retrieve(dataType, ['fresh', 'stale', 'archived', 'fallback']);
+          if (emergencyResult) {
+            console.log(`🚨 Emergency fallback to golden dataset: ${dataType}`);
+            return {
+              data: emergencyResult.data,
+              source: 'golden_emergency',
+              fresh: false,
+              metadata: emergencyResult.metadata
+            };
+          }
+        } catch (goldenError) {
+          console.error('❌ Golden dataset emergency fallback failed:', goldenError.message);
+        }
+      }
+
+      // Final fallback - try to fetch data directly
+      try {
+        const data = await fetchFunction();
+        if (data !== null && data !== undefined) {
+          // Still try to store in golden dataset for future use
+          if (enableGolden && dataType) {
+            await goldenDatasetService.store(dataType, data, 'fresh');
+          }
+          return { data, source: 'api_direct', fresh: true };
+        }
+      } catch (fetchError) {
+        console.error('❌ Direct fetch also failed:', fetchError.message);
+      }
+
+      throw new Error(`All cache strategies failed for key: ${key}`);
+    }
+  }
+
+  // Batch store successful API responses in golden dataset
+  async storeMultipleInGolden(dataMap) {
+    try {
+      const results = {};
+      for (const [dataType, data] of Object.entries(dataMap)) {
+        if (data !== null && data !== undefined) {
+          results[dataType] = await goldenDatasetService.store(dataType, data, 'fresh');
+        }
+      }
+      return results;
+    } catch (error) {
+      console.error('❌ Batch golden dataset storage failed:', error.message);
+      return {};
+    }
+  }
+
+  // Get cache and golden dataset combined health status
+  async getEnhancedHealth() {
+    try {
+      const cacheHealth = await this.healthCheck();
+      const goldenStats = await goldenDatasetService.getStats();
+      
+      return {
+        cache: cacheHealth,
+        goldenDataset: {
+          status: goldenStats.error ? 'degraded' : 'healthy',
+          ...goldenStats
+        },
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        cache: { status: 'degraded', error: error.message },
+        goldenDataset: { status: 'degraded', error: error.message },
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  // Periodic maintenance for golden dataset
+  async performMaintenance() {
+    try {
+      console.log('🔧 Performing cache maintenance...');
+      
+      // Clean up memory cache
+      this.cleanupMemoryCache();
+      
+      // Clean up golden dataset
+      const cleanedCount = await goldenDatasetService.cleanup();
+      
+      // Get updated stats
+      const stats = await this.getEnhancedHealth();
+      
+      console.log('✅ Cache maintenance completed');
+      return {
+        memoryEntriesCleared: this.memoryCache.size,
+        goldenEntriesProcessed: cleanedCount,
+        health: stats
+      };
+    } catch (error) {
+      console.error('❌ Cache maintenance failed:', error.message);
+      return { error: error.message };
+    }
   }
 
   // Health check method

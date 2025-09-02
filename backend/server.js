@@ -148,6 +148,32 @@ indicatorWss.on('connection', (ws, req) => {
 
 console.log('📊 Indicator streaming WebSocket server initialized on /ws/indicators');
 
+// ========== CACHE AND GOLDEN DATASET MAINTENANCE ==========
+
+// Initialize cache maintenance
+const cacheService = require('./src/services/cache/cacheService');
+
+// Perform initial cache health check and setup
+(async () => {
+  try {
+    const health = await cacheService.getEnhancedHealth();
+    console.log('📋 Cache system health check:', health);
+    
+    // Setup periodic cache maintenance (every 30 minutes)
+    setInterval(async () => {
+      try {
+        await cacheService.performMaintenance();
+      } catch (error) {
+        console.error('❌ Periodic cache maintenance failed:', error.message);
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+    
+    console.log('✅ Cache maintenance system initialized');
+  } catch (error) {
+    console.error('❌ Failed to initialize cache maintenance:', error.message);
+  }
+})();
+
 // Initialize indicator streaming on startup
 setTimeout(async () => {
   try {

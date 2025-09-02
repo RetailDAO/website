@@ -1,0 +1,77 @@
+{
+  "btc_1D": {
+    "data": {
+      "current": {
+        "price": 67500,
+        "change24h": 2.5,
+        "volume24h": 25000000000,
+        "marketCap": 1330000000000
+      },
+      "historical": [
+        {
+          "timestamp": "2025-09-01T03:23:40.071Z",
+          "price": 66000
+        },
+        {
+          "timestamp": "2025-09-01T15:23:40.071Z",
+          "price": 66800
+        },
+        {
+          "timestamp": "2025-09-02T03:23:40.071Z",
+          "price": 67500
+        }
+      ],
+      "dataSource": "test_api"
+    },
+    "timestamp": "2025-09-02T03:23:40.072Z",
+    "tier": "stale",
+    "expiresAt": "2025-09-02T04:31:25.571Z",
+    "source": "api_success",
+    "dataPoints": 4
+  },
+  "btc_30D": {
+    "data": {
+      "current": {
+        "price": 67850,
+        "change24h": 3.2,
+        "volume24h": 28000000000,
+        "marketCap": 1340000000000
+      },
+      "historical": [
+        {
+          "timestamp": "2025-08-03T03:30:43.056Z",
+          "price": 65000
+        },
+        {
+          "timestamp": "2025-08-08T03:30:43.057Z",
+          "price": 66200
+        },
+        {
+          "timestamp": "2025-08-13T03:30:43.057Z",
+          "price": 64800
+        },
+        {
+          "timestamp": "2025-08-18T03:30:43.057Z",
+          "price": 67100
+        },
+        {
+          "timestamp": "2025-08-23T03:30:43.057Z",
+          "price": 68500
+        },
+        {
+          "timestamp": "2025-08-28T03:30:43.057Z",
+          "price": 67200
+        },
+        {
+          "timestamp": "2025-09-02T03:30:43.057Z",
+          "price": 67850
+        }
+      ]
+    },
+    "timestamp": "2025-09-02T03:30:43.059Z",
+    "tier": "fresh",
+    "expiresAt": "2025-09-02T03:35:43.059Z",
+    "source": "api_success",
+    "dataPoints": 8
+  }
+}
