@@ -58,11 +58,14 @@ class RateLimitedApiService {
       const existingRequest = this.pendingRequests.get(requestKey);
       if (existingRequest) {
         console.log(`[coingecko] Reusing pending request for: ${requestKey}`);
-        return existingRequest;
+        return existingRequest.catch(() => null); // Handle errors gracefully
       }
     }
     
-    const requestPromise = this.makeRequest('coingecko', requestFn);
+    const requestPromise = this.makeRequest('coingecko', requestFn).catch(error => {
+      console.log(`[coingecko] Request failed gracefully, will use fallback data`);
+      return null; // Return null instead of throwing for graceful degradation
+    });
     
     // Store pending request to avoid duplicates
     if (requestKey) {
