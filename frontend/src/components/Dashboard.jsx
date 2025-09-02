@@ -9,12 +9,7 @@ import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Tooltip, { CryptoTooltips } from './Tooltip';
 import { ETFFlowsSkeleton, ProgressiveLoader } from './SkeletonLoader';
-import { 
-  updatePriceHistory, 
-  calculateRealtimeIndicators, 
-  getCurrentRSIValues,
-  getCurrentMAValues 
-} from '../utils/calculations'; 
+ 
 
 // Custom RetailDAO Loading Animation Component
 const RetailDAOLoader = ({ size = 100, message = "Loading market data..." }) => {
@@ -113,15 +108,8 @@ const CryptoDashboard = () => {
   const [useRealAPI, setUseRealAPI] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Price history for real-time calculations
-  const [priceHistory, setPriceHistory] = useState({
-    bitcoin: [],
-    ethereum: [],
-    solana: []
-  });
-  
-  // Real-time calculated indicators
-  const [calculatedIndicators, setCalculatedIndicators] = useState({});
+  // Simple price update tracking for pulsating effects
+  const [priceUpdates, setPriceUpdates] = useState({});
   
   const [dataUpdated, setDataUpdated] = useState({
     prices: false,
@@ -135,9 +123,9 @@ const CryptoDashboard = () => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // WebSocket integration for real-time price updates
+  // Simplified WebSocket handler for price cards only
   const handlePriceUpdate = useCallback((symbol, priceData) => {
-    console.log('🔄 WebSocket price update received:', symbol, priceData);
+    console.log('💰 WebSocket price update received:', symbol, priceData);
     
     let symbolKey;
     if (symbol.toLowerCase() === 'btcusdt') {
@@ -151,30 +139,7 @@ const CryptoDashboard = () => {
       return;
     }
 
-    // Update price history for client-side calculations
-    setPriceHistory(prev => {
-      const updated = {
-        ...prev,
-        [symbolKey]: updatePriceHistory(prev[symbolKey], {
-          price: priceData.price,
-          timestamp: priceData.timestamp || new Date()
-        })
-      };
-
-      // Calculate real-time indicators if we have enough data
-      if (updated[symbolKey].length >= 14) {
-        const indicators = calculateRealtimeIndicators(updated[symbolKey]);
-        setCalculatedIndicators(prevIndicators => ({
-          ...prevIndicators,
-          [symbolKey]: indicators
-        }));
-        console.log(`📊 Updated indicators for ${symbolKey}:`, indicators);
-      }
-
-      return updated;
-    });
-
-    // Update market data with new price
+    // Update market data with new price for price cards only
     setMarketData(prevData => {
       if (!prevData) return prevData;
       
@@ -191,7 +156,17 @@ const CryptoDashboard = () => {
       };
     });
 
-    // Trigger visual update animation
+    // Store price update for pulsating effect
+    setPriceUpdates(prev => ({
+      ...prev,
+      [symbolKey]: {
+        price: priceData.price,
+        timestamp: Date.now(),
+        change24h: priceData.change24h
+      }
+    }));
+
+    // Trigger pulsating animation for price cards
     setDataUpdated(prev => ({ ...prev, prices: true }));
     setTimeout(() => setDataUpdated(prev => ({ ...prev, prices: false })), 2000);
   }, []);
@@ -386,26 +361,7 @@ const CryptoDashboard = () => {
       console.log('🎭 Initial mock data loaded for instant UX');
       setMarketData(mockData);
       
-      // Initialize price history from mock data for calculations
-      if (mockData.bitcoin?.prices) {
-        setPriceHistory({
-          bitcoin: mockData.bitcoin.prices || [],
-          ethereum: mockData.ethereum?.prices || [],
-          solana: mockData.solana?.prices || []
-        });
-        
-        // Calculate initial indicators from historical data
-        ['bitcoin', 'ethereum', 'solana'].forEach(symbol => {
-          if (mockData[symbol]?.prices && mockData[symbol].prices.length >= 14) {
-            const indicators = calculateRealtimeIndicators(mockData[symbol].prices);
-            setCalculatedIndicators(prev => ({
-              ...prev,
-              [symbol]: indicators
-            }));
-            console.log(`📊 Initial indicators calculated for ${symbol}:`, indicators);
-          }
-        });
-      }
+      console.log('📊 Mock data loaded for instant UI display');
       
       setLoading(false); // Show UI immediately with mock data
       
@@ -1152,7 +1108,7 @@ const FundingRatesCard = () => {
 };
 
 
-  // Price Cards 
+  // Enhanced Price Cards with Live WebSocket Updates
 const PriceCards = () => {
   if (!marketData) return null;
 
@@ -1394,7 +1350,7 @@ const PriceCards = () => {
                   symbol="BTC" 
                   theme="orange"
                   showDataSource={true}
-                  rsiData={calculatedIndicators?.bitcoin?.rsi || marketData?.bitcoin?.rsi}
+                  rsiData={marketData?.bitcoin?.rsi}
                   loading={loading}
                   wsConnected={connectionStatus.isConnected}
                 />
@@ -1408,7 +1364,7 @@ const PriceCards = () => {
                   symbol="ETH" 
                   theme="blue"
                   showDataSource={true}
-                  rsiData={calculatedIndicators?.ethereum?.rsi || marketData?.ethereum?.rsi}
+                  rsiData={marketData?.ethereum?.rsi}
                   loading={loading}
                   wsConnected={connectionStatus.isConnected}
                 />

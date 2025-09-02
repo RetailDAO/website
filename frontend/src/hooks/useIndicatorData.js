@@ -1,6 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useIndicatorStream } from './useWebSocket';
-import apiService from '../services/api';
+import { useState, useCallback, useMemo } from 'react';
 
 /**
  * Hook for managing real-time and cached indicator data
@@ -11,12 +9,8 @@ export function useIndicatorData(symbols = ['BTC', 'ETH', 'SOL'], options = {}) 
   const [error, setError] = useState(null);
   const [hybridData, setHybridData] = useState({});
   
-  const {
-    enableRealTimeUpdates = true,
-    fallbackToApi = true,
-    refreshInterval = 5 * 60 * 1000, // 5 minutes
-    requireFreshData = false
-  } = options;
+  // Simplified - no complex options needed
+  const { requireFreshData = false } = options;
 
   // Convert symbols to WebSocket format (BTC -> BTCUSDT)
   const wsSymbols = useMemo(() => {
@@ -26,105 +20,20 @@ export function useIndicatorData(symbols = ['BTC', 'ETH', 'SOL'], options = {}) 
     });
   }, [symbols]);
 
-  // WebSocket connection for real-time updates
-  const {
-    indicators: wsIndicators,
-    isConnected: wsConnected,
-    isHealthy: wsHealthy,
-    getIndicator,
-    isDataFresh
-  } = useIndicatorStream({
-    autoSubscribe: enableRealTimeUpdates ? wsSymbols : [],
-    enableDataMerging: true,
-    fallbackToAPI: fallbackToApi
-  });
+  // Disabled complex indicator WebSocket - using simple price WebSocket only
+  const wsIndicators = {};
+  const wsConnected = false;
+  const wsHealthy = false;
+  const getIndicator = () => null;
+  const isDataFresh = () => false;
 
-  // Fetch initial data from API
+  // Simplified - no initial data fetching, rely on Dashboard's API calls
   const fetchInitialData = useCallback(async () => {
-    if (!fallbackToApi) return;
-    
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Use the multi-analysis endpoint for better performance
-      const symbolsQuery = symbols.join(',');
-      const response = await apiService.getAllMarketDataWithAnalysis();
-      
-      if (response.success) {
-        const apiData = {};
-        
-        symbols.forEach(symbol => {
-          const normalized = symbol.toLowerCase();
-          const data = response.data[normalized];
-          
-          if (data) {
-            const wsSymbol = symbol.toUpperCase().endsWith('USDT') ? 
-              symbol.toUpperCase() : `${symbol.toUpperCase()}USDT`;
-            
-            // Transform API data to match WebSocket format
-            apiData[wsSymbol] = {
-              symbol: wsSymbol,
-              timestamp: new Date().toISOString(),
-              rsi: data.rsi ? transformRSIData(data.rsi) : {},
-              movingAverages: data.movingAverages ? transformMAData(data.movingAverages) : {},
-              current: {
-                price: data.currentPrice,
-                change24h: data.priceChange24h,
-                volume24h: data.volume24h,
-                marketCap: data.marketCap
-              },
-              source: 'api',
-              received: new Date(),
-              cached: true
-            };
-          }
-        });
-        
-        setHybridData(apiData);
-      } else {
-        throw new Error('Failed to fetch market data');
-      }
-    } catch (err) {
-      console.error('Error fetching initial indicator data:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [symbols, fallbackToApi]);
-
-  // Transform API RSI data to match WebSocket format
-  const transformRSIData = useCallback((rsiData) => {
-    const transformed = {};
-    Object.entries(rsiData).forEach(([period, data]) => {
-      if (Array.isArray(data) && data.length > 0) {
-        const latest = data[data.length - 1];
-        transformed[period] = {
-          current: latest.value,
-          timestamp: latest.timestamp,
-          status: latest.value > 70 ? 'Overbought' : latest.value < 30 ? 'Oversold' : 'Normal'
-        };
-      }
-    });
-    return transformed;
+    console.log('📊 useIndicatorData: Relying on Dashboard API calls for RSI/MA data');
+    setLoading(false);
   }, []);
 
-  // Transform API MA data to match WebSocket format
-  const transformMAData = useCallback((maData) => {
-    const transformed = {};
-    Object.entries(maData).forEach(([period, data]) => {
-      if (Array.isArray(data) && data.length > 0) {
-        const latest = data[data.length - 1];
-        transformed[period] = {
-          current: latest.value,
-          timestamp: latest.timestamp,
-          pricePosition: 'unknown', // Will be calculated if current price is available
-          deviation: 0
-        };
-      }
-    });
-    return transformed;
-  }, []);
+  // Removed transformation functions - Dashboard handles API data directly
 
   // Merge WebSocket and API data
   const mergedData = useMemo(() => {
@@ -199,24 +108,10 @@ export function useIndicatorData(symbols = ['BTC', 'ETH', 'SOL'], options = {}) 
     };
   }, [getSymbolIndicators]);
 
-  // Initial data fetch - DISABLED to prevent rate limiting
+  // Disabled - Dashboard handles all API calls
   useEffect(() => {
-    // fetchInitialData(); // Temporarily disabled - data comes from Dashboard
-  }, [fetchInitialData]);
-
-  // Periodic refresh for API data (when WebSocket is not available) - DISABLED to prevent rate limiting
-  useEffect(() => {
-    // if (!fallbackToApi || !refreshInterval) return;
-    
-    // const interval = setInterval(() => {
-    //   if (!wsConnected || !wsHealthy) {
-    //     console.log('WebSocket not healthy, refreshing from API...');
-    //     fetchInitialData();
-    //   }
-    // }, refreshInterval);
-
-    // return () => clearInterval(interval);
-  }, [fallbackToApi, refreshInterval, wsConnected, wsHealthy, fetchInitialData]);
+    console.log('📊 useIndicatorData: Dashboard manages API data, WebSocket only for prices');
+  }, []);
 
   return {
     // Data access
