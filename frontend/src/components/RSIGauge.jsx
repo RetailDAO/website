@@ -146,20 +146,19 @@ const RSIGauge = ({
   );
 };
 
-// Real-time RSI Component using WebSocket data
-export const LiveRSIDisplay = ({ symbol = 'BTC', theme = 'orange', showDataSource = true }) => {
+// Real-time RSI Component using Dashboard data
+export const LiveRSIDisplay = ({ 
+  symbol = 'BTC', 
+  theme = 'orange', 
+  showDataSource = true,
+  rsiData = null, // RSI data from Dashboard
+  loading = false,
+  wsConnected = false 
+}) => {
   const { colors: themeColors } = useTheme();
-  const {
-    rsi,
-    rsiStatus,
-    current,
-    loading,
-    wsConnected,
-    getDataInfo
-  } = useSymbolIndicators(symbol, {
-    enableRealTimeUpdates: true,
-    fallbackToApi: true
-  });
+  
+  // Use passed RSI data instead of hook
+  const rsi = rsiData || {};
 
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
 
@@ -191,7 +190,11 @@ export const LiveRSIDisplay = ({ symbol = 'BTC', theme = 'orange', showDataSourc
   };
 
   const colors = colorThemes[theme] || colorThemes.orange;
-  const dataInfo = getDataInfo(symbol);
+  const dataInfo = {
+    available: rsiData && Object.keys(rsiData).length > 0,
+    source: 'dashboard_api',
+    fresh: true
+  };
 
   if (loading) {
     return (

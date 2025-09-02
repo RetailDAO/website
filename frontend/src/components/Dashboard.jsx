@@ -232,6 +232,7 @@ const CryptoDashboard = () => {
       }
 
       if (dxyData.status === 'fulfilled') {
+        console.log('🔍 DXY API response:', dxyData.value);
         setMarketData(prev => ({
           ...prev,
           dxy: dxyData.value
@@ -240,6 +241,8 @@ const CryptoDashboard = () => {
         setDataUpdated(prev => ({ ...prev, dxy: true }));
         setTimeout(() => setDataUpdated(prev => ({ ...prev, dxy: false })), 2000);
         console.log('✅ DXY data loaded and updated');
+      } else {
+        console.warn('⚠️ DXY data failed:', dxyData.reason);
       }
 
       // Step 4: Fetch funding rates (medium speed)
@@ -266,6 +269,7 @@ const CryptoDashboard = () => {
       
       try {
         const etfData = await apiService.getETFFlows();
+        console.log('🔍 ETF API response:', etfData);
         if (etfData) {
           setMarketData(prev => ({
             ...prev,
@@ -358,10 +362,10 @@ const CryptoDashboard = () => {
       style: { color: darkMode ? '#fff' : '#000', fontSize: '16px', fontWeight: 600 }
     },
     noData: {
-      text: '🔄 Loading data...',
+      text: 'Chart data unavailable',
       style: {
-        color: darkMode ? '#fff' : '#000',
-        fontSize: '18px',
+        color: darkMode ? '#666' : '#999',
+        fontSize: '14px',
         fontFamily: 'Inter, system-ui, sans-serif'
       }
     }
@@ -535,6 +539,7 @@ const CryptoDashboard = () => {
 
 //  DXY Chart 
 const getDXYChartOptions = () => {
+  console.log('🔍 DXY Chart - marketData.dxy:', marketData?.dxy);
   if (!marketData?.dxy?.prices) {
     return {
       series: [],
@@ -649,6 +654,7 @@ const getDXYChartOptions = () => {
 
   // BTC ETF Flows Chart - Bar Chart with Negative Values
   const getETFFlowsOptions = () => {
+    console.log('🔍 ETF Chart - marketData.etfFlows:', marketData?.etfFlows);
     if (!marketData?.etfFlows?.btcFlows) {
       return {
         series: [],
@@ -1274,9 +1280,12 @@ const PriceCards = () => {
                 dataUpdated.rsi ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
               }`}>
                 <LiveRSIDisplay 
-                  symbol="BTCUSDT" 
+                  symbol="BTC" 
                   theme="orange"
                   showDataSource={true}
+                  rsiData={marketData?.rsi}
+                  loading={loading}
+                  wsConnected={connectionStatus.isConnected}
                 />
               </div>
               
@@ -1285,9 +1294,12 @@ const PriceCards = () => {
                 dataUpdated.rsi ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
               }`}>
                 <LiveRSIDisplay 
-                  symbol="ETHUSDT" 
+                  symbol="ETH" 
                   theme="blue"
                   showDataSource={true}
+                  rsiData={marketData?.rsi}
+                  loading={loading}
+                  wsConnected={connectionStatus.isConnected}
                 />
               </div>
             </div>
