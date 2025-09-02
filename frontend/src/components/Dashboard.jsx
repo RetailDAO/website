@@ -158,6 +158,7 @@ const CryptoDashboard = () => {
       console.log('📈 Fetching live multi-crypto data...');
       
       const multiCryptoData = await apiService.getMultiCryptoAnalysis();
+      console.log('🔍 Multi-crypto API response:', multiCryptoData);
       if (multiCryptoData && multiCryptoData.success && multiCryptoData.data) {
         // Update each crypto's data
         Object.entries(multiCryptoData.data).forEach(([symbol, data]) => {
@@ -166,23 +167,30 @@ const CryptoDashboard = () => {
                             symbol.toLowerCase() === 'eth' ? 'ethereum' : 
                             symbol.toLowerCase() === 'sol' ? 'solana' : symbol.toLowerCase();
             
-            setMarketData(prev => ({
-              ...prev,
-              [cryptoKey]: { 
-                ...prev[cryptoKey], 
-                currentPrice: data.currentPrice,
-                priceChangePercent24h: data.priceChangePercent24h,
-                volume24h: data.volume24h,
-                marketCap: data.marketCap,
-                sparkline7d: data.sparkline7d
-              }
-            }));
+            console.log(`🔄 Updating ${cryptoKey} with price:`, data.currentPrice);
+            setMarketData(prev => {
+              const updated = {
+                ...prev,
+                [cryptoKey]: { 
+                  ...prev[cryptoKey], 
+                  currentPrice: data.currentPrice,
+                  priceChangePercent24h: data.priceChangePercent24h,
+                  volume24h: data.volume24h,
+                  marketCap: data.marketCap,
+                  sparkline7d: data.sparkline7d
+                }
+              };
+              console.log(`✅ Updated ${cryptoKey} state:`, updated[cryptoKey]);
+              return updated;
+            });
           }
         });
         // Trigger pulsing animation for price cards
         setDataUpdated(prev => ({ ...prev, prices: true }));
         setTimeout(() => setDataUpdated(prev => ({ ...prev, prices: false })), 2000);
         console.log('✅ Live multi-crypto data loaded and updated');
+      } else {
+        console.warn('⚠️ Multi-crypto data failed or invalid format:', multiCryptoData);
       }
 
       // Step 2: Fetch BTC analysis (medium speed)
@@ -306,9 +314,10 @@ const CryptoDashboard = () => {
   }, [useRealAPI, fetchProgressiveData]);
 
   useEffect(() => {
-    const interval = setInterval(fetchMarketData, 300000); // Update every 5 minutes
-    fetchMarketData();
-    return () => clearInterval(interval);
+    // Disabled interval to prevent rate limiting - user can manually refresh via sidebar
+    // const interval = setInterval(fetchMarketData, 300000); // Update every 5 minutes
+    fetchMarketData(); // Only fetch once on mount
+    // return () => clearInterval(interval);
   }, [fetchMarketData]); // Re-fetch when API mode changes
 
   const testRSIScenario = async (scenario) => {

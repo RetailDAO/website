@@ -199,23 +199,23 @@ export function useIndicatorData(symbols = ['BTC', 'ETH', 'SOL'], options = {}) 
     };
   }, [getSymbolIndicators]);
 
-  // Initial data fetch
+  // Initial data fetch - DISABLED to prevent rate limiting
   useEffect(() => {
-    fetchInitialData();
+    // fetchInitialData(); // Temporarily disabled - data comes from Dashboard
   }, [fetchInitialData]);
 
-  // Periodic refresh for API data (when WebSocket is not available)
+  // Periodic refresh for API data (when WebSocket is not available) - DISABLED to prevent rate limiting
   useEffect(() => {
-    if (!fallbackToApi || !refreshInterval) return;
+    // if (!fallbackToApi || !refreshInterval) return;
     
-    const interval = setInterval(() => {
-      if (!wsConnected || !wsHealthy) {
-        console.log('WebSocket not healthy, refreshing from API...');
-        fetchInitialData();
-      }
-    }, refreshInterval);
+    // const interval = setInterval(() => {
+    //   if (!wsConnected || !wsHealthy) {
+    //     console.log('WebSocket not healthy, refreshing from API...');
+    //     fetchInitialData();
+    //   }
+    // }, refreshInterval);
 
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, [fallbackToApi, refreshInterval, wsConnected, wsHealthy, fetchInitialData]);
 
   return {
