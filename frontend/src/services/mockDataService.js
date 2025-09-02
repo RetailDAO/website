@@ -15,11 +15,11 @@ class MockDataService {
     
     return {
       bitcoin: {
-        currentPrice: 61450.75,
-        priceChange24h: -850.25,
-        priceChangePercent24h: -1.37,
-        marketCap: 1215000000000,
-        volume24h: 28500000000,
+        currentPrice: 110307.00,
+        priceChange24h: 2450.50,
+        priceChangePercent24h: 2.27,
+        marketCap: 2185000000000,
+        volume24h: 45800000000,
         source: 'Mock Data',
         prices: timeSeriesData.btcPrices,
         volumes: timeSeriesData.btcVolumes,
@@ -36,14 +36,24 @@ class MockDataService {
         }
       },
       ethereum: {
-        currentPrice: 2340.85,
-        priceChange24h: 45.20,
-        priceChangePercent24h: 1.97,
-        marketCap: 281500000000,
-        volume24h: 15200000000,
+        currentPrice: 4393.31,
+        priceChange24h: 127.84,
+        priceChangePercent24h: 3.00,
+        marketCap: 528600000000,
+        volume24h: 28500000000,
         source: 'Mock Data',
         prices: timeSeriesData.ethPrices,
         volumes: timeSeriesData.ethVolumes
+      },
+      solana: {
+        currentPrice: 204.09,
+        priceChange24h: 8.45,
+        priceChangePercent24h: 4.32,
+        marketCap: 96800000000,
+        volume24h: 4200000000,
+        source: 'Mock Data',
+        prices: timeSeriesData.solPrices,
+        volumes: timeSeriesData.solVolumes
       },
       retail: {
         currentPrice: 0.0245,
@@ -93,6 +103,8 @@ class MockDataService {
       btcVolumes: [],
       ethPrices: [],
       ethVolumes: [],
+      solPrices: [],
+      solVolumes: [],
       dxyPrices: [],
       ma20: [],
       ma50: [],
@@ -108,6 +120,7 @@ class MockDataService {
     // Base values
     let btcPrice = 45000;
     let ethPrice = 2000;
+    let solPrice = 80; // Starting from lower base to reach current 204
     let dxyPrice = 102;
     
     // Generate daily data points
@@ -126,6 +139,12 @@ class MockDataService {
       const ethTrend = 1 + (Math.sin(i * 0.12) * 0.08);
       ethPrice = ethPrice * (1 + (volatility * ethCorrelation) + ethVolatility) * ethTrend;
       
+      // SOL Price with moderate correlation to ETH and higher volatility
+      const solCorrelation = 0.5; // 50% correlation with BTC
+      const solVolatility = (Math.random() - 0.5) * 0.10; // Higher volatility
+      const solTrend = 1 + (Math.sin(i * 0.15) * 0.12); // Different trend cycle
+      solPrice = solPrice * (1 + (volatility * solCorrelation) + solVolatility) * solTrend;
+      
       // DXY Price with smaller volatility
       const dxyVolatility = (Math.random() - 0.5) * 0.02;
       dxyPrice = dxyPrice * (1 + dxyVolatility);
@@ -138,6 +157,10 @@ class MockDataService {
       const ethBaseVolume = 12000000000;
       const ethVolumeVariation = (Math.random() * 0.8 + 0.6); // 60% to 140% of base
       const ethVolume = ethBaseVolume * ethVolumeVariation;
+      
+      const solBaseVolume = 3500000000;
+      const solVolumeVariation = (Math.random() * 1.0 + 0.5); // 50% to 150% of base
+      const solVolume = solBaseVolume * solVolumeVariation;
       
       // Add price and volume data
       data.btcPrices.push({
@@ -158,6 +181,16 @@ class MockDataService {
       data.ethVolumes.push({
         timestamp: new Date(date),
         volume: ethVolume
+      });
+      
+      data.solPrices.push({
+        timestamp: new Date(date),
+        price: solPrice
+      });
+      
+      data.solVolumes.push({
+        timestamp: new Date(date),
+        volume: solVolume
       });
       
       data.dxyPrices.push({

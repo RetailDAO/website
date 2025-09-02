@@ -121,6 +121,7 @@ const CryptoDashboard = () => {
 
   // WebSocket integration for real-time price updates
   const handlePriceUpdate = useCallback((symbol, priceData) => {
+    console.log('🔄 WebSocket price update received:', symbol, priceData);
     setMarketData(prevData => {
       if (!prevData) return prevData;
       
@@ -132,9 +133,11 @@ const CryptoDashboard = () => {
       } else if (symbol.toLowerCase() === 'solusdt') {
         symbolKey = 'solana';
       } else {
+        console.warn('🚫 Unknown WebSocket symbol:', symbol);
         return prevData;
       }
       
+      console.log(`📈 Updating ${symbolKey} price:`, priceData.price);
       return {
         ...prevData,
         [symbolKey]: {
@@ -233,9 +236,13 @@ const CryptoDashboard = () => {
 
       if (dxyData.status === 'fulfilled') {
         console.log('🔍 DXY API response:', dxyData.value);
+        // Extract data from API response structure
+        const dxyProcessed = dxyData.value?.success && dxyData.value?.data ? dxyData.value.data : dxyData.value;
+        console.log('🔍 DXY processed data:', dxyProcessed);
+        
         setMarketData(prev => ({
           ...prev,
-          dxy: dxyData.value
+          dxy: dxyProcessed
         }));
         // Trigger pulsing animation for DXY chart
         setDataUpdated(prev => ({ ...prev, dxy: true }));

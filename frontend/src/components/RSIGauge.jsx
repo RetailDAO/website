@@ -284,7 +284,7 @@ export const LiveRSIDisplay = ({
           <div className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
           <span>
             Last update: {lastUpdateTime.toLocaleTimeString()}
-            {current?.price && ` • ${symbol} Price: $${current.price.toLocaleString()}`}
+            {/* Price info removed - data comes from Dashboard */}
           </span>
         </div>
       )}
