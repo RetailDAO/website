@@ -149,30 +149,7 @@ const CryptoDashboard = () => {
 
   const { connectionStatus } = useCryptoPriceWebSocket(handlePriceUpdate);
 
-  const fetchMarketData = useCallback(async () => {
-    try {
-      setLoading(true);
-      
-      // Always load mock data first for instant UX
-      const mockData = await mockDataService.getAllMarketData();
-      console.log('🎭 Initial mock data loaded for instant UX');
-      setMarketData(mockData);
-      setLoading(false); // Show UI immediately with mock data
-      
-      if (useRealAPI) {
-        // Progressive loading with real API over mock data
-        await fetchProgressiveData();
-      }
-      
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch market data');
-      console.error(err);
-      setLoading(false);
-    }
-  }, [useRealAPI, fetchProgressiveData]);
-
-  // Progressive data loading function
+  // Progressive data loading function (defined first to avoid reference errors)
   const fetchProgressiveData = useCallback(async () => {
     try {
       console.log('🚀 Starting progressive data loading over mock data...');
@@ -303,7 +280,30 @@ const CryptoDashboard = () => {
       // Mock data is already loaded, so we're good
       console.log('🎭 Continuing with mock data due to API failure');
     }
-  }, []); // No dependencies needed - function only uses API calls and state setters
+  }, []);
+
+  const fetchMarketData = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Always load mock data first for instant UX
+      const mockData = await mockDataService.getAllMarketData();
+      console.log('🎭 Initial mock data loaded for instant UX');
+      setMarketData(mockData);
+      setLoading(false); // Show UI immediately with mock data
+      
+      if (useRealAPI) {
+        // Progressive loading with real API over mock data
+        await fetchProgressiveData();
+      }
+      
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch market data');
+      console.error(err);
+      setLoading(false);
+    }
+  }, [useRealAPI, fetchProgressiveData]);
 
   useEffect(() => {
     const interval = setInterval(fetchMarketData, 300000); // Update every 5 minutes
