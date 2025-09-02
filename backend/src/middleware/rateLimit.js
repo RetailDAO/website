@@ -11,6 +11,7 @@ const createRateLimiter = (windowMs, max, message) => {
     },
     standardHeaders: true,
     legacyHeaders: false,
+    trustProxy: true, // Explicitly trust proxy for accurate IP detection
     handler: (req, res) => {
       res.status(429).json({
         success: false,

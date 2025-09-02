@@ -177,19 +177,35 @@ const CryptoDashboard = () => {
     try {
       console.log('🚀 Starting progressive data loading over mock data...');
 
-      // Step 1: Fetch fast data first (prices, basic crypto data)
-      console.log('📈 Fetching live price data...');
+      // Step 1: Fetch multi-crypto data first (BTC, ETH, SOL prices and analysis)
+      console.log('📈 Fetching live multi-crypto data...');
       
-      const initialData = await apiService.getBTCPrice();
-      if (initialData) {
-        setMarketData(prev => ({
-          ...prev,
-          bitcoin: { ...prev.bitcoin, currentPrice: initialData.price }
-        }));
+      const multiCryptoData = await apiService.getMultiCryptoAnalysis();
+      if (multiCryptoData && multiCryptoData.success && multiCryptoData.data) {
+        // Update each crypto's data
+        Object.entries(multiCryptoData.data).forEach(([symbol, data]) => {
+          if (data && typeof data === 'object' && 'currentPrice' in data) {
+            const cryptoKey = symbol.toLowerCase() === 'btc' ? 'bitcoin' : 
+                            symbol.toLowerCase() === 'eth' ? 'ethereum' : 
+                            symbol.toLowerCase() === 'sol' ? 'solana' : symbol.toLowerCase();
+            
+            setMarketData(prev => ({
+              ...prev,
+              [cryptoKey]: { 
+                ...prev[cryptoKey], 
+                currentPrice: data.currentPrice,
+                priceChangePercent24h: data.priceChangePercent24h,
+                volume24h: data.volume24h,
+                marketCap: data.marketCap,
+                sparkline7d: data.sparkline7d
+              }
+            }));
+          }
+        });
         // Trigger pulsing animation for price cards
         setDataUpdated(prev => ({ ...prev, prices: true }));
         setTimeout(() => setDataUpdated(prev => ({ ...prev, prices: false })), 2000);
-        console.log('✅ Live price data loaded and updated');
+        console.log('✅ Live multi-crypto data loaded and updated');
       }
 
       // Step 2: Fetch BTC analysis (medium speed)
@@ -246,10 +262,10 @@ const CryptoDashboard = () => {
       
       try {
         const fundingData = await apiService.getFundingRates();
-        if (fundingData) {
+        if (fundingData && fundingData.success && fundingData.data?.structured) {
           setMarketData(prev => ({
             ...prev,
-            fundingRates: fundingData
+            fundingRates: fundingData.data.structured
           }));
           // Trigger pulsing animation for funding rates card
           setDataUpdated(prev => ({ ...prev, funding: true }));
@@ -287,7 +303,7 @@ const CryptoDashboard = () => {
       // Mock data is already loaded, so we're good
       console.log('🎭 Continuing with mock data due to API failure');
     }
-  }, []);
+  }, []); // No dependencies needed - function only uses API calls and state setters
 
   useEffect(() => {
     const interval = setInterval(fetchMarketData, 300000); // Update every 5 minutes
@@ -1190,7 +1206,7 @@ const PriceCards = () => {
   );
 };
 
-  if (loading && !marketData) {
+  if (loading || !marketData) {
     return (
       <div className={`min-h-screen ${colors.bg.primary} flex items-center justify-center transition-colors duration-300`}>
         <RetailDAOLoader size={100} message="Loading RetailDAO Terminal" />
