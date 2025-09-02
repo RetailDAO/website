@@ -54,13 +54,17 @@ export function useWebSocket(url, options = {}) {
 
       ws.current.onmessage = (event) => {
         try {
+          console.log('🔌 Raw WebSocket message:', event.data);
           const data = JSON.parse(event.data);
+          console.log('🔓 Parsed WebSocket data:', data);
           setLastMessage(data);
           if (optionsRef.current.onMessage) {
             optionsRef.current.onMessage(data);
+          } else {
+            console.warn('⚠️ No onMessage handler configured');
           }
         } catch (parseError) {
-          console.error('❌ WebSocket parse error:', parseError);
+          console.error('❌ WebSocket parse error:', parseError, 'Raw data:', event.data);
           setError('Message parsing error');
         }
       };
@@ -188,7 +192,9 @@ export function useCryptoPriceWebSocket(onPriceUpdate) {
   const [prices, setPrices] = useState({});
   
   const handleMessage = useCallback((data) => {
+    console.log('📨 WebSocket message received:', data);
     if (data.type === 'price_update') {
+      console.log('💰 Processing price update:', data);
       const { symbol, price, change24h, timestamp } = data;
       const priceData = { price, change24h, timestamp };
       
@@ -198,8 +204,13 @@ export function useCryptoPriceWebSocket(onPriceUpdate) {
       }));
       
       if (onPriceUpdate) {
+        console.log('📞 Calling onPriceUpdate callback with:', symbol, priceData);
         onPriceUpdate(symbol, priceData);
+      } else {
+        console.warn('⚠️ onPriceUpdate callback not provided');
       }
+    } else {
+      console.log('📝 Non-price message type:', data.type || 'unknown');
     }
   }, [onPriceUpdate]);
 
