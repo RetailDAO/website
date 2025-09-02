@@ -51,18 +51,8 @@ export function useWebSocket(url, options = {}) {
         reconnectAttempts.current = 0;
         console.log('✅ WebSocket connected successfully');
         
-        // Send subscription request for price updates
-        try {
-          const subscription = {
-            type: 'subscribe',
-            symbols: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'],
-            timestamp: new Date().toISOString()
-          };
-          console.log('📡 Sending price subscription request:', subscription);
-          ws.current.send(JSON.stringify(subscription));
-        } catch (error) {
-          console.error('❌ Failed to send subscription:', error);
-        }
+        // Price WebSocket doesn't need subscription - it auto-streams
+        console.log('✅ Connected to price WebSocket - auto-streaming enabled');
       };
 
       ws.current.onmessage = (event) => {
