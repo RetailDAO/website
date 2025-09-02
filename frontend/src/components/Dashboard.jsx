@@ -278,13 +278,39 @@ const CryptoDashboard = () => {
         const etfData = await apiService.getETFFlows();
         console.log('🔍 ETF API response:', etfData);
         if (etfData) {
-          // Extract data from API response structure  
-          const etfProcessed = etfData?.success && etfData?.data ? etfData.data : etfData;
-          console.log('🔍 ETF processed data:', etfProcessed);
+          // Handle both mock data format {btcFlows: [], ethFlows: []} and API format {flows: [...]}
+          let processedETF = {};
+          
+          if (etfData.success && etfData.data) {
+            // API format: {success: true, data: {flows: [...], summary: {...}}}
+            if (etfData.data.flows && Array.isArray(etfData.data.flows)) {
+              // Convert flows array to btcFlows/ethFlows structure
+              processedETF.btcFlows = etfData.data.flows.map(flow => ({
+                timestamp: new Date(flow.date || flow.timestamp),
+                flow: flow.flow || 0,
+                etf: flow.etf || 'Unknown'
+              }));
+              processedETF.ethFlows = []; // ETH flows not available in current API
+            } else if (etfData.data.btcFlows || etfData.data.ethFlows) {
+              // Already in correct format
+              processedETF = etfData.data;
+            }
+          } else if (etfData.btcFlows || etfData.ethFlows) {
+            // Direct mock format
+            processedETF = etfData;
+          } else {
+            // Fallback to mock data structure  
+            processedETF = {
+              btcFlows: apiService.generateETFMockData('btc'),
+              ethFlows: apiService.generateETFMockData('eth')
+            };
+          }
+          
+          console.log('🔍 ETF processed data:', processedETF);
           
           setMarketData(prev => ({
             ...prev,
-            etfFlows: etfProcessed
+            etfFlows: processedETF
           }));
           // Trigger pulsing animation for ETF chart
           setDataUpdated(prev => ({ ...prev, etf: true }));
