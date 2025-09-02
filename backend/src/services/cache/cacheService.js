@@ -15,12 +15,12 @@ class CacheService {
       errors: 0
     };
 
-    // Tiered caching strategy TTL values
+    // Optimized tiered caching strategy TTL values for rate limit management
     this.cacheTiers = {
-      tier1_realtime: 60,      // 1 min - real-time data
-      tier2_frequent: 1800,    // 30 min - frequently updated data
-      tier3_stable: 14400,     // 4 hours - stable/slow-changing data
-      tier4_historical: 86400  // 24 hours - historical data
+      tier1_realtime: 60,       // 1 min - real-time data
+      tier2_frequent: 3600,     // 1 hour - frequently updated (was 30min, now longer to reduce calls)
+      tier3_stable: 21600,      // 6 hours - stable/slow-changing data (was 4h, increased)
+      tier4_historical: 172800  // 48 hours - historical data (was 24h, doubled for rate limits)
     };
   }
 

@@ -91,18 +91,18 @@ class CryptoDataService {
         console.log('🌐 Using CoinGecko API for current BTC price');
       }
 
-      // Get historical data with rate limiting - ensure we have enough for RSI/MA calculations
+      // Optimized data fetching for specific needs:
+      // RSI: needs max 30 days, MA: needs max 100 days for BTC terminal
       const requestedDays = this.timeframeToDays(timeframe);
-      // Smart hybrid approach: get 90 days from API, extend with mock data for MAs
-const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free tier limit
-const requiredDaysForMAs = 220; // Total needed for 200-day MA // Always fetch at least 250 days for proper MA/RSI
+      const optimizedDays = Math.min(requestedDays, 90); // Respect CoinGecko free tier limit
+      console.log(`📊 Optimized API call: requesting ${optimizedDays} days (vs ${requestedDays} original)`);
       
       const historicalData = await rateLimitedApi.coinGeckoRequest(async () => {
         const response = await this.coinGeckoClient.get('/coins/bitcoin/market_chart', {
           params: {
             vs_currency: 'usd',
-            days: Math.min(minDaysForCalculations, 90), // CoinGecko free tier max
-            interval: minDaysForCalculations <= 1 ? 'hourly' : 'daily'
+            days: optimizedDays,
+            interval: optimizedDays <= 1 ? 'hourly' : 'daily'
           }
         });
         return response.data;
@@ -189,9 +189,10 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA // Always fetch a
     const mapping = {
       '1D': 1,
       '7D': 7,
-      '30D': 30,
-      '90D': 90,
-      '1Y': 365
+      '30D': 30,    // Perfect for RSI calculations (max 30 days)
+      '90D': 90,    // Good for MAs up to 90-day
+      '100D': 90,   // Optimized: cap at 90 days (CoinGecko free limit) for 100-day MAs  
+      '1Y': 90      // Optimized: reduce from 365 to 90 days to stay within limits
     };
     return mapping[timeframe] || 1;
   }
@@ -272,7 +273,7 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA // Always fetch a
       const requestedDays = this.timeframeToDays(timeframe);
       // Smart hybrid approach: get 90 days from API, extend with mock data for MAs
 const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free tier limit
-const requiredDaysForMAs = 220; // Total needed for 200-day MA
+// Removed: requiredDaysForMAs - now using optimized 90-day limit
       // Limit days to avoid CoinGecko API errors (max 365 days for free tier)
       const safeDaysLimit = Math.min(minDaysForCalculations, 90); // CoinGecko free tier max
       
@@ -419,7 +420,7 @@ const requiredDaysForMAs = 220; // Total needed for 200-day MA
       const requestedDays = this.timeframeToDays(timeframe);
       // Smart hybrid approach: get 90 days from API, extend with mock data for MAs
 const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free tier limit
-const requiredDaysForMAs = 220; // Total needed for 200-day MA
+// Removed: requiredDaysForMAs - now using optimized 90-day limit
       // Limit days to avoid CoinGecko API errors (max 365 days for free tier)
       const safeDaysLimit = Math.min(minDaysForCalculations, 90); // CoinGecko free tier max
       

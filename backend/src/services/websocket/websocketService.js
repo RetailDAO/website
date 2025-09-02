@@ -255,7 +255,8 @@ class WebSocketService {
       try {
         // Convert WebSocket symbol to API symbol (BTCUSDT -> BTC)
         const apiSymbol = symbol.replace('USDT', '');
-        const cryptoData = await cryptoDataService.getCryptoData(apiSymbol, '1Y');
+        // Optimized: Only request 100 days for MAs (enough for 100-day MA + buffer)
+        const cryptoData = await cryptoDataService.getCryptoData(apiSymbol, '100D');
         if (cryptoData.historical && cryptoData.historical.length > 0) {
           const history = cryptoData.historical.slice(-this.priceHistoryLimit).map(item => ({
             price: item.price,
