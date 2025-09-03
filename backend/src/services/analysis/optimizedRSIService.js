@@ -4,12 +4,25 @@ const websocketService = require('../websocket/websocketService');
 
 class OptimizedRSIService {
   constructor() {
-    this.defaultPeriods = [14, 21, 30];
+    this.defaultPeriods = [14, 21, 30, 50, 100]; // Extended periods for enhanced analysis
     this.supportedSymbols = ['BTC', 'ETH'];
+    // Enhanced period requirements:
+    // BTC: Can use up to 220 days for comprehensive MA analysis
+    // ETH: Can use up to 50 days for extended RSI analysis
+    this.enhancedPeriods = {
+      BTC: [14, 21, 30, 50, 100, 200], // Full MA spectrum
+      ETH: [14, 21, 30, 50] // Extended RSI analysis
+    };
   }
 
-  // Pre-calculate and cache RSI for multiple periods
-  async getBulkRSI(symbols = ['BTC', 'ETH'], periods = this.defaultPeriods, timeframe = '7D') {
+  // Pre-calculate and cache RSI for multiple periods with enhanced period support
+  async getBulkRSI(symbols = ['BTC', 'ETH'], periods = null, timeframe = '7D') {
+    // Use enhanced periods if none specified
+    if (!periods) {
+      periods = symbols.includes('BTC') ? this.enhancedPeriods.BTC : 
+               symbols.includes('ETH') ? this.enhancedPeriods.ETH : 
+               this.defaultPeriods;
+    }
     const results = {};
 
     // Use Promise.all for parallel processing
@@ -48,8 +61,12 @@ class OptimizedRSIService {
     return results;
   }
 
-  // Get RSI for a single symbol/period combination with smart caching
-  async getSingleRSI(symbol, period = 14, timeframe = '7D') {
+  // Get RSI for a single symbol/period combination with smart caching and enhanced data periods
+  async getSingleRSI(symbol, period = 14, timeframe = '220D') {
+    // Use appropriate timeframe based on symbol for enhanced calculations
+    const enhancedTimeframe = symbol.toUpperCase() === 'BTC' ? '220D' : 
+                            symbol.toUpperCase() === 'ETH' ? '50D' : 
+                            timeframe; // BTC: 220 days, ETH: 50 days
     const cacheKey = `rsi_${symbol}_${period}_${timeframe}`;
     
     // Check cache first
@@ -61,7 +78,7 @@ class OptimizedRSIService {
 
     try {
       // Get price data (with WebSocket integration for real-time current price)
-      const priceData = await this.getPriceData(symbol, timeframe);
+      const priceData = await this.getPriceData(symbol, enhancedTimeframe);
       
       if (priceData.length < period + 1) {
         throw new Error(`Insufficient data for RSI calculation (need ${period + 1}, got ${priceData.length})`);
@@ -265,11 +282,11 @@ class OptimizedRSIService {
     };
   }
 
-  // Batch warm cache for commonly requested RSI combinations
+  // Batch warm cache for commonly requested RSI combinations with enhanced periods
   async warmRSICache() {
     const symbols = ['BTC', 'ETH'];
-    const periods = [14, 21, 30];
-    const timeframes = ['1D', '7D'];
+    const periods = [14, 21, 30, 50, 100, 200]; // Extended periods
+    const timeframes = ['1D', '7D', '220D']; // Added 220D for BTC calculations
 
     console.log('🔥 Warming RSI cache...');
     

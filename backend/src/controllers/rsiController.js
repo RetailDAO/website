@@ -21,10 +21,10 @@ const rsiController = {
     }
 
     const rsiPeriod = parseInt(period);
-    if (isNaN(rsiPeriod) || rsiPeriod < 2 || rsiPeriod > 50) {
+    if (isNaN(rsiPeriod) || rsiPeriod < 2 || rsiPeriod > 200) {
       return res.status(400).json({
         success: false,
-        message: 'RSI period must be between 2 and 50'
+        message: 'RSI period must be between 2 and 200 (supports enhanced MA calculations)'
       });
     }
 
@@ -54,11 +54,11 @@ const rsiController = {
     const symbolList = symbols ? symbols.split(',').map(s => s.trim().toUpperCase()) : ['BTC', 'ETH'];
     const periodList = periods ? periods.split(',').map(p => parseInt(p.trim())) : [14, 21, 30];
 
-    // Validate periods
-    if (periodList.some(p => isNaN(p) || p < 2 || p > 50)) {
+    // Validate periods with enhanced limits
+    if (periodList.some(p => isNaN(p) || p < 2 || p > 200)) {
       return res.status(400).json({
         success: false,
-        message: 'All RSI periods must be between 2 and 50'
+        message: 'All RSI periods must be between 2 and 200 (supports enhanced MA calculations)'
       });
     }
 

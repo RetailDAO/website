@@ -160,7 +160,7 @@ class CryptoDataService {
 
     // Get historical klines from Binance
     const requestedDays = this.timeframeToDays(timeframe);
-    const daysToFetch = Math.max(requestedDays, 220); // Need 220+ days for 200-day MA // Always get at least 250 days
+    const daysToFetch = Math.max(requestedDays, 250); // Need 220+ days for 200-day MA, use 250 for buffer
     
     const interval = daysToFetch <= 1 ? '1h' : '1d';
     const limit = daysToFetch <= 1 ? 24 : Math.min(daysToFetch, 1000); // Binance max is 1000
@@ -194,9 +194,12 @@ class CryptoDataService {
       '1D': 1,
       '7D': 7,
       '30D': 30,    // Perfect for RSI calculations (max 30 days)
+      '50D': 50,    // ETH RSI calculations (50 days)
       '90D': 90,    // Good for MAs up to 90-day
-      '100D': 90,   // Optimized: cap at 90 days (CoinGecko free limit) for 100-day MAs  
-      '1Y': 90      // Optimized: reduce from 365 to 90 days to stay within limits
+      '100D': 100,  // Full 100-day MA calculations
+      '200D': 220,  // BTC: 200-day MA + buffer for calculations
+      '220D': 220,  // BTC: Full 220-day period for RSI/MAs
+      '1Y': 220     // BTC: Use 220 days instead of full year for better performance
     };
     return mapping[timeframe] || 1;
   }
@@ -277,9 +280,10 @@ class CryptoDataService {
       const historicalRequests = symbolsToFetch.map(symbol => {
         const coinId = symbolMap[symbol.toUpperCase()];
         
-        // Conservative timeframes to avoid CoinGecko 400 errors: Use 7 days to be very safe
-        const optimizedDays = 7; // Further reduced to 7 days to avoid API errors
-        console.log(`📊 Optimized request: ${symbol} using ${optimizedDays} days (reduced for API compatibility)`);
+        // Strategic periods: BTC gets 220 days, ETH gets 50 days for enhanced calculations
+        const optimizedDays = symbol.toUpperCase() === 'BTC' ? 220 : 
+                            symbol.toUpperCase() === 'ETH' ? 50 : 30;
+        console.log(`📊 Strategic request: ${symbol} using ${optimizedDays} days (BTC: 220d for MAs, ETH: 50d for RSI)`);
         
         return {
           key: `historical_${coinId}_${optimizedDays}d`,
@@ -423,11 +427,12 @@ class CryptoDataService {
 
       // Get historical data with rate limiting - ensure we have enough for RSI/MA calculations
       const requestedDays = this.timeframeToDays(timeframe);
-      // Smart hybrid approach: get 90 days from API, extend with mock data for MAs
-      const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free tier limit
-      // Removed: requiredDaysForMAs - now using optimized 90-day limit
-      // Limit days to avoid CoinGecko API errors (max 365 days for free tier)
-      const safeDaysLimit = Math.min(minDaysForCalculations, 90); // CoinGecko free tier max
+      // Enhanced approach: BTC gets up to 220 days, ETH gets up to 50 days
+      const minDaysForCalculations = Math.max(requestedDays, 
+        symbol.toUpperCase() === 'BTC' ? 220 : 
+        symbol.toUpperCase() === 'ETH' ? 50 : 30);
+      // CoinGecko allows up to 365 days - use strategically
+      const safeDaysLimit = Math.min(minDaysForCalculations, 365); // Full CoinGecko limit
       
       const historicalData = await rateLimitedApi.coinGeckoRequest(async () => {
         const response = await this.coinGeckoClient.get(`/coins/${coinId}/market_chart`, {
@@ -504,7 +509,11 @@ class CryptoDataService {
     }
     
     const requestedDays = this.timeframeToDays(timeframe);
-    const dataPoints = timeframe === '1D' ? 24 : Math.max(requestedDays, 220); // Need 220+ days for 200-day MA
+    // Enhanced mock data generation with proper periods for calculations
+    const dataPoints = timeframe === '1D' ? 24 : 
+                      symbol.toUpperCase() === 'BTC' ? Math.max(requestedDays, 250) : // BTC needs 220+ days + buffer
+                      symbol.toUpperCase() === 'ETH' ? Math.max(requestedDays, 50) :   // ETH needs 50 days
+                      Math.max(requestedDays, 30);  // Others need 30 days
     
     const historical = [];
     const now = new Date();
@@ -574,7 +583,11 @@ class CryptoDataService {
       
       const basePrice = priceMap[symbol.toUpperCase()] || 1000;
       const requestedDays = this.timeframeToDays(timeframe);
-      const dataPoints = timeframe === '1D' ? 24 : Math.max(requestedDays, 220); // Need 220+ days for 200-day MA
+      // Enhanced fallback mock generation with appropriate periods
+      const dataPoints = timeframe === '1D' ? 24 : 
+                        symbol.toUpperCase() === 'BTC' ? Math.max(requestedDays, 250) : // BTC needs 220+ days + buffer
+                        symbol.toUpperCase() === 'ETH' ? Math.max(requestedDays, 50) :   // ETH needs 50 days
+                        Math.max(requestedDays, 30);  // Others need 30 days
       
       const historical = [];
       const now = new Date();

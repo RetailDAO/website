@@ -1,88 +1,126 @@
 {
-  "btc_1D": {
-    "data": {
-      "current": {
-        "price": 56999.63,
-        "change24h": 0,
-        "volume24h": 29548856675,
-        "marketCap": 1122892711000,
-        "timestamp": "2025-09-02T23:29:48.453Z"
-      },
-      "historical": [
-        {
-          "timestamp": "2025-09-01T23:29:48.453Z",
-          "price": 79947.03,
-          "volume": 29542707479
-        },
-        {
-          "timestamp": "2025-09-02T23:29:48.453Z",
-          "price": 56999.63,
-          "volume": 29548856675
-        }
-      ],
-      "trend": {
-        "direction": "neutral",
-        "strength": 0.9672619047619048,
-        "pattern": "consolidation",
-        "overallChange": 0.04384615384615385,
-        "recentChange": 0.009672619047619048
-      },
-      "confidence": 24,
-      "rsi": {},
-      "movingAverages": {},
-      "dataSource": "intelligent_mock",
-      "goldenSource": "golden_adapted_btc_30D",
-      "generated": "2025-09-02T23:29:48.453Z"
-    },
-    "timestamp": "2025-09-02T23:29:48.454Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T00:40:45.866Z",
-    "source": "api_success",
-    "dataPoints": 3
-  },
   "btc_30D": {
     "data": {
       "current": {
-        "price": 67850,
-        "change24h": 3.2,
-        "volume24h": 28000000000,
-        "marketCap": 1340000000000
+        "price": 111000,
+        "change24h": 2.1,
+        "volume24h": 31000000000,
+        "marketCap": 2190000000000
       },
       "historical": [
-        {
-          "timestamp": "2025-08-03T03:30:43.056Z",
-          "price": 65000
-        },
-        {
-          "timestamp": "2025-08-08T03:30:43.057Z",
-          "price": 66200
-        },
-        {
-          "timestamp": "2025-08-13T03:30:43.057Z",
-          "price": 64800
-        },
-        {
-          "timestamp": "2025-08-18T03:30:43.057Z",
-          "price": 67100
-        },
-        {
-          "timestamp": "2025-08-23T03:30:43.057Z",
-          "price": 68500
-        },
-        {
-          "timestamp": "2025-08-28T03:30:43.057Z",
-          "price": 67200
-        },
-        {
-          "timestamp": "2025-09-02T03:30:43.057Z",
-          "price": 67850
-        }
-      ]
+        {"timestamp": "2025-08-04T00:00:00.000Z", "price": 65800, "volume": 28000000000},
+        {"timestamp": "2025-08-05T00:00:00.000Z", "price": 66200, "volume": 29500000000},
+        {"timestamp": "2025-08-06T00:00:00.000Z", "price": 67100, "volume": 32000000000},
+        {"timestamp": "2025-08-07T00:00:00.000Z", "price": 68300, "volume": 35000000000},
+        {"timestamp": "2025-08-08T00:00:00.000Z", "price": 69800, "volume": 38000000000},
+        {"timestamp": "2025-08-09T00:00:00.000Z", "price": 71200, "volume": 33000000000},
+        {"timestamp": "2025-08-10T00:00:00.000Z", "price": 72600, "volume": 31000000000},
+        {"timestamp": "2025-08-11T00:00:00.000Z", "price": 74100, "volume": 29000000000},
+        {"timestamp": "2025-08-12T00:00:00.000Z", "price": 75800, "volume": 27000000000},
+        {"timestamp": "2025-08-13T00:00:00.000Z", "price": 77300, "volume": 30000000000},
+        {"timestamp": "2025-08-14T00:00:00.000Z", "price": 78900, "volume": 34000000000},
+        {"timestamp": "2025-08-15T00:00:00.000Z", "price": 80500, "volume": 36000000000},
+        {"timestamp": "2025-08-16T00:00:00.000Z", "price": 82100, "volume": 39000000000},
+        {"timestamp": "2025-08-17T00:00:00.000Z", "price": 83800, "volume": 41000000000},
+        {"timestamp": "2025-08-18T00:00:00.000Z", "price": 85200, "volume": 38000000000},
+        {"timestamp": "2025-08-19T00:00:00.000Z", "price": 86900, "volume": 35000000000},
+        {"timestamp": "2025-08-20T00:00:00.000Z", "price": 88400, "volume": 32000000000},
+        {"timestamp": "2025-08-21T00:00:00.000Z", "price": 90100, "volume": 30000000000},
+        {"timestamp": "2025-08-22T00:00:00.000Z", "price": 91800, "volume": 28000000000},
+        {"timestamp": "2025-08-23T00:00:00.000Z", "price": 93500, "volume": 26000000000},
+        {"timestamp": "2025-08-24T00:00:00.000Z", "price": 95200, "volume": 33000000000},
+        {"timestamp": "2025-08-25T00:00:00.000Z", "price": 97000, "volume": 37000000000},
+        {"timestamp": "2025-08-26T00:00:00.000Z", "price": 98800, "volume": 40000000000},
+        {"timestamp": "2025-08-27T00:00:00.000Z", "price": 100500, "volume": 42000000000},
+        {"timestamp": "2025-08-28T00:00:00.000Z", "price": 102300, "volume": 39000000000},
+        {"timestamp": "2025-08-29T00:00:00.000Z", "price": 104100, "volume": 36000000000},
+        {"timestamp": "2025-08-30T00:00:00.000Z", "price": 105900, "volume": 34000000000},
+        {"timestamp": "2025-08-31T00:00:00.000Z", "price": 107700, "volume": 32000000000},
+        {"timestamp": "2025-09-01T00:00:00.000Z", "price": 109500, "volume": 30000000000},
+        {"timestamp": "2025-09-02T00:00:00.000Z", "price": 110200, "volume": 31000000000},
+        {"timestamp": "2025-09-03T00:00:00.000Z", "price": 111000, "volume": 31000000000}
+      ],
+      "trend": {
+        "direction": "bullish",
+        "strength": 0.85,
+        "pattern": "uptrend",
+        "overallChange": 68.5,
+        "recentChange": 2.1
+      },
+      "rsi": {
+        "14": [
+          {"timestamp": "2025-08-20T00:00:00.000Z", "value": 45.2, "period": 14},
+          {"timestamp": "2025-08-21T00:00:00.000Z", "value": 47.8, "period": 14},
+          {"timestamp": "2025-08-22T00:00:00.000Z", "value": 52.1, "period": 14},
+          {"timestamp": "2025-08-23T00:00:00.000Z", "value": 56.4, "period": 14},
+          {"timestamp": "2025-08-24T00:00:00.000Z", "value": 59.7, "period": 14},
+          {"timestamp": "2025-08-25T00:00:00.000Z", "value": 62.3, "period": 14},
+          {"timestamp": "2025-08-26T00:00:00.000Z", "value": 65.8, "period": 14},
+          {"timestamp": "2025-08-27T00:00:00.000Z", "value": 68.2, "period": 14},
+          {"timestamp": "2025-08-28T00:00:00.000Z", "value": 64.5, "period": 14},
+          {"timestamp": "2025-08-29T00:00:00.000Z", "value": 61.1, "period": 14},
+          {"timestamp": "2025-08-30T00:00:00.000Z", "value": 57.8, "period": 14},
+          {"timestamp": "2025-08-31T00:00:00.000Z", "value": 54.3, "period": 14},
+          {"timestamp": "2025-09-01T00:00:00.000Z", "value": 51.7, "period": 14},
+          {"timestamp": "2025-09-02T00:00:00.000Z", "value": 48.9, "period": 14},
+          {"timestamp": "2025-09-03T00:00:00.000Z", "value": 46.2, "period": 14}
+        ],
+        "21": [
+          {"timestamp": "2025-08-27T00:00:00.000Z", "value": 58.1, "period": 21},
+          {"timestamp": "2025-08-28T00:00:00.000Z", "value": 55.4, "period": 21},
+          {"timestamp": "2025-08-29T00:00:00.000Z", "value": 52.8, "period": 21},
+          {"timestamp": "2025-08-30T00:00:00.000Z", "value": 50.3, "period": 21},
+          {"timestamp": "2025-08-31T00:00:00.000Z", "value": 47.9, "period": 21},
+          {"timestamp": "2025-09-01T00:00:00.000Z", "value": 45.6, "period": 21},
+          {"timestamp": "2025-09-02T00:00:00.000Z", "value": 43.8, "period": 21},
+          {"timestamp": "2025-09-03T00:00:00.000Z", "value": 42.1, "period": 21}
+        ],
+        "30": [
+          {"timestamp": "2025-09-01T00:00:00.000Z", "value": 52.3, "period": 30},
+          {"timestamp": "2025-09-02T00:00:00.000Z", "value": 49.7, "period": 30},
+          {"timestamp": "2025-09-03T00:00:00.000Z", "value": 47.2, "period": 30}
+        ]
+      },
+      "movingAverages": {
+        "20": [
+          {"timestamp": "2025-08-24T00:00:00.000Z", "value": 89200},
+          {"timestamp": "2025-08-25T00:00:00.000Z", "value": 90500},
+          {"timestamp": "2025-08-26T00:00:00.000Z", "value": 91800},
+          {"timestamp": "2025-08-27T00:00:00.000Z", "value": 93100},
+          {"timestamp": "2025-08-28T00:00:00.000Z", "value": 94400},
+          {"timestamp": "2025-08-29T00:00:00.000Z", "value": 95700},
+          {"timestamp": "2025-08-30T00:00:00.000Z", "value": 97000},
+          {"timestamp": "2025-08-31T00:00:00.000Z", "value": 98300},
+          {"timestamp": "2025-09-01T00:00:00.000Z", "value": 99600},
+          {"timestamp": "2025-09-02T00:00:00.000Z", "value": 100900},
+          {"timestamp": "2025-09-03T00:00:00.000Z", "value": 102200}
+        ],
+        "50": [
+          {"timestamp": "2025-08-28T00:00:00.000Z", "value": 85600},
+          {"timestamp": "2025-08-29T00:00:00.000Z", "value": 86800},
+          {"timestamp": "2025-08-30T00:00:00.000Z", "value": 88000},
+          {"timestamp": "2025-08-31T00:00:00.000Z", "value": 89200},
+          {"timestamp": "2025-09-01T00:00:00.000Z", "value": 90400},
+          {"timestamp": "2025-09-02T00:00:00.000Z", "value": 91600},
+          {"timestamp": "2025-09-03T00:00:00.000Z", "value": 92800}
+        ],
+        "100": [
+          {"timestamp": "2025-09-01T00:00:00.000Z", "value": 78900},
+          {"timestamp": "2025-09-02T00:00:00.000Z", "value": 80100},
+          {"timestamp": "2025-09-03T00:00:00.000Z", "value": 81300}
+        ],
+        "200": [
+          {"timestamp": "2025-09-03T00:00:00.000Z", "value": 72500}
+        ]
+      },
+      "confidence": 85,
+      "dataSource": "seed_data_realistic",
+      "generated": "2025-09-03T05:25:00.000Z"
     },
-    "timestamp": "2025-09-02T03:30:43.059Z",
-    "tier": "archived",
-    "expiresAt": "2025-09-03T23:29:38.827Z",
-    "source": "api_success",
-    "dataPoints": 8
+    "timestamp": "2025-09-03T05:25:00.000Z",
+    "tier": "fresh",
+    "expiresAt": "2025-09-03T11:25:00.000Z",
+    "source": "manual_seed",
+    "dataPoints": 31
   }
 }

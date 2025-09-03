@@ -2,7 +2,16 @@ const cacheService = require('../cache/cacheService');
 
 class MovingAverageService {
   constructor() {
+    // Enhanced MA periods for comprehensive technical analysis
     this.maPeriods = [20, 50, 100, 200];
+    // Symbol-specific optimized periods:
+    // BTC: Full spectrum with 220+ days of data
+    // ETH: Standard periods with 50+ days of data
+    this.enhancedPeriods = {
+      BTC: [20, 50, 100, 200], // Full MA ribbon with 220+ days support
+      ETH: [20, 50],           // Focus on shorter MAs with 50+ days
+      default: [20, 50]        // Conservative default
+    };
   }
 
   // Calculate Simple Moving Average
@@ -16,14 +25,23 @@ class MovingAverageService {
     return sum / period;
   }
 
-  // Calculate multiple MAs for a dataset
-  calculateMultipleMAs(priceData) {
+  // Calculate multiple MAs for a dataset with symbol-aware periods
+  calculateMultipleMAs(priceData, symbol = '') {
     const prices = priceData.map(item => item.price);
     const result = {};
+    
+    // Use enhanced periods based on symbol
+    const periods = this.enhancedPeriods[symbol.toUpperCase()] || this.enhancedPeriods.default;
+    console.log(`📊 Using ${periods.length} MA periods for ${symbol}: [${periods.join(', ')}]`);
 
-    this.maPeriods.forEach(period => {
+    periods.forEach(period => {
       const ma = this.calculateSMA(prices, period);
-      result[`ma${period}`] = ma;
+      if (ma !== null) {
+        result[`ma${period}`] = ma;
+        console.log(`✅ Calculated MA${period} for ${symbol}: ${ma.toFixed(2)} (${prices.length} data points)`);
+      } else {
+        console.log(`⚠️ Insufficient data for MA${period} (need ${period}, have ${prices.length})`);
+      }
     });
 
     return result;
@@ -43,9 +61,15 @@ class MovingAverageService {
     return signals;
   }
 
-  // Get MA ribbon data with caching
-  async getMARibbon(symbol, timeframe) {
-    const cacheKey = `ma_ribbon_${symbol}_${timeframe}`;
+  // Get MA ribbon data with caching and enhanced timeframes
+  async getMARibbon(symbol, timeframe = null) {
+    // Use enhanced timeframes: BTC gets 220D, ETH gets 50D
+    const enhancedTimeframe = timeframe || 
+                            (symbol.toUpperCase() === 'BTC' ? '220D' : 
+                             symbol.toUpperCase() === 'ETH' ? '50D' : '30D');
+    const cacheKey = `ma_ribbon_${symbol}_${enhancedTimeframe}`;
+    
+    console.log(`📊 MA Ribbon request: ${symbol} using ${enhancedTimeframe} (enhanced periods)`);
     
     // Check cache first
     const cached = await cacheService.get(cacheKey);
@@ -61,17 +85,17 @@ class MovingAverageService {
       
       let priceData;
       if (symbol.toUpperCase() === 'BTC') {
-        priceData = await dataService.getBTCData(timeframe);
+        priceData = await dataService.getBTCData(enhancedTimeframe);
       } else {
-        priceData = await dataService.getCryptoData(symbol, timeframe);
+        priceData = await dataService.getCryptoData(symbol, enhancedTimeframe);
       }
 
       if (!priceData || !priceData.historical) {
         throw new Error('No price data available');
       }
 
-      // Calculate MAs
-      const maValues = this.calculateMultipleMAs(priceData.historical);
+      // Calculate MAs with symbol awareness for enhanced periods
+      const maValues = this.calculateMultipleMAs(priceData.historical, symbol);
       const currentPrice = priceData.current.price;
       const signals = this.calculateMASignals(currentPrice, maValues);
 

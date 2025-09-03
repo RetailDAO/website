@@ -82,23 +82,23 @@ router.get('/funding-rates',
   fundingController.getFundingRates
 );
 
-// RSI data - enhanced with optimized service
+// RSI data - enhanced with optimized service and extended periods
 router.get('/rsi',
   [
     query('symbol').notEmpty().withMessage('Symbol is required'),
-    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D']),
-    query('period').optional().isInt({ min: 2, max: 50 })
+    query('timeframe').optional().isIn(['1D', '7D', '30D', '50D', '90D', '220D']), // Extended timeframes
+    query('period').optional().isInt({ min: 2, max: 200 }) // Extended periods for BTC MAs
   ],
   validateRequest,
   rsiController.getRSI
 );
 
-// Bulk RSI calculations for multiple symbols/periods
+// Bulk RSI calculations for multiple symbols/periods with enhanced periods
 router.get('/rsi/bulk',
   [
     query('symbols').optional(),
     query('periods').optional(),
-    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D'])
+    query('timeframe').optional().isIn(['1D', '7D', '30D', '50D', '90D', '220D']) // Extended timeframes
   ],
   validateRequest,
   rsiController.getBulkRSI
