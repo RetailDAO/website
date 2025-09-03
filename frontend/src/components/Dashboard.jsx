@@ -209,9 +209,25 @@ const CryptoDashboard = () => {
       // Update Moving Averages data from WebSocket
       if (indicatorData.movingAverages) {
         console.log(`🔄 Updating ${cryptoKey} MAs from WebSocket:`, indicatorData.movingAverages);
+        
+        // Convert WebSocket MA format to expected array format
+        const convertedMAs = {};
+        Object.entries(indicatorData.movingAverages).forEach(([period, data]) => {
+          if (data && data.current !== undefined) {
+            // Create array format expected by charts: [{ timestamp, value }]
+            convertedMAs[period] = [{
+              timestamp: new Date(data.timestamp || Date.now()),
+              value: data.current
+            }];
+          }
+        });
+        
         updated[cryptoKey] = {
           ...updated[cryptoKey],
-          movingAverages: indicatorData.movingAverages
+          movingAverages: {
+            ...updated[cryptoKey]?.movingAverages,
+            ...convertedMAs
+          }
         };
       }
       
