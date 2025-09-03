@@ -7,7 +7,7 @@ const { indicatorStreamController } = require('./src/controllers/indicatorStream
 const PORT = process.env.PORT || 8000;
 
 // Ensure proper server configuration for WebSocket upgrade handling
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Crypto Dashboard API v${process.env.npm_package_version}`);
 });
