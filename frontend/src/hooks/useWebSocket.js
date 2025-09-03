@@ -234,6 +234,56 @@ export function useCryptoPriceWebSocket(onPriceUpdate) {
   };
 }
 
+// Hook for WebSocket indicator streaming (RSI, Moving Averages)
+export function useIndicatorWebSocket(onIndicatorUpdate) {
+  const [indicators, setIndicators] = useState({});
+
+  const handleMessage = useCallback((data) => {
+    console.log('📊 Indicator WebSocket message:', data);
+    
+    if (data.type === 'indicator_update' && data.data) {
+      console.log('📊 Processing indicator update:', data);
+      const { symbol, data: indicatorData } = data;
+      
+      // Update indicators state
+      setIndicators(prev => ({
+        ...prev,
+        [symbol]: indicatorData
+      }));
+      
+      // Call callback if provided
+      if (onIndicatorUpdate) {
+        console.log('📞 Calling onIndicatorUpdate callback with:', symbol, indicatorData);
+        onIndicatorUpdate(symbol, indicatorData);
+      } else {
+        console.warn('⚠️ onIndicatorUpdate callback not provided');
+      }
+    } else if (data.type === 'connection_established') {
+      console.log('✅ Indicator WebSocket connection established:', data);
+    } else if (data.type === 'pong') {
+      console.log('🏓 Indicator WebSocket pong received');
+    } else {
+      console.log('📝 Non-indicator message type:', data.type || 'unknown');
+    }
+  }, [onIndicatorUpdate]);
+
+  // Use Vite proxied WebSocket endpoint in development
+  const wsUrl = import.meta.env.DEV 
+    ? 'ws://localhost:3000/ws/indicators'  // Vite dev server with proxy
+    : 'wss://website-production-8f8a.up.railway.app/ws/indicators'; // Railway production URL
+    
+  const wsConnection = useWebSocket(wsUrl, {
+    onMessage: handleMessage,
+    maxReconnectAttempts: 3,
+    reconnectInterval: 5000
+  });
+
+  return {
+    ...wsConnection,
+    indicators
+  };
+}
+
 // Hook for connection status monitoring
 export function useConnectionStatus() {
   const [status, setStatus] = useState({

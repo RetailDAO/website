@@ -3,7 +3,7 @@ import Chart from 'react-apexcharts';
 import mockDataService from '../services/mockDataService';
 import apiService from '../services/api';
 import { LiveRSIDisplay } from './RSIGauge';
-import { useCryptoPriceWebSocket } from '../hooks/useWebSocket';
+import { useCryptoPriceWebSocket, useIndicatorWebSocket } from '../hooks/useWebSocket';
 import { useTheme } from '../context/ThemeContext';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -173,6 +173,58 @@ const CryptoDashboard = () => {
 
   const { connectionStatus } = useCryptoPriceWebSocket(handlePriceUpdate);
 
+  // Handle WebSocket indicator updates (RSI, Moving Averages)
+  const handleIndicatorUpdate = useCallback((symbol, indicatorData) => {
+    console.log(`📊 Received indicator update for ${symbol}:`, indicatorData);
+    
+    // Convert BTCUSDT -> bitcoin, ETHUSDT -> ethereum for data structure consistency
+    const cryptoKey = symbol === 'BTCUSDT' ? 'bitcoin' : 
+                     symbol === 'ETHUSDT' ? 'ethereum' : 
+                     symbol === 'SOLUSDT' ? 'solana' : null;
+
+    if (!cryptoKey) {
+      console.warn(`⚠️ Unknown symbol for indicator update: ${symbol}`);
+      return;
+    }
+
+    setMarketData(prev => {
+      if (!prev) return prev;
+      
+      const updated = { ...prev };
+      
+      // Update RSI data from WebSocket
+      if (indicatorData.rsi) {
+        console.log(`🔄 Updating ${cryptoKey} RSI from WebSocket:`, indicatorData.rsi);
+        updated[cryptoKey] = {
+          ...updated[cryptoKey],
+          rsi: indicatorData.rsi
+        };
+        
+        // Also update global RSI for backward compatibility
+        if (cryptoKey === 'bitcoin') {
+          updated.rsi = indicatorData.rsi;
+        }
+      }
+      
+      // Update Moving Averages data from WebSocket
+      if (indicatorData.movingAverages) {
+        console.log(`🔄 Updating ${cryptoKey} MAs from WebSocket:`, indicatorData.movingAverages);
+        updated[cryptoKey] = {
+          ...updated[cryptoKey],
+          movingAverages: indicatorData.movingAverages
+        };
+      }
+      
+      return updated;
+    });
+
+    // Trigger pulsating animation for updated indicators
+    setDataUpdated(prev => ({ ...prev, rsi: true, btc: cryptoKey === 'bitcoin' }));
+    setTimeout(() => setDataUpdated(prev => ({ ...prev, rsi: false, btc: false })), 2000);
+  }, []);
+
+  const { connectionStatus: indicatorConnectionStatus } = useIndicatorWebSocket(handleIndicatorUpdate);
+
   // Progressive data loading function (defined first to avoid reference errors)
   const fetchProgressiveData = useCallback(async () => {
     try {
@@ -217,43 +269,14 @@ const CryptoDashboard = () => {
         console.warn('⚠️ Multi-crypto data failed or invalid format:', multiCryptoData);
       }
 
-      // Step 2: Fetch BTC analysis (medium speed)
-      console.log('📊 Fetching BTC analysis...');
+      // Step 2: Fetch DXY data only (BTC analysis and RSI now provided by WebSocket indicators)
+      console.log('📈 Fetching DXY data (BTC analysis and RSI provided by WebSocket)...');
       
-      try {
-        const btcAnalysis = await apiService.getBTCAnalysis();
-        if (btcAnalysis) {
-          setMarketData(prev => ({
-            ...prev,
-            bitcoin: { ...prev?.bitcoin, ...btcAnalysis }
-          }));
-          // Trigger pulsing animation for BTC chart
-          setDataUpdated(prev => ({ ...prev, btc: true }));
-          setTimeout(() => setDataUpdated(prev => ({ ...prev, btc: false })), 2000);
-          console.log('✅ BTC analysis loaded and updated');
-        }
-      } catch (error) {
-        console.warn('⚠️ BTC analysis failed, keeping mock data:', error);
-      }
-
-      // Step 3: Fetch RSI and DXY data (parallel)
-      console.log('📈 Fetching RSI and DXY data...');
-      
-      const [rsiData, dxyData] = await Promise.allSettled([
-        apiService.getRSI('BTC'),
+      const [dxyData] = await Promise.allSettled([
         apiService.getDXYAnalysis()
       ]);
 
-      if (rsiData.status === 'fulfilled') {
-        setMarketData(prev => ({
-          ...prev,
-          rsi: rsiData.value
-        }));
-        // Trigger pulsing animation for RSI cards
-        setDataUpdated(prev => ({ ...prev, rsi: true }));
-        setTimeout(() => setDataUpdated(prev => ({ ...prev, rsi: false })), 2000);
-        console.log('✅ RSI data loaded and updated');
-      }
+      console.log('ℹ️ Skipping redundant BTC analysis and RSI API calls - using WebSocket indicators instead');
 
       if (dxyData.status === 'fulfilled') {
         console.log('🔍 DXY API response:', dxyData.value);
