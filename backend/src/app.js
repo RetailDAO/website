@@ -38,7 +38,15 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api', rateLimiter);
 
 // Routes
-// app.use('/health', healthRoutes);
+// Simple health check for Railway deployment
+app.get('/health', (_, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'RetailDAO Backend'
+  });
+});
+
 app.use('/api/v1', apiRoutes);
 
 // 404 handler  
