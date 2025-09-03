@@ -66,7 +66,7 @@ export const useRSI = (symbol = 'BTC', timeframe = '1D', period = 14) => {
   });
 };
 
-export const useMultiCryptoAnalysis = (symbols = 'BTC,ETH', timeframe = '30D') => {
+export const useMultiCryptoAnalysis = (symbols = 'BTC,ETH', timeframe = '220D') => {
   return useQuery({
     queryKey: queryKeys.multiCrypto(symbols, timeframe),
     queryFn: () => apiService.getMultiCryptoAnalysis(symbols, timeframe),
@@ -88,8 +88,8 @@ export const useDashboardData = () => {
   const queries = useQueries({
     queries: [
       {
-        queryKey: queryKeys.multiCrypto('BTC,ETH', '1Y'),
-        queryFn: () => apiService.getMultiCryptoAnalysis('BTC,ETH', '1Y'),
+        queryKey: queryKeys.multiCrypto('BTC,ETH', '220D'),
+        queryFn: () => apiService.getMultiCryptoAnalysis('BTC,ETH', '220D'),
         staleTime: 5 * 60 * 1000,
       },
       {

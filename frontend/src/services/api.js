@@ -110,7 +110,8 @@ class ApiService {
   }
 
   // Multi-crypto Analysis (BTC, ETH) - SOL price comes from WebSocket only
-  async getMultiCryptoAnalysis(symbols = 'BTC,ETH', timeframe = '30D', includeAnalysis = 'true') {
+  // BTC optimized for 220D to match backend Golden Dataset storage
+  async getMultiCryptoAnalysis(symbols = 'BTC,ETH', timeframe = '220D', includeAnalysis = 'true') {
     const params = new URLSearchParams({ symbols, timeframe, includeAnalysis });
     return this.request(`/api/v1/crypto/multi-analysis?${params}`);
   }

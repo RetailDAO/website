@@ -244,45 +244,72 @@ const CryptoDashboard = () => {
   // Progressive data loading function (defined first to avoid reference errors)
   const fetchProgressiveData = useCallback(async () => {
     try {
-      console.log('🚀 Starting progressive data loading over mock data...');
+      console.log('🚀 Starting progressive data loading for fresh updates...');
 
-      // Step 1: Fetch multi-crypto data first (BTC, ETH, SOL prices and analysis)
-      console.log('📈 Fetching live multi-crypto data...');
+      // Step 1: Fetch fresh multi-crypto data (BTC, ETH prices and analysis)
+      console.log('📈 Fetching fresh multi-crypto data...');
       
-      const multiCryptoData = await apiService.getMultiCryptoAnalysis();
+      const multiCryptoData = await apiService.getMultiCryptoAnalysis('BTC,ETH', '220D');
       console.log('🔍 Multi-crypto API response:', multiCryptoData);
       if (multiCryptoData && multiCryptoData.success && multiCryptoData.data) {
-        // Update each crypto's data
+        let hasUpdates = false;
+        
+        // Update each crypto's data and check for changes
         Object.entries(multiCryptoData.data).forEach(([symbol, data]) => {
           if (data && typeof data === 'object' && 'currentPrice' in data) {
             const cryptoKey = symbol.toLowerCase() === 'btc' ? 'bitcoin' : 
-                            symbol.toLowerCase() === 'eth' ? 'ethereum' : 
-                            symbol.toLowerCase() === 'sol' ? 'solana' : symbol.toLowerCase();
+                            symbol.toLowerCase() === 'eth' ? 'ethereum' : symbol.toLowerCase();
             
-            console.log(`🔄 Updating ${cryptoKey} with price:`, data.currentPrice);
+            console.log(`🔄 Fresh update for ${cryptoKey} with price:`, data.currentPrice);
             setMarketData(prev => {
+              // Check if this is actually new data to trigger animation
+              const prevPrice = prev.cryptoPrices?.[cryptoKey]?.price || prev[cryptoKey]?.currentPrice;
+              if (prevPrice !== data.currentPrice) {
+                hasUpdates = true;
+              }
+              
               const updated = {
                 ...prev,
+                // Update price cards data
+                cryptoPrices: {
+                  ...prev.cryptoPrices,
+                  [cryptoKey]: {
+                    ...prev.cryptoPrices?.[cryptoKey],
+                    price: data.currentPrice,
+                    change: data.priceChangePercent24h || data.priceChange24h || 0,
+                    volume: data.volume24h,
+                    marketCap: data.marketCap,
+                    historical: data.historical || prev.cryptoPrices?.[cryptoKey]?.historical
+                  }
+                },
+                // Update main crypto object for backward compatibility
                 [cryptoKey]: { 
                   ...prev[cryptoKey], 
                   currentPrice: data.currentPrice,
                   priceChangePercent24h: data.priceChangePercent24h,
                   volume24h: data.volume24h,
                   marketCap: data.marketCap,
-                  sparkline7d: data.sparkline7d
+                  historical: data.historical || prev[cryptoKey]?.historical,
+                  rsi: data.rsi || prev[cryptoKey]?.rsi,
+                  movingAverages: data.movingAverages || prev[cryptoKey]?.movingAverages
                 }
               };
-              console.log(`✅ Updated ${cryptoKey} state:`, updated[cryptoKey]);
+              
+              console.log(`✅ Fresh data updated for ${cryptoKey}:`, updated.cryptoPrices[cryptoKey]);
               return updated;
             });
           }
         });
-        // Trigger pulsing animation for price cards
-        setDataUpdated(prev => ({ ...prev, prices: true }));
-        setTimeout(() => setDataUpdated(prev => ({ ...prev, prices: false })), 2000);
-        console.log('✅ Live multi-crypto data loaded and updated');
+        
+        // Trigger pulsing animation only if we have fresh updates
+        if (hasUpdates) {
+          console.log('💫 Triggering price card pulse animations for fresh data');
+          setDataUpdated(prev => ({ ...prev, prices: true }));
+          setTimeout(() => setDataUpdated(prev => ({ ...prev, prices: false })), 2000);
+        }
+        console.log('✅ Fresh multi-crypto data processed');
       } else {
-        console.warn('⚠️ Multi-crypto data failed or invalid format:', multiCryptoData);
+        console.warn('⚠️ Fresh multi-crypto data failed or invalid format:', multiCryptoData);
       }
 
       // Step 2: Fetch DXY data only (BTC analysis and RSI now provided by WebSocket indicators)
@@ -295,48 +322,65 @@ const CryptoDashboard = () => {
       console.log('ℹ️ Skipping redundant BTC analysis and RSI API calls - using WebSocket indicators instead');
 
       if (dxyData.status === 'fulfilled') {
-        console.log('🔍 DXY API response:', dxyData.value);
-        // Extract data from API response structure
+        console.log('🔍 Fresh DXY API response:', dxyData.value);
         const dxyProcessed = dxyData.value?.success && dxyData.value?.data ? dxyData.value.data : dxyData.value;
-        console.log('🔍 DXY processed data:', dxyProcessed);
         
-        setMarketData(prev => ({
-          ...prev,
-          dxy: dxyProcessed
-        }));
-        // Trigger pulsing animation for DXY chart
-        setDataUpdated(prev => ({ ...prev, dxy: true }));
-        setTimeout(() => setDataUpdated(prev => ({ ...prev, dxy: false })), 2000);
-        console.log('✅ DXY data loaded and updated');
+        setMarketData(prev => {
+          // Check if DXY data has actually changed
+          const prevDXY = prev.dxyData || prev.dxy;
+          const hasChanged = JSON.stringify(prevDXY) !== JSON.stringify(dxyProcessed);
+          
+          if (hasChanged) {
+            console.log('💫 Triggering DXY card pulse animation for fresh data');
+            setDataUpdated(prevState => ({ ...prevState, dxy: true }));
+            setTimeout(() => setDataUpdated(prevState => ({ ...prevState, dxy: false })), 2000);
+          }
+          
+          return {
+            ...prev,
+            dxyData: dxyProcessed,
+            dxy: dxyProcessed // Keep both for backward compatibility
+          };
+        });
+        console.log('✅ Fresh DXY data processed');
       } else {
-        console.warn('⚠️ DXY data failed:', dxyData.reason);
+        console.warn('⚠️ Fresh DXY data failed:', dxyData.reason);
       }
 
-      // Step 4: Fetch funding rates (medium speed)
-      console.log('💰 Fetching funding rates...');
+      // Step 4: Fetch fresh funding rates
+      console.log('💰 Fetching fresh funding rates...');
       
       try {
         const fundingData = await apiService.getFundingRates();
         if (fundingData && fundingData.success && fundingData.data?.structured) {
-          setMarketData(prev => ({
-            ...prev,
-            fundingRates: fundingData.data.structured
-          }));
-          // Trigger pulsing animation for funding rates card
-          setDataUpdated(prev => ({ ...prev, funding: true }));
-          setTimeout(() => setDataUpdated(prev => ({ ...prev, funding: false })), 2000);
-          console.log('✅ Funding rates loaded and updated');
+          setMarketData(prev => {
+            // Check if funding rates have changed
+            const prevFunding = prev.fundingRates;
+            const hasChanged = JSON.stringify(prevFunding) !== JSON.stringify(fundingData.data.structured);
+            
+            if (hasChanged) {
+              console.log('💫 Triggering funding rates pulse animation for fresh data');
+              setDataUpdated(prevState => ({ ...prevState, funding: true }));
+              setTimeout(() => setDataUpdated(prevState => ({ ...prevState, funding: false })), 2000);
+            }
+            
+            return {
+              ...prev,
+              fundingRates: fundingData.data.structured
+            };
+          });
+          console.log('✅ Fresh funding rates processed');
         }
       } catch (error) {
-        console.warn('⚠️ Funding rates failed, keeping mock data:', error);
+        console.warn('⚠️ Fresh funding rates failed, keeping cached data:', error);
       }
 
-      // Step 5: Fetch ETF data (slowest, load last)
-      console.log('🏦 Fetching ETF flow data (may take up to 60s)...');
+      // Step 5: Fetch fresh ETF data (slowest, load last)
+      console.log('🏦 Fetching fresh ETF flow data (may take up to 60s)...');
       
       try {
         const etfData = await apiService.getETFFlows();
-        console.log('🔍 ETF API response:', etfData);
+        console.log('🔍 Fresh ETF API response:', etfData);
         if (etfData) {
           // Handle both mock data format {btcFlows: [], ethFlows: []} and API format {flows: [...]}
           let processedETF = {};
@@ -346,36 +390,35 @@ const CryptoDashboard = () => {
             if (etfData.data.flows && Array.isArray(etfData.data.flows)) {
               // Convert flows array to btcFlows/ethFlows structure
               processedETF.btcFlows = etfData.data.flows.map(flow => ({
-                timestamp: new Date(flow.date || flow.timestamp),
-                flow: flow.flow || 0,
-                etf: flow.etf || 'Unknown'
+                date: flow.date,
+                value: flow.value || flow.netFlow || 0
               }));
-              processedETF.ethFlows = []; // ETH flows not available in current API
-            } else if (etfData.data.btcFlows || etfData.data.ethFlows) {
-              // Already in correct format
+            } else if (etfData.data.btcFlows) {
               processedETF = etfData.data;
             }
-          } else if (etfData.btcFlows || etfData.ethFlows) {
-            // Direct mock format
+          } else if (etfData.btcFlows) {
             processedETF = etfData;
-          } else {
-            // Fallback to mock data structure  
-            processedETF = {
-              btcFlows: apiService.generateETFMockData('btc'),
-              ethFlows: apiService.generateETFMockData('eth')
-            };
           }
           
-          console.log('🔍 ETF processed data:', processedETF);
-          
-          setMarketData(prev => ({
-            ...prev,
-            etfFlows: processedETF
-          }));
-          // Trigger pulsing animation for ETF chart
-          setDataUpdated(prev => ({ ...prev, etf: true }));
-          setTimeout(() => setDataUpdated(prev => ({ ...prev, etf: false })), 2000);
-          console.log('✅ ETF data loaded and updated');
+          if (processedETF.btcFlows && processedETF.btcFlows.length > 0) {
+            setMarketData(prev => {
+              // Check if ETF data has changed
+              const prevETF = prev.etfFlows;
+              const hasChanged = JSON.stringify(prevETF) !== JSON.stringify(processedETF);
+              
+              if (hasChanged) {
+                console.log('💫 Triggering ETF flows pulse animation for fresh data');
+                setDataUpdated(prevState => ({ ...prevState, etf: true }));
+                setTimeout(() => setDataUpdated(prevState => ({ ...prevState, etf: false })), 2000);
+              }
+              
+              return {
+                ...prev,
+                etfFlows: processedETF
+              };
+            });
+            console.log('✅ Fresh ETF flows processed');
+          }
         }
       } catch (error) {
         console.warn('⚠️ ETF data failed, keeping mock data:', error);
@@ -391,21 +434,104 @@ const CryptoDashboard = () => {
     }
   }, []);
 
+  // Load cached data first for most accurate display
+  const loadCachedDataFirst = useCallback(async () => {
+    try {
+      console.log('💾 Loading cached data first for accuracy...');
+      
+      // Try to load recent cached data from all endpoints
+      const cachedPromises = [
+        apiService.getMultiCryptoAnalysis('BTC,ETH', '220D').catch(() => null),
+        apiService.getDXYAnalysis('30D').catch(() => null),
+        apiService.getFundingRates().catch(() => null),
+        apiService.getETFFlows().catch(() => null),
+      ];
+      
+      const [cachedCrypto, cachedDXY, cachedFunding, cachedETF] = await Promise.all(cachedPromises);
+      
+      // Start with mock data as base
+      let initialData = await mockDataService.getAllMarketData();
+      console.log('🎭 Mock data loaded as fallback base');
+      
+      // Overlay cached data where available
+      if (cachedCrypto?.success && cachedCrypto.data) {
+        console.log('💾 Found cached crypto data, overlaying...', cachedCrypto.source);
+        Object.entries(cachedCrypto.data).forEach(([symbol, data]) => {
+          if (data && typeof data === 'object' && 'currentPrice' in data) {
+            const cryptoKey = symbol.toLowerCase() === 'btc' ? 'bitcoin' : 
+                            symbol.toLowerCase() === 'eth' ? 'ethereum' : symbol.toLowerCase();
+            
+            initialData.cryptoPrices[cryptoKey] = {
+              ...initialData.cryptoPrices[cryptoKey],
+              price: data.currentPrice,
+              change: data.priceChange24h || data.change24h || 0,
+              historical: data.historical || initialData.cryptoPrices[cryptoKey]?.historical
+            };
+            
+            // Update BTC chart data if available
+            if (cryptoKey === 'bitcoin' && data.historical) {
+              initialData.bitcoin = {
+                ...initialData.bitcoin,
+                historical: data.historical,
+                rsi: data.rsi || initialData.bitcoin.rsi,
+                movingAverages: data.movingAverages || initialData.bitcoin.movingAverages
+              };
+            }
+          }
+        });
+      }
+      
+      if (cachedDXY?.success && cachedDXY.data) {
+        console.log('💾 Found cached DXY data, overlaying...', cachedDXY.source);
+        initialData.dxyData = {
+          ...initialData.dxyData,
+          ...cachedDXY.data
+        };
+      }
+      
+      if (cachedFunding?.success && cachedFunding.data?.structured) {
+        console.log('💾 Found cached funding rates, overlaying...', cachedFunding.source);
+        initialData.fundingRates = cachedFunding.data.structured;
+      }
+      
+      if (cachedETF?.success || (cachedETF && !cachedETF.success)) {
+        console.log('💾 Found cached ETF data, overlaying...', cachedETF?.source || 'direct');
+        const etfData = cachedETF?.data || cachedETF;
+        if (etfData?.flows || etfData?.btcFlows) {
+          initialData.etfFlows = etfData.flows ? {
+            btcFlows: etfData.flows.map(flow => ({
+              date: flow.date,
+              value: flow.value || flow.netFlow || 0
+            }))
+          } : etfData;
+        }
+      }
+      
+      console.log('💾 Cached data overlaying complete - showing most accurate available data');
+      setMarketData(initialData);
+      return initialData;
+      
+    } catch (error) {
+      console.warn('⚠️ Failed to load cached data, using pure mock:', error);
+      const mockData = await mockDataService.getAllMarketData();
+      setMarketData(mockData);
+      return mockData;
+    }
+  }, []);
+
   const fetchMarketData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Always load mock data first for instant UX
-      const mockData = await mockDataService.getAllMarketData();
-      console.log('🎭 Initial mock data loaded for instant UX');
-      setMarketData(mockData);
+      // Load cached data first for most accurate display
+      await loadCachedDataFirst();
       
-      console.log('📊 Mock data loaded for instant UI display');
+      console.log('📊 Initial data loaded (cached + mock fallback)');
       
-      setLoading(false); // Show UI immediately with mock data
+      setLoading(false); // Show UI immediately with best available data
       
       if (useRealAPI) {
-        // Progressive loading with real API over mock data
+        // Progressive loading to update with fresh data
         await fetchProgressiveData();
       }
       
@@ -415,7 +541,7 @@ const CryptoDashboard = () => {
       console.error(err);
       setLoading(false);
     }
-  }, [useRealAPI, fetchProgressiveData]);
+  }, [useRealAPI, fetchProgressiveData, loadCachedDataFirst]);
 
   useEffect(() => {
     // Disabled interval to prevent rate limiting - user can manually refresh via sidebar
@@ -1622,7 +1748,7 @@ const PriceCards = () => {
           </p>
           {useRealAPI && (
             <p className="mt-1 text-xs text-blue-400">
-              ⚡ Live data powered by CoinGecko | BTC Chart: 220 days | RSI calculations available in mock mode
+              ⚡ Live data powered by CoinGecko | BTC Chart: 220 days cached data | Ring animations show fresh updates
             </p>
           )}
           {!useRealAPI && (

@@ -412,8 +412,8 @@
       "generated": "2025-09-03T05:25:00.000Z"
     },
     "timestamp": "2025-09-03T05:25:00.000Z",
-    "tier": "fresh",
-    "expiresAt": "2025-09-03T11:25:00.000Z",
+    "tier": "stale",
+    "expiresAt": "2025-09-03T17:40:29.455Z",
     "source": "manual_seed",
     "dataPoints": 31
   },
@@ -793,8 +793,8 @@
       ]
     },
     "timestamp": "2025-09-03T09:48:11.878Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T11:07:00.276Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T16:40:29.455Z",
     "source": "api_success",
     "dataPoints": 92
   },
@@ -809,8 +809,8 @@
       "historical": []
     },
     "timestamp": "2025-09-03T10:05:08.488Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T11:12:04.932Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T16:40:29.455Z",
     "source": "api_success",
     "dataPoints": 1
   },
@@ -1190,8 +1190,8 @@
       ]
     },
     "timestamp": "2025-09-03T10:10:02.266Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T11:15:14.028Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T16:40:29.455Z",
     "source": "api_success",
     "dataPoints": 92
   }
