@@ -542,11 +542,20 @@ const CryptoDashboard = () => {
           }
         },
         theme: { mode: darkMode ? 'dark' : 'light' },
-        colors: ['#22ad1eff', '#7e7cf8ff', '#ff5c5cff', '#81a011ff'], // High contrast colors
+        colors: ['#10B981', '#7e7cf8ff', '#ff5c5cff', '#81a011ff'], // Green for BTC area, other colors for MAs
         stroke: {
           width: [2, 1.5, 1.5, 1.5], // Thicker main line
           curve: 'smooth',
           dashArray: [0, 0, 5, 5] // Dashed for longer MAs
+        },
+        fill: {
+          type: ['gradient', 'solid', 'solid', 'solid'], // Gradient only for BTC area
+          gradient: {
+            shadeIntensity: 1,
+            opacityFrom: 0.3,
+            opacityTo: 0.1,
+            stops: [0, 100]
+          }
         },
         title: {
           text: 'BTC Price with Moving Averages',

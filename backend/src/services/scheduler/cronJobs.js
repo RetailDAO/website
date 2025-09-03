@@ -139,7 +139,7 @@ class CronJobService {
   listActiveJobs() {
     console.log('📋 Active cron jobs:');
     this.jobs.forEach((job, name) => {
-      const status = job.getStatus();
+      const status = job.running ? 'running' : 'scheduled';
       console.log(`  - ${name}: ${status}`);
     });
   }
@@ -186,16 +186,16 @@ class CronJobService {
   // Manual trigger for testing
   async triggerJob(jobName) {
     switch (jobName) {
-      case 'dxy-refresh':
-        return await this.refreshDXYData();
-      case 'etf-refresh':
-        return await this.refreshETFData();
-      case 'cache-maintenance':
-        return await cacheService.performMaintenance();
-      case 'golden-backup':
-        return await this.backupGoldenDataset();
-      default:
-        throw new Error(`Unknown job: ${jobName}`);
+    case 'dxy-refresh':
+      return await this.refreshDXYData();
+    case 'etf-refresh':
+      return await this.refreshETFData();
+    case 'cache-maintenance':
+      return await cacheService.performMaintenance();
+    case 'golden-backup':
+      return await this.backupGoldenDataset();
+    default:
+      throw new Error(`Unknown job: ${jobName}`);
     }
   }
 }

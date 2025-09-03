@@ -104,7 +104,7 @@ class CryptoDataService {
             days: optimizedDays,
             // Only add interval for specific cases - CoinGecko can be picky
             ...(optimizedDays <= 1 ? { interval: 'hourly' } : 
-               optimizedDays <= 90 ? { interval: 'daily' } : {})
+              optimizedDays <= 90 ? { interval: 'daily' } : {})
           }
         });
         return response.data;
@@ -112,15 +112,15 @@ class CryptoDataService {
 
       const data = {
         current: {
-          price: currentData.bitcoin.usd,
-          change24h: currentData.bitcoin.usd_24h_change,
-          volume24h: currentData.bitcoin.usd_24h_vol,
-          marketCap: currentData.bitcoin.usd_market_cap
+          price: currentData?.bitcoin?.usd || 0,
+          change24h: currentData?.bitcoin?.usd_24h_change || 0,
+          volume24h: currentData?.bitcoin?.usd_24h_vol || 0,
+          marketCap: currentData?.bitcoin?.usd_market_cap || 0
         },
-        historical: historicalData.prices.map(([timestamp, price]) => ({
+        historical: historicalData?.prices?.map(([timestamp, price]) => ({
           timestamp: new Date(timestamp).toISOString(),
           price
-        }))
+        })) || []
       };
 
       console.log(`✅ [CoinGecko] Successfully fetched BTC data for ${timeframe} (${data.historical.length} points)`);
@@ -245,7 +245,7 @@ class CryptoDataService {
     }
     
     if (symbolsToFetch.length === 0) {
-      console.log(`✅ All batch data served from individual caches`);
+      console.log('✅ All batch data served from individual caches');
       await cacheService.set(cacheKey, results, 300);
       return results;
     }
@@ -291,7 +291,7 @@ class CryptoDataService {
                 days: optimizedDays,
                 // Only add interval for specific cases - CoinGecko is picky about this
                 ...(optimizedDays <= 1 ? { interval: 'hourly' } : 
-                   optimizedDays <= 90 ? { interval: 'daily' } : {})
+                  optimizedDays <= 90 ? { interval: 'daily' } : {})
               }
             });
             return response.data;
@@ -310,7 +310,7 @@ class CryptoDataService {
         const symbol = request.symbol;
         const coinId = request.coinId;
         
-        if (result.success && currentData[coinId]) {
+        if (result.success && currentData && currentData[coinId] && result.data && result.data.prices) {
           const symbolData = {
             current: {
               price: currentData[coinId].usd,
@@ -361,7 +361,7 @@ class CryptoDataService {
       return results;
 
     } catch (error) {
-      console.error(`❌ [CoinGecko] Critical error in batch request, using comprehensive fallback:`, error.message);
+      console.error('❌ [CoinGecko] Critical error in batch request, using comprehensive fallback:', error.message);
       
       // Generate mock data for any symbols we don't have
       for (const symbol of symbolsToFetch) {
@@ -422,8 +422,8 @@ class CryptoDataService {
       // Get historical data with rate limiting - ensure we have enough for RSI/MA calculations
       const requestedDays = this.timeframeToDays(timeframe);
       // Smart hybrid approach: get 90 days from API, extend with mock data for MAs
-const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free tier limit
-// Removed: requiredDaysForMAs - now using optimized 90-day limit
+      const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free tier limit
+      // Removed: requiredDaysForMAs - now using optimized 90-day limit
       // Limit days to avoid CoinGecko API errors (max 365 days for free tier)
       const safeDaysLimit = Math.min(minDaysForCalculations, 90); // CoinGecko free tier max
       
@@ -434,7 +434,7 @@ const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free ti
             days: safeDaysLimit,
             // Only add interval for specific cases - CoinGecko can be picky
             ...(safeDaysLimit <= 1 ? { interval: 'hourly' } : 
-               safeDaysLimit <= 90 ? { interval: 'daily' } : {})
+              safeDaysLimit <= 90 ? { interval: 'daily' } : {})
           }
         });
         return response.data;
@@ -442,15 +442,15 @@ const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free ti
 
       const data = {
         current: {
-          price: currentData[coinId].usd,
-          change24h: currentData[coinId].usd_24h_change,
-          volume24h: currentData[coinId].usd_24h_vol,
-          marketCap: currentData[coinId].usd_market_cap
+          price: currentData?.[coinId]?.usd || 0,
+          change24h: currentData?.[coinId]?.usd_24h_change || 0,
+          volume24h: currentData?.[coinId]?.usd_24h_vol || 0,
+          marketCap: currentData?.[coinId]?.usd_market_cap || 0
         },
-        historical: historicalData.prices.map(([timestamp, price]) => ({
+        historical: historicalData?.prices?.map(([timestamp, price]) => ({
           timestamp: new Date(timestamp).toISOString(),
           price
-        }))
+        })) || []
       };
 
       // Cache successful results for 5 minutes
