@@ -332,23 +332,16 @@ class WebSocketService {
         dataPoints: history.length
       };
 
-      // Check if indicators have changed significantly
-      const hasSignificantChange = await this.hasSignificantIndicatorChange(symbol, indicatorData);
+      // Cache the indicators
+      await cacheService.setFrequent(`ws_indicators_${symbol}`, indicatorData);
       
-      if (hasSignificantChange) {
-        // Cache the indicators
-        await cacheService.setFrequent(`ws_indicators_${symbol}`, indicatorData);
-        
-        // Broadcast to subscribed clients
-        await this.broadcastIndicators(symbol, indicatorData);
-        
-        // Update last indicator data for comparison
-        this.lastIndicatorData.set(symbol, indicatorData);
-        
-        console.log(`📊 Calculated and streamed indicators for ${symbol}`);
-      } else {
-        console.log(`📊 ${symbol} indicators unchanged, skipping broadcast`);
-      }
+      // Always broadcast to subscribed clients for price card pulsing
+      await this.broadcastIndicators(symbol, indicatorData);
+      
+      // Update last indicator data for comparison
+      this.lastIndicatorData.set(symbol, indicatorData);
+      
+      console.log(`📊 Calculated and streamed indicators for ${symbol}`)
 
       return indicatorData;
       

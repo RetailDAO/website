@@ -263,6 +263,26 @@ const CryptoDashboard = () => {
       return;
     }
 
+    // Trigger price card pulse animation on every WebSocket update
+    setPulseEffects(prev => ({
+      ...prev,
+      priceCards: {
+        active: true,
+        type: 'websocket_indicator',
+        intensity: 'medium',
+        timestamp: Date.now(),
+        source: `${symbol} Indicators`
+      }
+    }));
+    
+    // Auto-clear pulse effect
+    setTimeout(() => {
+      setPulseEffects(prev => ({
+        ...prev,
+        priceCards: { ...prev.priceCards, active: false }
+      }));
+    }, 1500);
+
     setMarketData(prev => {
       if (!prev) return prev;
       
@@ -385,6 +405,7 @@ const CryptoDashboard = () => {
                   priceChangePercent24h: data.priceChangePercent24h,
                   volume24h: data.volume24h,
                   marketCap: data.marketCap,
+                  prices: data.historical?.prices || data.prices || prev[cryptoKey]?.prices,
                   historical: data.historical || prev[cryptoKey]?.historical,
                   rsi: data.rsi || prev[cryptoKey]?.rsi,
                   movingAverages: data.movingAverages || prev[cryptoKey]?.movingAverages
@@ -560,8 +581,8 @@ const CryptoDashboard = () => {
             if (etfData.data.flows && Array.isArray(etfData.data.flows)) {
               // Convert flows array to btcFlows/ethFlows structure
               processedETF.btcFlows = etfData.data.flows.map(flow => ({
-                date: flow.date,
-                value: flow.value || flow.netFlow || 0
+                timestamp: flow.date,
+                flow: flow.value || flow.netFlow || 0
               }));
             } else if (etfData.data.btcFlows) {
               processedETF = etfData.data;
@@ -690,8 +711,8 @@ const CryptoDashboard = () => {
         if (etfData?.flows || etfData?.btcFlows) {
           initialData.etfFlows = etfData.flows ? {
             btcFlows: etfData.flows.map(flow => ({
-              date: flow.date,
-              value: flow.value || flow.netFlow || 0
+              timestamp: flow.date,
+              flow: flow.value || flow.netFlow || 0
             }))
           } : etfData;
         }
