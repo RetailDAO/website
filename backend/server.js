@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 const websocketService = require('./src/services/websocket/websocketService');
 const { indicatorStreamController } = require('./src/controllers/indicatorStreamController');
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8000;
 
 // Ensure proper server configuration for WebSocket upgrade handling
 const server = app.listen(PORT, '0.0.0.0', () => {

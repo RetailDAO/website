@@ -35,8 +35,8 @@
       "generated": "2025-09-02T23:29:48.453Z"
     },
     "timestamp": "2025-09-02T23:29:48.454Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T00:40:45.866Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T00:49:33.289Z",
     "source": "api_success",
     "dataPoints": 3
   },
