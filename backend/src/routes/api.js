@@ -117,7 +117,7 @@ router.get('/rsi/summary',
 router.get('/crypto/analysis',
   [
     query('symbol').notEmpty().withMessage('Symbol is required'),
-    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D', '1Y']),
+    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D', '220D', '1Y']),
     query('includeAnalysis').optional().isBoolean()
   ],
   validateRequest,
@@ -127,7 +127,7 @@ router.get('/crypto/analysis',
 router.get('/crypto/multi-analysis',
   [
     query('symbols').notEmpty().withMessage('Symbols are required (e.g. BTC,ETH,RETAIL)'),
-    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D', '1Y']),
+    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D', '220D', '1Y']),
     query('includeAnalysis').optional().isBoolean()
   ],
   validateRequest,

@@ -139,19 +139,32 @@ const CryptoDashboard = () => {
       return;
     }
 
-    // Update market data with new price for price cards only
+    // Update market data with new price for price cards (both data paths)
     setMarketData(prevData => {
       if (!prevData) return prevData;
       
       console.log(`📈 Updating ${symbolKey} price:`, priceData.price);
       return {
         ...prevData,
+        // Update main crypto object (for PriceCards component)
         [symbolKey]: {
           ...prevData[symbolKey],
           currentPrice: priceData.price,
+          priceChangePercent24h: priceData.change24h,
           priceChange24h: priceData.change24h,
           lastUpdated: priceData.timestamp,
           source: 'WebSocket Live'
+        },
+        // Also update cryptoPrices path (for consistency with cached data structure)
+        cryptoPrices: {
+          ...prevData.cryptoPrices,
+          [symbolKey]: {
+            ...prevData.cryptoPrices?.[symbolKey],
+            price: priceData.price,
+            change: priceData.change24h,
+            lastUpdated: priceData.timestamp,
+            source: 'WebSocket Live'
+          }
         }
       };
     });
