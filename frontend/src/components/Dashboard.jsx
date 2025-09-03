@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Chart from 'react-apexcharts';
 import mockDataService from '../services/mockDataService';
+import persistentMockService from '../services/persistentMockDataService';
 import apiService from '../services/api';
 import { LiveRSIDisplay } from './RSIGauge';
 import { useCryptoPriceWebSocket, useIndicatorWebSocket } from '../hooks/useWebSocket';
@@ -120,24 +121,66 @@ const CryptoDashboard = () => {
     funding: false
   });
   
+  // Enhanced pulsating system with different types and intensities
+  const [pulseEffects, setPulseEffects] = useState({
+    priceCards: { active: false, type: 'websocket', intensity: 'normal', timestamp: null },
+    btcChart: { active: false, type: 'api_fresh', intensity: 'normal', timestamp: null },
+    ethChart: { active: false, type: 'api_fresh', intensity: 'normal', timestamp: null },
+    dxyChart: { active: false, type: 'api_cached', intensity: 'subtle', timestamp: null },
+    rsiIndicators: { active: false, type: 'websocket', intensity: 'strong', timestamp: null },
+    fundingRates: { active: false, type: 'api_cached', intensity: 'normal', timestamp: null },
+    etfFlows: { active: false, type: 'api_fresh', intensity: 'subtle', timestamp: null }
+  });
+  
+  // Enhanced WebSocket connection status tracking
+  const [wsConnectionHealth, setWsConnectionHealth] = useState({
+    priceWs: 'connecting',
+    indicatorWs: 'connecting',
+    lastPriceUpdate: null,
+    lastIndicatorUpdate: null
+  });
+  
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Simplified WebSocket handler for price cards only
+  // Enhanced WebSocket handler for price cards with error handling
   const handlePriceUpdate = useCallback((symbol, priceData) => {
     console.log('💰 WebSocket price update received:', symbol, priceData);
     
+    // Validate input data to prevent errors
+    if (!symbol || typeof symbol !== 'string' || !priceData) {
+      console.warn('🚫 Invalid WebSocket data:', { symbol, priceData });
+      return;
+    }
+    
     let symbolKey;
-    if (symbol.toLowerCase() === 'btcusdt') {
+    const normalizedSymbol = symbol.toLowerCase();
+    if (normalizedSymbol === 'btcusdt') {
       symbolKey = 'bitcoin';
-    } else if (symbol.toLowerCase() === 'ethusdt') {
+    } else if (normalizedSymbol === 'ethusdt') {
       symbolKey = 'ethereum';
-    } else if (symbol.toLowerCase() === 'solusdt') {
+    } else if (normalizedSymbol === 'solusdt') {
       symbolKey = 'solana';
     } else {
       console.warn('🚫 Unknown WebSocket symbol:', symbol);
       return;
     }
+    
+    // Validate price data
+    const price = parseFloat(priceData.price);
+    const change24h = parseFloat(priceData.change24h || 0);
+    
+    if (isNaN(price)) {
+      console.warn('🚫 Invalid price data:', priceData);
+      return;
+    }
+    
+    // Update connection health tracking
+    setWsConnectionHealth(prev => ({
+      ...prev,
+      priceWs: 'connected',
+      lastPriceUpdate: Date.now()
+    }));
 
     // Update market data with new price for price cards (both data paths)
     setMarketData(prevData => {
@@ -179,7 +222,27 @@ const CryptoDashboard = () => {
       }
     }));
 
-    // Trigger pulsating animation for price cards
+    // Trigger enhanced pulsating animation for price cards
+    setPulseEffects(prev => ({
+      ...prev,
+      priceCards: { 
+        active: true, 
+        type: 'websocket', 
+        intensity: Math.abs(change24h) > 5 ? 'strong' : 'normal',
+        timestamp: Date.now(),
+        crypto: symbolKey
+      }
+    }));
+    
+    // Auto-clear the pulse after animation
+    setTimeout(() => {
+      setPulseEffects(prev => ({
+        ...prev,
+        priceCards: { ...prev.priceCards, active: false }
+      }));
+    }, 2500);
+    
+    // Legacy support for existing animations
     setDataUpdated(prev => ({ ...prev, prices: true }));
     setTimeout(() => setDataUpdated(prev => ({ ...prev, prices: false })), 2000);
   }, []);
@@ -247,7 +310,27 @@ const CryptoDashboard = () => {
       return updated;
     });
 
-    // Trigger pulsating animation for updated indicators
+    // Trigger enhanced pulsating animation for updated indicators
+    setPulseEffects(prev => ({
+      ...prev,
+      rsiIndicators: {
+        active: true,
+        type: 'websocket',
+        intensity: 'strong', // RSI changes are important
+        timestamp: Date.now(),
+        crypto: cryptoKey,
+        source: 'WebSocket Indicators'
+      }
+    }));
+    
+    setTimeout(() => {
+      setPulseEffects(prev => ({
+        ...prev,
+        rsiIndicators: { ...prev.rsiIndicators, active: false }
+      }));
+    }, 2000);
+    
+    // Legacy support
     setDataUpdated(prev => ({ ...prev, rsi: true, btc: cryptoKey === 'bitcoin' }));
     setTimeout(() => setDataUpdated(prev => ({ ...prev, rsi: false, btc: false })), 2000);
   }, []);
@@ -314,9 +397,43 @@ const CryptoDashboard = () => {
           }
         });
         
-        // Trigger pulsing animation only if we have fresh updates
+        // Trigger enhanced pulsing animation only if we have fresh updates
         if (hasUpdates) {
-          console.log('💫 Triggering price card pulse animations for fresh data');
+          console.log('💫 Triggering enhanced pulse animations for fresh API data');
+          
+          // Price cards pulse - API fresh data style
+          setPulseEffects(prev => ({
+            ...prev,
+            priceCards: {
+              active: true,
+              type: 'api_fresh',
+              intensity: 'strong',
+              timestamp: Date.now(),
+              source: 'Multi-Crypto API'
+            }
+          }));
+          
+          // BTC chart pulse if BTC data updated
+          setPulseEffects(prev => ({
+            ...prev,
+            btcChart: {
+              active: true,
+              type: 'api_fresh',
+              intensity: 'normal',
+              timestamp: Date.now()
+            }
+          }));
+          
+          // Auto-clear pulses
+          setTimeout(() => {
+            setPulseEffects(prev => ({
+              ...prev,
+              priceCards: { ...prev.priceCards, active: false },
+              btcChart: { ...prev.btcChart, active: false }
+            }));
+          }, 3000);
+          
+          // Legacy support
           setDataUpdated(prev => ({ ...prev, prices: true }));
           setTimeout(() => setDataUpdated(prev => ({ ...prev, prices: false })), 2000);
         }
@@ -344,7 +461,27 @@ const CryptoDashboard = () => {
           const hasChanged = JSON.stringify(prevDXY) !== JSON.stringify(dxyProcessed);
           
           if (hasChanged) {
-            console.log('💫 Triggering DXY card pulse animation for fresh data');
+            console.log('💫 Triggering DXY enhanced pulse animation for fresh data');
+            
+            setPulseEffects(prev => ({
+              ...prev,
+              dxyChart: {
+                active: true,
+                type: 'api_fresh',
+                intensity: 'normal',
+                timestamp: Date.now(),
+                source: 'DXY API'
+              }
+            }));
+            
+            setTimeout(() => {
+              setPulseEffects(prev => ({
+                ...prev,
+                dxyChart: { ...prev.dxyChart, active: false }
+              }));
+            }, 2500);
+            
+            // Legacy support
             setDataUpdated(prevState => ({ ...prevState, dxy: true }));
             setTimeout(() => setDataUpdated(prevState => ({ ...prevState, dxy: false })), 2000);
           }
@@ -372,7 +509,27 @@ const CryptoDashboard = () => {
             const hasChanged = JSON.stringify(prevFunding) !== JSON.stringify(fundingData.data.structured);
             
             if (hasChanged) {
-              console.log('💫 Triggering funding rates pulse animation for fresh data');
+              console.log('💫 Triggering funding rates enhanced pulse animation');
+              
+              setPulseEffects(prev => ({
+                ...prev,
+                fundingRates: {
+                  active: true,
+                  type: 'api_fresh',
+                  intensity: 'normal',
+                  timestamp: Date.now(),
+                  source: 'Funding Rates API'
+                }
+              }));
+              
+              setTimeout(() => {
+                setPulseEffects(prev => ({
+                  ...prev,
+                  fundingRates: { ...prev.fundingRates, active: false }
+                }));
+              }, 2500);
+              
+              // Legacy support
               setDataUpdated(prevState => ({ ...prevState, funding: true }));
               setTimeout(() => setDataUpdated(prevState => ({ ...prevState, funding: false })), 2000);
             }
@@ -420,7 +577,27 @@ const CryptoDashboard = () => {
               const hasChanged = JSON.stringify(prevETF) !== JSON.stringify(processedETF);
               
               if (hasChanged) {
-                console.log('💫 Triggering ETF flows pulse animation for fresh data');
+                console.log('💫 Triggering ETF flows enhanced pulse animation');
+                
+                setPulseEffects(prev => ({
+                  ...prev,
+                  etfFlows: {
+                    active: true,
+                    type: 'api_fresh',
+                    intensity: 'subtle', // ETF data updates are less frequent
+                    timestamp: Date.now(),
+                    source: 'ETF Flows API'
+                  }
+                }));
+                
+                setTimeout(() => {
+                  setPulseEffects(prev => ({
+                    ...prev,
+                    etfFlows: { ...prev.etfFlows, active: false }
+                  }));
+                }, 3000); // Longer animation for less frequent updates
+                
+                // Legacy support
                 setDataUpdated(prevState => ({ ...prevState, etf: true }));
                 setTimeout(() => setDataUpdated(prevState => ({ ...prevState, etf: false })), 2000);
               }
@@ -535,23 +712,52 @@ const CryptoDashboard = () => {
   const fetchMarketData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // Load cached data first for most accurate display
-      await loadCachedDataFirst();
+      // PROGRESSIVE LOADING PATTERN FOR FASTER UI:
       
-      console.log('📊 Initial data loaded (cached + mock fallback)');
+      // Phase 1: Load persistent mock data IMMEDIATELY for instant UI display
+      console.log('🚀 Phase 1: Loading persistent mock data for immediate display...');
+      const mockData = await persistentMockService.getAllMarketData();
+      setMarketData(mockData);
+      setLoading(false); // Show UI immediately with realistic mock data
+      console.log('✅ Phase 1 complete: UI is visible with pattern-based mock data');
       
-      setLoading(false); // Show UI immediately with best available data
+      // Log mock data info for debugging
+      const dataInfo = persistentMockService.getDataInfo();
+      console.log('📊 Mock data info:', dataInfo);
       
+      // Phase 2: Enhance with cached data (background, non-blocking)
       if (useRealAPI) {
-        // Progressive loading to update with fresh data
-        await fetchProgressiveData();
+        console.log('🔄 Phase 2: Enhancing with cached data...');
+        setTimeout(async () => {
+          try {
+            await loadCachedDataFirst();
+            console.log('✅ Phase 2 complete: Enhanced with cached data');
+            
+            // Phase 3: Get fresh data (background, non-blocking)
+            console.log('📡 Phase 3: Fetching fresh data in background...');
+            setTimeout(() => {
+              fetchProgressiveData().catch(error => {
+                console.warn('⚠️ Fresh data fetch failed (non-critical):', error.message);
+              });
+            }, 1000);
+            
+          } catch (error) {
+            console.warn('⚠️ Phase 2 enhancement failed (non-critical):', error.message);
+            // Still proceed to fresh data attempt
+            setTimeout(() => {
+              fetchProgressiveData().catch(error => {
+                console.warn('⚠️ Fresh data fetch failed:', error.message);
+              });
+            }, 2000);
+          }
+        }, 200); // Very short delay to ensure UI is rendered
       }
       
-      setError(null);
     } catch (err) {
-      setError('Failed to fetch market data');
-      console.error(err);
+      console.error('❌ Critical error in market data loading:', err);
+      setError(`Failed to load market data: ${err.message}`);
       setLoading(false);
     }
   }, [useRealAPI, fetchProgressiveData, loadCachedDataFirst]);
@@ -612,7 +818,23 @@ const CryptoDashboard = () => {
 
   // Enhanced Bitcoin chart with Moving Averages - Professional Trader Grade
   const getBitcoinChartOptions = () => {
-    if (!marketData?.bitcoin?.prices) {
+    if (!marketData?.bitcoin?.prices || !Array.isArray(marketData.bitcoin.prices)) {
+      return {
+        series: [],
+        options: getLoadingOptions('BTC Price with Moving Averages')
+      };
+    }
+
+    // Safely filter and map price data to prevent ApexCharts path errors
+    const validPrices = marketData.bitcoin.prices
+      .filter(item => item && item.timestamp && typeof item.price === 'number' && !isNaN(item.price))
+      .map(item => {
+        const timestamp = item.timestamp instanceof Date ? item.timestamp.getTime() : new Date(item.timestamp).getTime();
+        return [timestamp, Math.round(item.price)];
+      })
+      .filter(([timestamp, price]) => !isNaN(timestamp) && !isNaN(price));
+
+    if (validPrices.length === 0) {
       return {
         series: [],
         options: getLoadingOptions('BTC Price with Moving Averages')
@@ -623,28 +845,32 @@ const CryptoDashboard = () => {
       {
         name: 'BTC Price',
         type: 'area',
-        data: marketData.bitcoin.prices.map(item => [
-          item.timestamp.getTime(),
-          Math.round(item.price)
-        ])
+        data: validPrices
       }
     ];
 
-    // Add moving averages with distinct styles
+    // Add moving averages with distinct styles - with data validation
     const maPeriods = [20, 50, 100, 200];
     maPeriods.forEach((period, index) => {
-      if (marketData.bitcoin.movingAverages[period]) {
-        series.push({
-          name: `${period}d MA`,
-          type: 'line',
-          data: marketData.bitcoin.movingAverages[period].map(item => [
-            item.timestamp.getTime(),
-            Math.round(item.value)
-          ]),
-          stroke: {
-            dashArray: index % 2 === 0 ? 0 : 5 // Dashed for some MAs for distinction
-          }
-        });
+      if (marketData.bitcoin.movingAverages && marketData.bitcoin.movingAverages[period]) {
+        const validMAData = marketData.bitcoin.movingAverages[period]
+          .filter(item => item && item.timestamp && typeof item.value === 'number' && !isNaN(item.value))
+          .map(item => {
+            const timestamp = item.timestamp instanceof Date ? item.timestamp.getTime() : new Date(item.timestamp).getTime();
+            return [timestamp, Math.round(item.value)];
+          })
+          .filter(([timestamp, value]) => !isNaN(timestamp) && !isNaN(value));
+
+        if (validMAData.length > 0) {
+          series.push({
+            name: `${period}d MA`,
+            type: 'line',
+            data: validMAData,
+            stroke: {
+              dashArray: index % 2 === 0 ? 0 : 5 // Dashed for some MAs for distinction
+            }
+          });
+        }
       }
     });
 
@@ -789,7 +1015,7 @@ const CryptoDashboard = () => {
 const getDXYChartOptions = () => {
   console.log('🔍 DXY Chart - marketData.dxy:', marketData?.dxy);
   // Check for different data structures: mock data has .prices, API has .historical
-  const dxyPrices = marketData?.dxy?.prices || marketData?.dxy?.historical;
+  const dxyPrices = marketData?.dxy?.prices || marketData?.dxy?.historical || marketData?.dxyData?.prices || marketData?.dxyData?.historical;
   console.log('🔍 DXY prices array:', dxyPrices);
   if (!dxyPrices || !Array.isArray(dxyPrices) || dxyPrices.length === 0) {
     return {
@@ -805,13 +1031,34 @@ const getDXYChartOptions = () => {
     };
   }
 
+  // Safely filter and map DXY data to prevent ApexCharts path errors
+  const validDxyData = dxyPrices
+    .filter(item => item && (item.timestamp || item.date) && (typeof item.price === 'number' || typeof item.value === 'number'))
+    .map(item => {
+      const timestamp = new Date(item.timestamp || item.date).getTime();
+      const price = item.price || item.value;
+      return [timestamp, price];
+    })
+    .filter(([timestamp, price]) => !isNaN(timestamp) && !isNaN(price));
+
+  if (validDxyData.length === 0) {
+    return {
+      series: [],
+      options: {
+        ...getLoadingOptions('US Dollar Index (DXY)'),
+        chart: {
+          ...getLoadingOptions('US Dollar Index (DXY)').chart,
+          height: 200,
+          type: 'area'
+        }
+      }
+    };
+  }
+
   return {
     series: [{
       name: 'DXY',
-      data: dxyPrices.map(item => [
-        new Date(item.timestamp || item.date).getTime(),
-        item.price || item.value
-      ])
+      data: validDxyData
     }],
     options: {
       chart: {
@@ -923,10 +1170,35 @@ const getDXYChartOptions = () => {
       };
     }
 
-    const btcData = btcFlows.map(item => ({
-      x: new Date(item.timestamp || item.date).getTime(),
-      y: Math.round((item.flow || item.value || item.amount) / 1000000) // Convert to millions
-    }));
+    // Safely filter and map ETF data to prevent ApexCharts errors
+    const validETFData = btcFlows
+      .filter(item => {
+        const hasTimestamp = item && (item.timestamp || item.date);
+        const hasValue = typeof (item.flow || item.value || item.amount) === 'number';
+        return hasTimestamp && hasValue;
+      })
+      .map(item => {
+        const timestamp = new Date(item.timestamp || item.date).getTime();
+        const value = Math.round((item.flow || item.value || item.amount) / 1000000); // Convert to millions
+        return { x: timestamp, y: value };
+      })
+      .filter(item => !isNaN(item.x) && !isNaN(item.y));
+
+    if (validETFData.length === 0) {
+      return {
+        series: [],
+        options: {
+          ...getLoadingOptions('BTC Spot ETF Net Flows'),
+          chart: {
+            ...getLoadingOptions('BTC Spot ETF Net Flows').chart,
+            height: 300,
+            type: 'bar'
+          }
+        }
+      };
+    }
+
+    const btcData = validETFData;
 
     return {
       series: [
@@ -1592,7 +1864,10 @@ const PriceCards = () => {
         <div className="flex justify-between">
           <span className={`${colors.text.muted}`}>Current Value:</span>
           <span className={`${colors.text.primary} font-mono`}>
-            {(marketData?.dxy?.currentPrice || marketData?.dxy?.current?.value)?.toFixed(2) || '102.61'}
+            {(() => {
+              const dxyValue = marketData?.dxyData?.currentPrice || marketData?.dxy?.currentPrice || marketData?.dxy?.current?.value;
+              return typeof dxyValue === 'number' && !isNaN(dxyValue) ? dxyValue.toFixed(2) : '102.61';
+            })()}
           </span>
         </div>
         <div className="flex justify-between">

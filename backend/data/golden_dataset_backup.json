@@ -412,8 +412,8 @@
       "generated": "2025-09-03T05:25:00.000Z"
     },
     "timestamp": "2025-09-03T05:25:00.000Z",
-    "tier": "fresh",
-    "expiresAt": "2025-09-03T11:25:00.000Z",
+    "tier": "stale",
+    "expiresAt": "2025-09-03T17:40:29.455Z",
     "source": "manual_seed",
     "dataPoints": 31
   },
@@ -793,8 +793,8 @@
       ]
     },
     "timestamp": "2025-09-03T09:48:11.878Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T11:07:00.276Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T16:40:29.455Z",
     "source": "api_success",
     "dataPoints": 92
   },
@@ -809,8 +809,8 @@
       "historical": []
     },
     "timestamp": "2025-09-03T10:05:08.488Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T11:12:04.932Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T16:40:29.455Z",
     "source": "api_success",
     "dataPoints": 1
   },
@@ -1190,9 +1190,97 @@
       ]
     },
     "timestamp": "2025-09-03T10:10:02.266Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T11:15:14.028Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T16:40:29.455Z",
     "source": "api_success",
     "dataPoints": 92
+  },
+  "eth_220D": {
+    "data": {
+      "current": {
+        "price": 4485,
+        "change24h": 2.34,
+        "volume24h": 18500000000,
+        "marketCap": 540000000000
+      },
+      "historical": [
+        {
+          "timestamp": "2025-08-04T00:00:00.000Z",
+          "price": 3200
+        },
+        {
+          "timestamp": "2025-08-15T00:00:00.000Z",
+          "price": 3800
+        },
+        {
+          "timestamp": "2025-09-01T00:00:00.000Z",
+          "price": 4200
+        },
+        {
+          "timestamp": "2025-09-03T00:00:00.000Z",
+          "price": 4485
+        }
+      ]
+    },
+    "timestamp": "2025-09-03T17:45:00.000Z",
+    "tier": "fresh",
+    "expiresAt": "2025-09-03T18:50:00.000Z",
+    "source": "api_success",
+    "dataPoints": 4
+  },
+  "dxy_30D": {
+    "data": {
+      "current": {
+        "price": 0.8589,
+        "change24h": 0.597,
+        "rsi": 54.68
+      },
+      "historical": [
+        {
+          "timestamp": "2025-08-01T00:00:00.000Z",
+          "price": 0.863
+        },
+        {
+          "timestamp": "2025-08-15T00:00:00.000Z",
+          "price": 0.855
+        },
+        {
+          "timestamp": "2025-09-01T00:00:00.000Z",
+          "price": 0.854
+        },
+        {
+          "timestamp": "2025-09-03T00:00:00.000Z",
+          "price": 0.8589
+        }
+      ]
+    },
+    "timestamp": "2025-09-03T17:45:00.000Z",
+    "tier": "fresh", 
+    "expiresAt": "2025-09-03T18:50:00.000Z",
+    "source": "api_success",
+    "dataPoints": 4
+  },
+  "funding_rates": {
+    "data": {
+      "structured": {
+        "btc": {
+          "rate": -0.0004177,
+          "trend": "negative",
+          "nextFundingTime": "2025-09-03T22:45:00.000Z",
+          "exchange": "Mock"
+        },
+        "eth": {
+          "rate": -0.0005538,
+          "trend": "negative", 
+          "nextFundingTime": "2025-09-03T22:45:00.000Z",
+          "exchange": "Mock"
+        }
+      }
+    },
+    "timestamp": "2025-09-03T17:45:00.000Z",
+    "tier": "fresh",
+    "expiresAt": "2025-09-03T18:50:00.000Z",
+    "source": "api_success",
+    "dataPoints": 2
   }
 }

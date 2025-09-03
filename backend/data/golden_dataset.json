@@ -412,8 +412,8 @@
       "generated": "2025-09-03T05:25:00.000Z"
     },
     "timestamp": "2025-09-03T05:25:00.000Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T17:40:29.455Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T18:00:00.355Z",
     "source": "manual_seed",
     "dataPoints": 31
   },
@@ -1255,7 +1255,7 @@
       ]
     },
     "timestamp": "2025-09-03T17:45:00.000Z",
-    "tier": "fresh", 
+    "tier": "fresh",
     "expiresAt": "2025-09-03T18:50:00.000Z",
     "source": "api_success",
     "dataPoints": 4
@@ -1271,7 +1271,7 @@
         },
         "eth": {
           "rate": -0.0005538,
-          "trend": "negative", 
+          "trend": "negative",
           "nextFundingTime": "2025-09-03T22:45:00.000Z",
           "exchange": "Mock"
         }
