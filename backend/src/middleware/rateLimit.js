@@ -11,8 +11,29 @@ const createRateLimiter = (windowMs, max, message) => {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    // Remove trustProxy here - it's already set globally in app.js
-    handler: (req, res) => {
+    // Configure secure trust proxy settings
+    trustProxy: (ip) => {
+      // Only trust specific known proxy IPs (Railway, Cloudflare, etc.)
+      const trustedProxies = [
+        '127.0.0.1',
+        '::1',
+        // Add Railway proxy IPs if known
+        // Add Cloudflare IPs if using Cloudflare
+      ];
+      return trustedProxies.includes(ip);
+    },
+    // Use a more secure key generator that considers X-Forwarded-For carefully
+    keyGenerator: (req) => {
+      // Use the rightmost IP from X-Forwarded-For as the client IP
+      const forwarded = req.headers['x-forwarded-for'];
+      if (forwarded) {
+        const ips = forwarded.split(',').map(ip => ip.trim());
+        // Take the last IP (closest to client) for rate limiting
+        return ips[ips.length - 1];
+      }
+      return req.connection.remoteAddress || req.socket.remoteAddress;
+    },
+    handler: (_, res) => {
       res.status(429).json({
         success: false,
         message: 'Too many requests',

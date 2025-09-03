@@ -11,8 +11,10 @@ class CryptoDataService {
     this.coinGeckoClient = axios.create({
       baseURL: config.COINGECKO_BASE_URL,
       headers: {
-        'X-CG-Pro-API-Key': config.COINGECKO_API_KEY,
-        'accept': 'application/json'
+        // Use Demo API key header format for free/demo plans
+        'X-CG-Demo-API-Key': config.COINGECKO_API_KEY,
+        'accept': 'application/json',
+        'User-Agent': 'RetailDAO/1.0'
       },
       timeout: 30000
     });
@@ -676,48 +678,44 @@ class CryptoDataService {
       if (exchange === 'binance' || exchange === 'all') {
         // Get real funding rate from Binance Futures API for BTC and ETH
         try {
-          const [btcPriceResponse, fundingInfoResponse, ethPriceResponse] = await Promise.all([
+          const [btcPriceResponse, ethPriceResponse] = await Promise.all([
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'BTCUSDT' }
             }),
-            this.binanceFuturesClient.get('/fapi/v1/fundingInfo'),
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'ETHUSDT' }
             })
           ]);
 
-          // Find BTC and ETH funding info from the response
-          const btcFundingInfo = fundingInfoResponse.data.find(item => item.symbol === 'BTCUSDT');
-          const ethFundingInfo = fundingInfoResponse.data.find(item => item.symbol === 'ETHUSDT');
+          // Get funding rates directly from premiumIndex endpoint
+          const [btcFundingRate, ethFundingRate] = await Promise.all([
+            this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
+              params: { symbol: 'BTCUSDT' }
+            }),
+            this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
+              params: { symbol: 'ETHUSDT' }
+            })
+          ]);
           
           const binanceRates = [];
           
-          if (btcFundingInfo) {
-            // For fundingInfo endpoint, we need to get current funding rate from premiumIndex API
-            const btcFundingRate = await this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
-              params: { symbol: 'BTCUSDT' }
-            });
-            
+          if (btcFundingRate && btcFundingRate.data) {
             binanceRates.push({
               symbol: 'BTCUSDT',
               fundingRate: parseFloat(btcFundingRate.data.lastFundingRate),
               nextFundingTime: new Date(btcFundingRate.data.nextFundingTime).toISOString(),
-              fundingIntervalHours: btcFundingInfo.fundingIntervalHours,
+              fundingIntervalHours: 8, // Binance uses 8-hour intervals
               exchange: 'Binance',
               price: parseFloat(btcPriceResponse.data.price)
             });
           }
           
-          if (ethFundingInfo) {
-            const ethFundingRate = await this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
-              params: { symbol: 'ETHUSDT' }
-            });
-            
+          if (ethFundingRate && ethFundingRate.data) {
             binanceRates.push({
               symbol: 'ETHUSDT',
               fundingRate: parseFloat(ethFundingRate.data.lastFundingRate),
               nextFundingTime: new Date(ethFundingRate.data.nextFundingTime).toISOString(),
-              fundingIntervalHours: ethFundingInfo.fundingIntervalHours,
+              fundingIntervalHours: 8, // Binance uses 8-hour intervals
               exchange: 'Binance',
               price: parseFloat(ethPriceResponse.data.price)
             });
