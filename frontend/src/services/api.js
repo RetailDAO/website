@@ -550,7 +550,7 @@ class ApiService {
         return transformed;
       };
 
-      // Transform the backend data to match frontend expectations
+      // Transform the backend data to match frontend expectations  
       const transformedData = {
         bitcoin: {
           currentPrice: response.data.btc.current.price,
@@ -558,7 +558,9 @@ class ApiService {
           priceChangePercent24h: response.data.btc.current.change24h,
           marketCap: response.data.btc.current.marketCap,
           volume24h: response.data.btc.current.volume24h,
-          prices: transformPrices(response.data.btc.historical),
+          // FIX: Provide data in both expected formats for compatibility
+          prices: transformPrices(response.data.btc.historical), // Legacy format
+          historical: transformPrices(response.data.btc.historical), // New format
           rsi: transformRSI(response.data.btc.rsi),
           movingAverages: transformMovingAverages(response.data.btc.movingAverages),
           rsiStatus: response.data.btc.rsiStatus,
@@ -570,7 +572,9 @@ class ApiService {
           priceChangePercent24h: response.data.eth.current.change24h,
           marketCap: response.data.eth.current.marketCap,
           volume24h: response.data.eth.current.volume24h,
-          prices: transformPrices(response.data.eth.historical),
+          // FIX: Provide data in both expected formats for compatibility
+          prices: transformPrices(response.data.eth.historical), // Legacy format
+          historical: transformPrices(response.data.eth.historical), // New format
           rsi: transformRSI(response.data.eth.rsi),
           movingAverages: transformMovingAverages(response.data.eth.movingAverages),
           rsiStatus: response.data.eth.rsiStatus,

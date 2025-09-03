@@ -3,6 +3,7 @@ import Chart from 'react-apexcharts';
 import mockDataService from '../services/mockDataService';
 import persistentMockService from '../services/persistentMockDataService';
 import apiService from '../services/api';
+import intelligentCacheService from '../services/intelligentCacheService';
 import { LiveRSIDisplay } from './RSIGauge';
 import { useCryptoPriceWebSocket, useIndicatorWebSocket } from '../hooks/useWebSocket';
 import { useTheme } from '../context/ThemeContext';
@@ -288,17 +289,39 @@ const CryptoDashboard = () => {
       
       const updated = { ...prev };
       
-      // Update RSI data from WebSocket
+      // Update RSI data from WebSocket - FIX: Properly merge with existing data
       if (indicatorData.rsi) {
         console.log(`🔄 Updating ${cryptoKey} RSI from WebSocket:`, indicatorData.rsi);
-        updated[cryptoKey] = {
-          ...updated[cryptoKey],
-          rsi: indicatorData.rsi
-        };
         
-        // Also update global RSI for backward compatibility
-        if (cryptoKey === 'bitcoin') {
-          updated.rsi = indicatorData.rsi;
+        // FIX: Validate RSI values before updating (RSI should be 0-100)
+        const validatedRSI = {};
+        Object.entries(indicatorData.rsi).forEach(([period, rsiValue]) => {
+          if (typeof rsiValue === 'object' && rsiValue.current !== undefined) {
+            const rsiCurrent = parseFloat(rsiValue.current);
+            if (!isNaN(rsiCurrent) && rsiCurrent >= 0 && rsiCurrent <= 100) {
+              validatedRSI[period] = rsiValue;
+            } else {
+              console.warn(`🚫 Invalid RSI value for ${cryptoKey} ${period}:`, rsiCurrent);
+            }
+          }
+        });
+        
+        if (Object.keys(validatedRSI).length > 0) {
+          updated[cryptoKey] = {
+            ...updated[cryptoKey],
+            rsi: {
+              ...updated[cryptoKey]?.rsi, // Preserve existing RSI data
+              ...validatedRSI // Update with validated new data
+            }
+          };
+          
+          // Also update global RSI for backward compatibility
+          if (cryptoKey === 'bitcoin') {
+            updated.rsi = {
+              ...updated.rsi,
+              ...validatedRSI
+            };
+          }
         }
       }
       
@@ -735,53 +758,94 @@ const CryptoDashboard = () => {
       setLoading(true);
       setError(null);
       
-      // PROGRESSIVE LOADING PATTERN FOR FASTER UI:
+      // INTELLIGENT TIERED LOADING FOR SUB-3-SECOND PERFORMANCE:
+      console.log('🚀 Starting Intelligent Tiered Loading System...');
       
-      // Phase 1: Load persistent mock data IMMEDIATELY for instant UI display
-      console.log('🚀 Phase 1: Loading persistent mock data for immediate display...');
-      const mockData = await persistentMockService.getAllMarketData();
-      setMarketData(mockData);
-      setLoading(false); // Show UI immediately with realistic mock data
-      console.log('✅ Phase 1 complete: UI is visible with pattern-based mock data');
-      
-      // Log mock data info for debugging
-      const dataInfo = persistentMockService.getDataInfo();
-      console.log('📊 Mock data info:', dataInfo);
-      
-      // Phase 2: Enhance with cached data (background, non-blocking)
-      if (useRealAPI) {
-        console.log('🔄 Phase 2: Enhancing with cached data...');
-        setTimeout(async () => {
-          try {
-            await loadCachedDataFirst();
-            console.log('✅ Phase 2 complete: Enhanced with cached data');
-            
-            // Phase 3: Get fresh data (background, non-blocking)
-            console.log('📡 Phase 3: Fetching fresh data in background...');
-            setTimeout(() => {
-              fetchProgressiveData().catch(error => {
-                console.warn('⚠️ Fresh data fetch failed (non-critical):', error.message);
-              });
-            }, 1000);
-            
-          } catch (error) {
-            console.warn('⚠️ Phase 2 enhancement failed (non-critical):', error.message);
-            // Still proceed to fresh data attempt
-            setTimeout(() => {
-              fetchProgressiveData().catch(error => {
-                console.warn('⚠️ Fresh data fetch failed:', error.message);
-              });
-            }, 2000);
+      // Use intelligent cache service with progressive enhancement callbacks
+      await intelligentCacheService.getMarketDataIntelligent({
+        // Tier 1: Golden Dataset - Instant UI (Target: <100ms)
+        onTier1Complete: (data, meta) => {
+          console.log(`✅ TIER 1 (${meta.quality}): UI ready in ${meta.loadTime.toFixed(1)}ms`);
+          setMarketData(data);
+          setLoading(false); // UI is immediately interactive
+          
+          // Trigger subtle pulse to indicate data freshness
+          setPulseEffects(prev => ({
+            ...prev,
+            priceCards: { 
+              active: true, 
+              type: meta.quality === 'golden' ? 'golden_data' : 'mock_data', 
+              intensity: 'subtle',
+              timestamp: Date.now()
+            }
+          }));
+          setTimeout(() => setPulseEffects(prev => ({...prev, priceCards: { ...prev.priceCards, active: false }})), 1500);
+        },
+        
+        // Tier 2: Cached Real Data - Enhanced accuracy (Target: <500ms)
+        onTier2Complete: (data, meta) => {
+          console.log(`📈 TIER 2 (${meta.quality}): Enhanced data in ${meta.loadTime.toFixed(1)}ms`);
+          setMarketData(data);
+          
+          // Stronger pulse for real cached data
+          setPulseEffects(prev => ({
+            ...prev,
+            priceCards: { 
+              active: true, 
+              type: 'cached_real_data', 
+              intensity: 'normal',
+              timestamp: Date.now()
+            }
+          }));
+          setTimeout(() => setPulseEffects(prev => ({...prev, priceCards: { ...prev.priceCards, active: false }})), 2000);
+        },
+        
+        // Tier 3: Fresh API Data - Maximum accuracy (Target: <3000ms)  
+        onTier3Complete: (data, meta) => {
+          console.log(`🎯 TIER 3 (${meta.quality}): Fresh data in ${meta.loadTime.toFixed(1)}ms`);
+          setMarketData(data);
+          
+          // Strongest pulse for fresh API data
+          setPulseEffects(prev => ({
+            ...prev,
+            priceCards: { 
+              active: true, 
+              type: 'fresh_api_data', 
+              intensity: 'strong',
+              timestamp: Date.now()
+            }
+          }));
+          setTimeout(() => setPulseEffects(prev => ({...prev, priceCards: { ...prev.priceCards, active: false }})), 3000);
+          
+          // Update persistent mock service with fresh patterns  
+          if (data && typeof persistentMockService.updateWithRealData === 'function') {
+            persistentMockService.updateWithRealData(data);
           }
-        }, 200); // Very short delay to ensure UI is rendered
-      }
+        },
+        
+        enableProgressiveLoading: useRealAPI
+      });
+      
+      // Get performance statistics
+      const perfStats = intelligentCacheService.getPerformanceStats();
+      console.log('📊 Loading Performance:', perfStats);
       
     } catch (err) {
-      console.error('❌ Critical error in market data loading:', err);
-      setError(`Failed to load market data: ${err.message}`);
-      setLoading(false);
+      console.error('❌ Critical error in intelligent cache loading:', err);
+      
+      // ULTIMATE FALLBACK: Traditional mock data if everything fails
+      try {
+        console.log('🚨 ULTIMATE FALLBACK: Loading traditional mock data...');
+        const fallbackData = await mockDataService.getAllMarketData();
+        setMarketData(fallbackData);
+        setLoading(false);
+        setError('Using offline data - some features may be limited');
+      } catch (fallbackErr) {
+        setError(`Critical system failure: ${err.message}`);
+        setLoading(false);
+      }
     }
-  }, [useRealAPI, fetchProgressiveData, loadCachedDataFirst]);
+  }, [useRealAPI]);
 
   useEffect(() => {
     // Disabled interval to prevent rate limiting - user can manually refresh via sidebar
@@ -839,7 +903,9 @@ const CryptoDashboard = () => {
 
   // Enhanced Bitcoin chart with Moving Averages and Bollinger Bands - Professional Trader Grade
   const getBitcoinChartOptions = () => {
-    if (!marketData?.bitcoin?.prices || !Array.isArray(marketData.bitcoin.prices)) {
+    // FIX: Check both possible data paths - historical (from API) and prices (legacy)
+    const priceData = marketData?.bitcoin?.historical || marketData?.bitcoin?.prices;
+    if (!priceData || !Array.isArray(priceData)) {
       return {
         series: [],
         options: getLoadingOptions('BTC Price with Technical Analysis')
@@ -847,7 +913,7 @@ const CryptoDashboard = () => {
     }
 
     // Safely filter and map price data to prevent ApexCharts path errors
-    const validPrices = marketData.bitcoin.prices
+    const validPrices = priceData
       .filter(item => item && item.timestamp && typeof item.price === 'number' && !isNaN(item.price))
       .map(item => {
         const timestamp = item.timestamp instanceof Date ? item.timestamp.getTime() : new Date(item.timestamp).getTime();

@@ -279,7 +279,9 @@ class PersistentMockDataService {
       priceChange24h: change24h,
       marketCap: this.estimateMarketCap(cryptoKey, currentPrice),
       volume24h: this.estimateVolume(cryptoKey, currentPrice, volatility),
-      prices: prices,
+      // FIX: Provide data in both expected formats for compatibility
+      prices: prices, // Legacy format
+      historical: prices, // New format
       source: 'Pattern-Based Mock',
       lastPatternUpdate: patterns.timestamp
     };
@@ -345,7 +347,9 @@ class PersistentMockDataService {
       priceChange24h: change24h,
       marketCap: currentPrice * 467000000, // Rough SOL supply
       volume24h: currentPrice * Math.random() * 50000000,
-      prices: prices,
+      // FIX: Provide data in both expected formats for compatibility
+      prices: prices, // Legacy format
+      historical: prices, // New format
       source: 'Pattern-Based Mock'
     };
   }
@@ -441,7 +445,9 @@ class PersistentMockDataService {
       priceChange24h: def.change,
       marketCap: this.estimateMarketCap(cryptoKey, def.price),
       volume24h: this.estimateVolume(cryptoKey, def.price, 0.02),
-      prices: [],
+      // FIX: Provide data in both expected formats for compatibility
+      prices: [], // Legacy format
+      historical: [], // New format  
       source: 'Default Mock'
     };
   }

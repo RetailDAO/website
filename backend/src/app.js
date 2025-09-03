@@ -78,10 +78,18 @@ app.use(errorHandler);
 
 // Initialize services for real-time data and scheduled tasks
 if (process.env.NODE_ENV !== 'test') {
-  // Delay intensive initialization to prevent Railway SIGTERM during startup
+  // FIX: Reduce delay for faster WebSocket availability
   setTimeout(() => {
     console.log('🚀 Initializing WebSocket connections...');
     websocketService.connectToBinance();
+    
+    // Start indicator streaming for main symbols immediately after WebSocket connects
+    setTimeout(() => {
+      console.log('📊 Starting indicator streaming...');
+      websocketService.startIndicatorStreaming('BTCUSDT');
+      websocketService.startIndicatorStreaming('ETHUSDT');  
+      websocketService.startIndicatorStreaming('SOLUSDT');
+    }, 2000);
     
     console.log('🚀 Initializing scheduled tasks...');
     try {
@@ -89,7 +97,7 @@ if (process.env.NODE_ENV !== 'test') {
     } catch (error) {
       console.error('⚠️ Cron job initialization failed, continuing without scheduled tasks:', error.message);
     }
-  }, 5000); // Wait 5 seconds after server starts
+  }, 2000); // Reduced from 5s to 2s for faster initialization
 }
 
 // Graceful shutdown handling
