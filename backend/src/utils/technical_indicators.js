@@ -1,7 +1,8 @@
 const _ = require('lodash');
+const { RSI, SMA, EMA, BollingerBands, MACD } = require('trading-signals');
 
 /**
- * Calculate Relative Strength Index (RSI)
+ * Calculate Relative Strength Index (RSI) using trading-signals library
  * @param {number[]} prices - Array of prices
  * @param {number} period - RSI period (default: 14)
  * @returns {number[]} Array of RSI values
@@ -11,44 +12,21 @@ function calculateRSI(prices, period = 14) {
     return [];
   }
 
-  const gains = [];
-  const losses = [];
-  
-  // Calculate price changes
-  for (let i = 1; i < prices.length; i++) {
-    const change = prices[i] - prices[i - 1];
-    gains.push(change > 0 ? change : 0);
-    losses.push(change < 0 ? Math.abs(change) : 0);
-  }
-
+  const rsi = new RSI(period);
   const rsiValues = [];
   
-  // Calculate first RSI value
-  const avgGain = _.mean(gains.slice(0, period));
-  const avgLoss = _.mean(losses.slice(0, period));
-  
-  let rs = avgGain / avgLoss;
-  let rsi = 100 - (100 / (1 + rs));
-  rsiValues.push(rsi);
-
-  // Calculate subsequent RSI values using smoothed averages
-  let currentAvgGain = avgGain;
-  let currentAvgLoss = avgLoss;
-  
-  for (let i = period; i < gains.length; i++) {
-    currentAvgGain = (currentAvgGain * (period - 1) + gains[i]) / period;
-    currentAvgLoss = (currentAvgLoss * (period - 1) + losses[i]) / period;
-    
-    rs = currentAvgLoss === 0 ? 100 : currentAvgGain / currentAvgLoss;
-    rsi = 100 - (100 / (1 + rs));
-    rsiValues.push(rsi);
+  for (const price of prices) {
+    rsi.update(price);
+    if (rsi.isStable) {
+      rsiValues.push(rsi.getResult().valueOf());
+    }
   }
 
   return rsiValues;
 }
 
 /**
- * Calculate Simple Moving Average (SMA)
+ * Calculate Simple Moving Average (SMA) using trading-signals library
  * @param {number[]} prices - Array of prices
  * @param {number} period - Moving average period
  * @returns {number[]} Array of SMA values
@@ -58,19 +36,21 @@ function calculateMovingAverage(prices, period) {
     return [];
   }
 
+  const sma = new SMA(period);
   const smaValues = [];
   
-  for (let i = period - 1; i < prices.length; i++) {
-    const slice = prices.slice(i - period + 1, i + 1);
-    const average = _.mean(slice);
-    smaValues.push(average);
+  for (const price of prices) {
+    sma.update(price);
+    if (sma.isStable) {
+      smaValues.push(sma.getResult().valueOf());
+    }
   }
 
   return smaValues;
 }
 
 /**
- * Calculate Exponential Moving Average (EMA)
+ * Calculate Exponential Moving Average (EMA) using trading-signals library
  * @param {number[]} prices - Array of prices
  * @param {number} period - EMA period
  * @returns {number[]} Array of EMA values
@@ -80,49 +60,49 @@ function calculateEMA(prices, period) {
     return [];
   }
 
+  const ema = new EMA(period);
   const emaValues = [];
-  const multiplier = 2 / (period + 1);
   
-  // First EMA value is SMA
-  let ema = _.mean(prices.slice(0, period));
-  emaValues.push(ema);
-
-  // Calculate subsequent EMA values
-  for (let i = period; i < prices.length; i++) {
-    ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
-    emaValues.push(ema);
+  for (const price of prices) {
+    ema.update(price);
+    if (ema.isStable) {
+      emaValues.push(ema.getResult().valueOf());
+    }
   }
 
   return emaValues;
 }
 
 /**
- * Calculate Bollinger Bands
+ * Calculate Bollinger Bands using trading-signals library
  * @param {number[]} prices - Array of prices
  * @param {number} period - Period for moving average
  * @param {number} stdDev - Number of standard deviations
  * @returns {Object} Object with upper, middle, and lower bands
  */
 function calculateBollingerBands(prices, period = 20, stdDev = 2) {
-  const sma = calculateMovingAverage(prices, period);
+  if (prices.length < period) {
+    return { upper: [], middle: [], lower: [] };
+  }
+
+  const bb = new BollingerBands(period, stdDev);
   const bands = { upper: [], middle: [], lower: [] };
 
-  for (let i = 0; i < sma.length; i++) {
-    const slice = prices.slice(i, i + period);
-    const mean = sma[i];
-    const variance = _.mean(slice.map(price => Math.pow(price - mean, 2)));
-    const standardDeviation = Math.sqrt(variance);
-
-    bands.middle.push(mean);
-    bands.upper.push(mean + (standardDeviation * stdDev));
-    bands.lower.push(mean - (standardDeviation * stdDev));
+  for (const price of prices) {
+    bb.update(price);
+    if (bb.isStable) {
+      const result = bb.getResult();
+      bands.upper.push(result.upper.valueOf());
+      bands.middle.push(result.middle.valueOf());
+      bands.lower.push(result.lower.valueOf());
+    }
   }
 
   return bands;
 }
 
 /**
- * Calculate MACD (Moving Average Convergence Divergence)
+ * Calculate MACD (Moving Average Convergence Divergence) using trading-signals library
  * @param {number[]} prices - Array of prices
  * @param {number} fastPeriod - Fast EMA period (default: 12)
  * @param {number} slowPeriod - Slow EMA period (default: 26)
@@ -130,29 +110,24 @@ function calculateBollingerBands(prices, period = 20, stdDev = 2) {
  * @returns {Object} Object with MACD line, signal line, and histogram
  */
 function calculateMACD(prices, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
-  const fastEMA = calculateEMA(prices, fastPeriod);
-  const slowEMA = calculateEMA(prices, slowPeriod);
-  
-  const macdLine = [];
-  const startIndex = slowPeriod - fastPeriod;
-  
-  for (let i = 0; i < slowEMA.length; i++) {
-    macdLine.push(fastEMA[i + startIndex] - slowEMA[i]);
+  if (prices.length < slowPeriod) {
+    return { macd: [], signal: [], histogram: [] };
+  }
+
+  const macd = new MACD({ fast: fastPeriod, slow: slowPeriod, signal: signalPeriod });
+  const result = { macd: [], signal: [], histogram: [] };
+
+  for (const price of prices) {
+    macd.update(price);
+    if (macd.isStable) {
+      const macdResult = macd.getResult();
+      result.macd.push(macdResult.macd.valueOf());
+      result.signal.push(macdResult.signal.valueOf());
+      result.histogram.push(macdResult.histogram.valueOf());
+    }
   }
   
-  const signalLine = calculateEMA(macdLine, signalPeriod);
-  const histogram = [];
-  const signalStartIndex = signalPeriod - 1;
-  
-  for (let i = 0; i < signalLine.length; i++) {
-    histogram.push(macdLine[i + signalStartIndex] - signalLine[i]);
-  }
-  
-  return {
-    macd: macdLine,
-    signal: signalLine,
-    histogram: histogram
-  };
+  return result;
 }
 
 module.exports = {
