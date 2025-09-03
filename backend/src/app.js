@@ -38,6 +38,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api', rateLimiter);
 
 // Routes
+// Root route for Railway deployment verification
+app.get('/', (_, res) => {
+  res.json({
+    message: 'RetailDAO Backend API',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api/v1',
+      websockets: ['/ws/prices', '/ws/indicators']
+    }
+  });
+});
+
 // Simple health check for Railway deployment
 app.get('/health', (_, res) => {
   res.json({
