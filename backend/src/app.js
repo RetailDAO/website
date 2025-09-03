@@ -78,31 +78,34 @@ app.use(errorHandler);
 
 // Initialize services for real-time data and scheduled tasks
 if (process.env.NODE_ENV !== 'test') {
-  console.log('🚀 Initializing WebSocket connections...');
-  websocketService.connectToBinance();
-  
-  console.log('🚀 Initializing scheduled tasks...');
-  try {
-    cronJobService.initializeJobs();
-  } catch (error) {
-    console.error('⚠️ Cron job initialization failed, continuing without scheduled tasks:', error.message);
-  }
-  
-  // Graceful shutdown handling
-  process.on('SIGTERM', () => {
-    console.log('📡 Closing WebSocket connections...');
-    websocketService.closeAllConnections();
-    console.log('⏹️ Stopping scheduled tasks...');
-    cronJobService.stopAllJobs();
-  });
-  
-  process.on('SIGINT', () => {
-    console.log('📡 Closing WebSocket connections...');
-    websocketService.closeAllConnections();
-    console.log('⏹️ Stopping scheduled tasks...');
-    cronJobService.stopAllJobs();
-    process.exit(0);
-  });
+  // Delay intensive initialization to prevent Railway SIGTERM during startup
+  setTimeout(() => {
+    console.log('🚀 Initializing WebSocket connections...');
+    websocketService.connectToBinance();
+    
+    console.log('🚀 Initializing scheduled tasks...');
+    try {
+      cronJobService.initializeJobs();
+    } catch (error) {
+      console.error('⚠️ Cron job initialization failed, continuing without scheduled tasks:', error.message);
+    }
+  }, 5000); // Wait 5 seconds after server starts
 }
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('📡 Closing WebSocket connections...');
+  websocketService.closeAllConnections();
+  console.log('⏹️ Stopping scheduled tasks...');
+  cronJobService.stopAllJobs();
+});
+
+process.on('SIGINT', () => {
+  console.log('📡 Closing WebSocket connections...');
+  websocketService.closeAllConnections();
+  console.log('⏹️ Stopping scheduled tasks...');
+  cronJobService.stopAllJobs();
+  process.exit(0);
+});
 
 module.exports = app;
