@@ -17,7 +17,7 @@ module.exports = {
   // External APIs
   COINGECKO_BASE_URL: 'https://api.coingecko.com/api/v3',
   ALPHA_VANTAGE_BASE_URL: 'https://www.alphavantage.co/query',
-  BINANCE_BASE_URL: 'https://api.binance.com/api/v3',
+  BINANCE_BASE_URL: 'https://api.binance.com',
   POLYGON_BASE_URL: 'https://api.polygon.io/v2',
   COINGLASS_BASE_URL: 'https://open-api.coinglass.com/public/v2',
 };

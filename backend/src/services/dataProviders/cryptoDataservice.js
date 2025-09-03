@@ -32,8 +32,13 @@ class CryptoDataService {
   }
 
   async getBTCData(timeframe = '1D') {
-    const cacheKey = `btc_data_${timeframe}`;
-    const dataType = `btc_${timeframe}`;
+    const requestedDays = this.timeframeToDays(timeframe);
+    
+    // Use different cache key for 220D+ requests to ensure Binance fallback
+    const cacheKey = requestedDays > 90 ? `btc_binance_data_${timeframe}` : `btc_data_${timeframe}`;
+    const dataType = requestedDays > 90 ? `btc_binance_${timeframe}` : `btc_${timeframe}`;
+    
+    console.log(`🔍 [BTC Cache] Using cache key: ${cacheKey} for ${requestedDays} days`);
     
     // Use enhanced cache with golden dataset integration
     const result = await cacheService.getOrFetchWithGolden(
@@ -93,11 +98,43 @@ class CryptoDataService {
         console.log('🌐 Using CoinGecko API for current BTC price');
       }
 
-      // Optimized data fetching for specific needs:
-      // RSI: needs max 30 days, MA: needs max 100 days for BTC terminal
+      // Enhanced data fetching strategy for 220-day BTC requirements
       const requestedDays = this.timeframeToDays(timeframe);
+      console.log(`🔍 [BTC API] Executing fetchBTCDataFromAPI - timeframe: ${timeframe}, requestedDays: ${requestedDays}`);
+      
+      // If requesting more than 90 days, try Binance first (supports up to 1000 days)
+      if (requestedDays > 90) {
+        console.log(`📊 [BTC API] Requested ${requestedDays} days exceeds CoinGecko limit (90d), switching to Binance for complete dataset`);
+        try {
+          const binanceHistoricalData = await this.getBTCHistoricalFromBinance(requestedDays);
+          console.log(`✅ [Binance Primary] Successfully fetched ${requestedDays} days of BTC data (${binanceHistoricalData.prices?.length || 0} points)`);
+          
+          const data = {
+            current: {
+              price: currentData?.bitcoin?.usd || 0,
+              change24h: currentData?.bitcoin?.usd_24h_change || 0,
+              volume24h: currentData?.bitcoin?.usd_24h_vol || 0,
+              marketCap: currentData?.bitcoin?.usd_market_cap || 0
+            },
+            historical: binanceHistoricalData.prices?.map(([timestamp, price]) => ({
+              timestamp: new Date(timestamp).toISOString(),
+              price
+            })) || []
+          };
+
+          console.log(`✅ [Binance Primary] Successfully serving BTC data for ${timeframe} (${data.historical.length} actual points)`);
+          return data;
+          
+        } catch (binanceError) {
+          console.error(`❌ [Binance Primary] Failed for ${requestedDays} days, falling back to CoinGecko 90d limit:`, binanceError.message);
+        }
+      } else {
+        console.log(`📊 [BTC API] Requested ${requestedDays} days is within CoinGecko limit, using CoinGecko`);
+      }
+      
+      // Fall back to CoinGecko with 90-day limit
       const optimizedDays = Math.min(requestedDays, 90); // Respect CoinGecko free tier limit
-      console.log(`📊 Optimized API call: requesting ${optimizedDays} days (vs ${requestedDays} original)`);
+      console.log(`📊 CoinGecko fallback: requesting ${optimizedDays} days (vs ${requestedDays} original)`);
       
       const historicalData = await rateLimitedApi.coinGeckoRequest(async () => {
         const response = await this.coinGeckoClient.get('/coins/bitcoin/market_chart', {
@@ -149,6 +186,33 @@ class CryptoDataService {
         return mockData;
       }
     }
+  }
+
+  // Enhanced Binance method specifically for historical data (supports 220+ days)
+  async getBTCHistoricalFromBinance(requestedDays) {
+    const daysToFetch = Math.min(requestedDays, 1000); // Binance allows up to 1000 klines
+    
+    console.log(`📊 [Binance] Fetching ${daysToFetch} days of BTC historical data...`);
+    console.log(`📊 [Binance] Using baseURL: ${this.binanceClient.defaults.baseURL}`);
+    console.log(`📊 [Binance] Full URL will be: ${this.binanceClient.defaults.baseURL}/api/v3/klines`);
+    
+    const response = await this.binanceClient.get('/api/v3/klines', {
+      params: {
+        symbol: 'BTCUSDT',
+        interval: '1d', // Daily interval for long-term data
+        limit: daysToFetch
+      }
+    });
+
+    console.log(`✅ [Binance] Received ${response.data.length} klines from API`);
+
+    // Format as CoinGecko-compatible structure
+    const prices = response.data.map(kline => [
+      kline[0], // timestamp
+      parseFloat(kline[4]) // close price
+    ]);
+
+    return { prices };
   }
 
   async getBTCDataFromBinance(timeframe) {

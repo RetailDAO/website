@@ -9,12 +9,12 @@ const btcController = {
     try {
       const { timeframe = '1D' } = req.query;
 
-      // Validate timeframe
-      const validTimeframes = ['1D', '7D', '30D', '90D', '1Y'];
+      // Validate timeframe - added support for 220D
+      const validTimeframes = ['1D', '7D', '30D', '90D', '220D', '1Y'];
       if (!validTimeframes.includes(timeframe)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid timeframe. Use: 1D, 7D, 30D, 90D, or 1Y'
+          message: 'Invalid timeframe. Use: 1D, 7D, 30D, 90D, 220D, or 1Y'
         });
       }
 
@@ -87,12 +87,12 @@ const btcController = {
     try {
       const { timeframe = '7D', symbol = 'BTC' } = req.query;
 
-      // Validate timeframe
-      const validTimeframes = ['1D', '7D', '30D', '90D', '1Y'];
+      // Validate timeframe - added support for 220D
+      const validTimeframes = ['1D', '7D', '30D', '90D', '220D', '1Y'];
       if (!validTimeframes.includes(timeframe)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid timeframe. Use: 1D, 7D, 30D, 90D, or 1Y'
+          message: 'Invalid timeframe. Use: 1D, 7D, 30D, 90D, 220D, or 1Y'
         });
       }
 

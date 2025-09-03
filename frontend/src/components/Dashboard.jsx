@@ -828,7 +828,7 @@ const getDXYChartOptions = () => {
           }
         },
         dataLabels: {
-          enabled: true
+          enabled: false
         },
         title: {
           text: 'BTC Spot ETF Net Flows',

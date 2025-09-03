@@ -27,7 +27,7 @@ const validateRequest = (req, res, next) => {
 // BTC routes
 router.get('/btc-analysis', 
   [
-    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D', '1Y']),
+    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D', '220D', '1Y']),
     query('refresh').optional().isBoolean()
   ],
   validateRequest,
@@ -38,7 +38,7 @@ router.get('/btc/price', btcController.getCurrentPrice);
 
 router.get('/btc/ma-ribbon',
   [
-    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D', '1Y']),
+    query('timeframe').optional().isIn(['1D', '7D', '30D', '90D', '220D', '1Y']),
     query('symbol').optional().isLength({ min: 1, max: 10 })
   ],
   validateRequest,
