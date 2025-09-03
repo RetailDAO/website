@@ -673,25 +673,23 @@ const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free ti
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'BTCUSDT' }
             }),
-            this.binanceFuturesClient.get('/v1/fundingRate', {
+            this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
               params: { 
-                symbol: 'BTCUSDT',
-                limit: 1
+                symbol: 'BTCUSDT'
               }
             }),
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'ETHUSDT' }
             }),
-            this.binanceFuturesClient.get('/v1/fundingRate', {
+            this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
               params: { 
-                symbol: 'ETHUSDT',
-                limit: 1
+                symbol: 'ETHUSDT'
               }
             })
           ]);
 
-          const btcFundingRateData = btcFundingResponse.data[0];
-          const ethFundingRateData = ethFundingResponse.data[0];
+          const btcFundingRateData = btcFundingResponse.data;
+          const ethFundingRateData = ethFundingResponse.data;
           
           const binanceRates = [
             {
