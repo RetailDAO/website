@@ -59,7 +59,11 @@ if (process.env.NODE_ENV !== 'test') {
   websocketService.connectToBinance();
   
   console.log('🚀 Initializing scheduled tasks...');
-  cronJobService.initializeJobs();
+  try {
+    cronJobService.initializeJobs();
+  } catch (error) {
+    console.error('⚠️ Cron job initialization failed, continuing without scheduled tasks:', error.message);
+  }
   
   // Graceful shutdown handling
   process.on('SIGTERM', () => {

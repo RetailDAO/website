@@ -172,7 +172,7 @@ class CronJobService {
     const status = {};
     this.jobs.forEach((job, name) => {
       status[name] = {
-        status: job.getStatus(),
+        status: job.running ? 'running' : 'scheduled',
         scheduled: true
       };
     });
