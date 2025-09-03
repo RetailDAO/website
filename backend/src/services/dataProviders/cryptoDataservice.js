@@ -102,7 +102,9 @@ class CryptoDataService {
           params: {
             vs_currency: 'usd',
             days: optimizedDays,
-            interval: optimizedDays <= 1 ? 'hourly' : 'daily'
+            // Only add interval for specific cases - CoinGecko can be picky
+            ...(optimizedDays <= 1 ? { interval: 'hourly' } : 
+               optimizedDays <= 90 ? { interval: 'daily' } : {})
           }
         });
         return response.data;
@@ -273,8 +275,8 @@ class CryptoDataService {
       const historicalRequests = symbolsToFetch.map(symbol => {
         const coinId = symbolMap[symbol.toUpperCase()];
         
-        // Conservative timeframes to avoid CoinGecko 400 errors: BTC 30 days, ETH 30 days
-        const optimizedDays = 30; // Reduced from 90 to 30 for BTC to avoid API errors
+        // Conservative timeframes to avoid CoinGecko 400 errors: Use 7 days to be very safe
+        const optimizedDays = 7; // Further reduced to 7 days to avoid API errors
         console.log(`📊 Optimized request: ${symbol} using ${optimizedDays} days (reduced for API compatibility)`);
         
         return {
@@ -282,12 +284,14 @@ class CryptoDataService {
           symbol: symbol,
           coinId: coinId,
           fn: async () => {
-            console.log(`🔍 CoinGecko API call: /coins/${coinId}/market_chart?vs_currency=usd&days=${optimizedDays}&interval=daily`);
+            console.log(`🔍 CoinGecko API call: /coins/${coinId}/market_chart?vs_currency=usd&days=${optimizedDays}`);
             const response = await this.coinGeckoClient.get(`/coins/${coinId}/market_chart`, {
               params: {
                 vs_currency: 'usd',
-                days: optimizedDays
-                // Removed interval parameter - let CoinGecko decide automatically
+                days: optimizedDays,
+                // Only add interval for specific cases - CoinGecko is picky about this
+                ...(optimizedDays <= 1 ? { interval: 'hourly' } : 
+                   optimizedDays <= 90 ? { interval: 'daily' } : {})
               }
             });
             return response.data;
@@ -428,7 +432,9 @@ const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free ti
           params: {
             vs_currency: 'usd',
             days: safeDaysLimit,
-            interval: safeDaysLimit <= 1 ? 'hourly' : 'daily'
+            // Only add interval for specific cases - CoinGecko can be picky
+            ...(safeDaysLimit <= 1 ? { interval: 'hourly' } : 
+               safeDaysLimit <= 90 ? { interval: 'daily' } : {})
           }
         });
         return response.data;
@@ -670,47 +676,57 @@ const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free ti
       if (exchange === 'binance' || exchange === 'all') {
         // Get real funding rate from Binance Futures API for BTC and ETH
         try {
-          const [btcPriceResponse, btcFundingResponse, ethPriceResponse, ethFundingResponse] = await Promise.all([
+          const [btcPriceResponse, fundingInfoResponse, ethPriceResponse] = await Promise.all([
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'BTCUSDT' }
             }),
-            this.binanceFuturesClient.get('/fapi/v1/fundingRate', {
-              params: { 
-                symbol: 'BTCUSDT'
-              }
-            }),
+            this.binanceFuturesClient.get('/fapi/v1/fundingInfo'),
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'ETHUSDT' }
-            }),
-            this.binanceFuturesClient.get('/fapi/v1/fundingRate', {
-              params: { 
-                symbol: 'ETHUSDT'
-              }
             })
           ]);
 
-          const btcFundingRateData = btcFundingResponse.data[0];
-          const ethFundingRateData = ethFundingResponse.data[0];
+          // Find BTC and ETH funding info from the response
+          const btcFundingInfo = fundingInfoResponse.data.find(item => item.symbol === 'BTCUSDT');
+          const ethFundingInfo = fundingInfoResponse.data.find(item => item.symbol === 'ETHUSDT');
           
-          const binanceRates = [
-            {
-              symbol: btcPriceResponse.data.symbol,
-              fundingRate: parseFloat(btcFundingRateData.fundingRate),
-              nextFundingTime: new Date(btcFundingRateData.fundingTime + 8 * 60 * 60 * 1000).toISOString(),
+          const binanceRates = [];
+          
+          if (btcFundingInfo) {
+            // For fundingInfo endpoint, we need to get current funding rate from premiumIndex API
+            const btcFundingRate = await this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
+              params: { symbol: 'BTCUSDT' }
+            });
+            
+            binanceRates.push({
+              symbol: 'BTCUSDT',
+              fundingRate: parseFloat(btcFundingRate.data.lastFundingRate),
+              nextFundingTime: new Date(btcFundingRate.data.nextFundingTime).toISOString(),
+              fundingIntervalHours: btcFundingInfo.fundingIntervalHours,
               exchange: 'Binance',
               price: parseFloat(btcPriceResponse.data.price)
-            },
-            {
-              symbol: ethPriceResponse.data.symbol,
-              fundingRate: parseFloat(ethFundingRateData.fundingRate),
-              nextFundingTime: new Date(ethFundingRateData.fundingTime + 8 * 60 * 60 * 1000).toISOString(),
+            });
+          }
+          
+          if (ethFundingInfo) {
+            const ethFundingRate = await this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
+              params: { symbol: 'ETHUSDT' }
+            });
+            
+            binanceRates.push({
+              symbol: 'ETHUSDT',
+              fundingRate: parseFloat(ethFundingRate.data.lastFundingRate),
+              nextFundingTime: new Date(ethFundingRate.data.nextFundingTime).toISOString(),
+              fundingIntervalHours: ethFundingInfo.fundingIntervalHours,
               exchange: 'Binance',
               price: parseFloat(ethPriceResponse.data.price)
-            }
-          ];
+            });
+          }
           
           data = [...data, ...binanceRates];
-          console.log('✅ [Binance] Real funding rates fetched - BTC:', btcFundingRateData.fundingRate, 'ETH:', ethFundingRateData.fundingRate);
+          const btcRate = binanceRates.find(r => r.symbol === 'BTCUSDT')?.fundingRate;
+          const ethRate = binanceRates.find(r => r.symbol === 'ETHUSDT')?.fundingRate;
+          console.log('✅ [Binance] Real funding rates fetched - BTC:', btcRate, 'ETH:', ethRate);
           
         } catch (binanceError) {
           console.warn('⚠️ [Binance] Funding rate API failed, using fallback:', binanceError.message);

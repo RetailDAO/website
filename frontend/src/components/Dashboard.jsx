@@ -483,7 +483,7 @@ const CryptoDashboard = () => {
     const series = [
       {
         name: 'BTC Price',
-        type: 'line',
+        type: 'area',
         data: marketData.bitcoin.prices.map(item => [
           item.timestamp.getTime(),
           Math.round(item.price)
@@ -542,9 +542,9 @@ const CryptoDashboard = () => {
           }
         },
         theme: { mode: darkMode ? 'dark' : 'light' },
-        colors: ['#F7931A', '#8B5CF6', '#06B6D4', '#10B981'], // High contrast colors
+        colors: ['#22ad1eff', '#7e7cf8ff', '#ff5c5cff', '#81a011ff'], // High contrast colors
         stroke: {
-          width: [3, 2, 2, 2], // Thicker main line
+          width: [2, 1.5, 1.5, 1.5], // Thicker main line
           curve: 'smooth',
           dashArray: [0, 0, 5, 5] // Dashed for longer MAs
         },
@@ -803,7 +803,7 @@ const getDXYChartOptions = () => {
         plotOptions: {
           bar: {
             horizontal: false,
-            columnWidth: '70%',
+            columnWidth: '80%',
             endingShape: 'rounded',
             colors: {
               ranges: [{
@@ -819,7 +819,7 @@ const getDXYChartOptions = () => {
           }
         },
         dataLabels: {
-          enabled: false
+          enabled: true
         },
         title: {
           text: 'BTC Spot ETF Net Flows',
@@ -844,7 +844,7 @@ const getDXYChartOptions = () => {
           labels: {
             style: { 
               colors: '#D1D5DB',
-              fontSize: '12px'
+              fontSize: '10px'
             },
             formatter: (val) => `$${val}M`
           },
@@ -878,7 +878,7 @@ const getDXYChartOptions = () => {
     };
   };
 
-  // Volume Analysis Card Component (Enhanced Styling)
+  // Volume Analysis Card Component 
   const VolumeAnalysisCard = () => {
     if (!marketData) return (
       <div className="flex items-center justify-center h-48">

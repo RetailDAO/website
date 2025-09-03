@@ -25,11 +25,11 @@ const Sidebar = ({
 
   const menuItems = [
     { 
-      id: 'dashboard',
-      name: 'Dashboard', 
+      id: 'terminal',
+      name: 'Terminal', 
       icon: <Activity size={20} />, 
       active: true,
-      description: 'Main analytics view'
+      description: 'Main terminal view'
     },
     { 
       id: 'analytics',
@@ -41,7 +41,7 @@ const Sidebar = ({
       id: 'trading',
       name: 'Features to', 
       icon: <TrendingUp size={20} />,
-      description: 'AI-powered trading insights'
+      description: 'ML-powered trading insights'
     },
     { 
       id: 'rsi',

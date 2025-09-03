@@ -425,8 +425,15 @@ class IntelligentMockService {
   }
 
   timeframeToDays(timeframe) {
-    const mapping = { '1D': 1, '7D': 7, '30D': 30, '90D': 90, '1Y': 365 };
-    return mapping[timeframe] || 30;
+    const mapping = { 
+      '1D': 1, 
+      '7D': 7, 
+      '30D': 250,   // Increased to ensure sufficient data for 200-day MA and indicators
+      '90D': 250,   // Increased to ensure sufficient data for 200-day MA and indicators
+      '100D': 250,  // Increased to ensure sufficient data for 200-day MA and indicators
+      '1Y': 365 
+    };
+    return mapping[timeframe] || 250; // Default to 250 days for sufficient technical analysis data
   }
 
   getDefaultPrice(symbol) {
@@ -449,7 +456,7 @@ class IntelligentMockService {
    */
   generateFallbackMockData(symbol, timeframe) {
     const basePrice = this.getDefaultPrice(symbol);
-    const days = this.timeframeToDays(timeframe);
+    const days = Math.max(this.timeframeToDays(timeframe), 250); // Ensure minimum 250 days for technical analysis
     const historical = [];
     const now = new Date();
     
