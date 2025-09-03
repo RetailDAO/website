@@ -5,7 +5,9 @@ const { v4: uuidv4 } = require('uuid');
 class IndicatorStreamController {
   constructor() {
     this.isStreamingActive = false;
-    this.supportedSymbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
+    // Only BTC and ETH need indicator streaming (RSI, MA)
+    // SOL is price-only via WebSocket price stream
+    this.supportedSymbols = ['BTCUSDT', 'ETHUSDT'];
   }
 
   // Initialize indicator streaming for all supported symbols
@@ -24,11 +26,11 @@ class IndicatorStreamController {
       // Wait a moment for connection to establish
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Start indicator streaming for each symbol
+      // Start indicator streaming for each symbol with increased stagger delay
       for (const symbol of this.supportedSymbols) {
         websocketService.startIndicatorStreaming(symbol);
-        // Stagger the start to avoid overwhelming the system
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Longer stagger delay to avoid CoinGecko rate limits
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
       
       this.isStreamingActive = true;
