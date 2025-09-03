@@ -2,6 +2,8 @@
 // Generates realistic mock data based on cached real data patterns
 // Falls back gracefully when real data is unavailable
 
+import mockDataService from './mockDataService.js';
+
 class PersistentMockDataService {
   constructor() {
     this.lastRealData = null;
@@ -420,8 +422,7 @@ class PersistentMockDataService {
   generateDefaultMockData() {
     console.log('🎭 Generating default mock data');
     
-    // Import original mock service for fallback
-    const mockDataService = require('./mockDataService').default;
+    // Use original mock service for fallback
     return mockDataService.generateMockData();
   }
 
