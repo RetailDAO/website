@@ -72,7 +72,7 @@ class ApiService {
   }
 
   // BTC Analysis
-  async getBTCAnalysis(timeframe = '1D') {
+  async getBTCAnalysis(timeframe = '30D') {
     return this.request(`/api/v1/btc-analysis?timeframe=${timeframe}`);
   }
 
@@ -91,7 +91,7 @@ class ApiService {
   }
 
   // RSI Data
-  async getRSI(symbol = 'BTC', timeframe = '1D', period = 14) {
+  async getRSI(symbol = 'BTC', timeframe = '30D', period = 14) {
     return this.request(`/api/v1/rsi?symbol=${symbol}&timeframe=${timeframe}&period=${period}`);
   }
 
