@@ -273,20 +273,21 @@ class CryptoDataService {
       const historicalRequests = symbolsToFetch.map(symbol => {
         const coinId = symbolMap[symbol.toUpperCase()];
         
-        // Optimized timeframes: BTC needs 90 days (for 100-day MAs), ETH needs 30 days (for RSI)
-        const optimizedDays = symbol.toUpperCase() === 'BTC' ? 90 : 30;
-        console.log(`📊 Optimized request: ${symbol} using ${optimizedDays} days`);
+        // Conservative timeframes to avoid CoinGecko 400 errors: BTC 30 days, ETH 30 days
+        const optimizedDays = 30; // Reduced from 90 to 30 for BTC to avoid API errors
+        console.log(`📊 Optimized request: ${symbol} using ${optimizedDays} days (reduced for API compatibility)`);
         
         return {
           key: `historical_${coinId}_${optimizedDays}d`,
           symbol: symbol,
           coinId: coinId,
           fn: async () => {
+            console.log(`🔍 CoinGecko API call: /coins/${coinId}/market_chart?vs_currency=usd&days=${optimizedDays}&interval=daily`);
             const response = await this.coinGeckoClient.get(`/coins/${coinId}/market_chart`, {
               params: {
                 vs_currency: 'usd',
-                days: optimizedDays,
-                interval: optimizedDays <= 1 ? 'hourly' : 'daily'
+                days: optimizedDays
+                // Removed interval parameter - let CoinGecko decide automatically
               }
             });
             return response.data;
@@ -673,7 +674,7 @@ const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free ti
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'BTCUSDT' }
             }),
-            this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
+            this.binanceFuturesClient.get('/fapi/v1/fundingRate', {
               params: { 
                 symbol: 'BTCUSDT'
               }
@@ -681,15 +682,15 @@ const minDaysForCalculations = Math.max(requestedDays, 90); // CoinGecko free ti
             this.binanceClient.get('/v3/ticker/price', {
               params: { symbol: 'ETHUSDT' }
             }),
-            this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
+            this.binanceFuturesClient.get('/fapi/v1/fundingRate', {
               params: { 
                 symbol: 'ETHUSDT'
               }
             })
           ]);
 
-          const btcFundingRateData = btcFundingResponse.data;
-          const ethFundingRateData = ethFundingResponse.data;
+          const btcFundingRateData = btcFundingResponse.data[0];
+          const ethFundingRateData = ethFundingResponse.data[0];
           
           const binanceRates = [
             {
