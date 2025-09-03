@@ -1223,8 +1223,8 @@
       ]
     },
     "timestamp": "2025-09-03T17:45:00.000Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T19:55:24.342Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T20:20:19.462Z",
     "source": "api_success",
     "dataPoints": 4
   },
@@ -1255,8 +1255,8 @@
       ]
     },
     "timestamp": "2025-09-03T17:45:00.000Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T19:55:24.342Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T20:20:19.462Z",
     "source": "api_success",
     "dataPoints": 4
   },
@@ -1278,8 +1278,8 @@
       }
     },
     "timestamp": "2025-09-03T17:45:00.000Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-03T19:55:24.342Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-04T20:20:19.462Z",
     "source": "api_success",
     "dataPoints": 2
   }

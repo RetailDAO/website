@@ -1,5 +1,5 @@
 const { CryptoDataService } = require('../services/dataProviders/cryptoDataservice');
-const { calculateRSI, calculateMovingAverage } = require('../utils/technical_indicators');
+const { calculateRSI, calculateMovingAverage, calculateBollingerBands } = require('../utils/technical_indicators');
 const cacheService = require('../services/cache/cacheService');
 
 const cryptoDataService = new CryptoDataService();
@@ -48,9 +48,32 @@ class CryptoController {
           }
         });
 
+        // Calculate Bollinger Bands
+        const bollingerBands = {};
+        [20].forEach(period => {
+          const bbData = calculateBollingerBands(prices, period, 2); // 20-period, 2 std dev
+          if (bbData.upper.length > 0) {
+            bollingerBands[period] = {
+              upper: bbData.upper.map((value, index) => ({
+                timestamp: cryptoData.historical[cryptoData.historical.length - bbData.upper.length + index].timestamp,
+                value: Math.round(value * 100) / 100
+              })),
+              middle: bbData.middle.map((value, index) => ({
+                timestamp: cryptoData.historical[cryptoData.historical.length - bbData.middle.length + index].timestamp,
+                value: Math.round(value * 100) / 100
+              })),
+              lower: bbData.lower.map((value, index) => ({
+                timestamp: cryptoData.historical[cryptoData.historical.length - bbData.lower.length + index].timestamp,
+                value: Math.round(value * 100) / 100
+              }))
+            };
+          }
+        });
+
         // Add analysis to data
         analysisData.rsi = rsiData;
         analysisData.movingAverages = movingAverages;
+        analysisData.bollingerBands = bollingerBands;
         
         // Add current RSI status
         if (rsiData[14] && rsiData[14].length > 0) {
@@ -141,8 +164,31 @@ class CryptoController {
             }
           });
 
+          // Calculate Bollinger Bands
+          const bollingerBands = {};
+          [20].forEach(period => {
+            const bbData = calculateBollingerBands(prices, period, 2); // 20-period, 2 std dev
+            if (bbData.upper.length > 0) {
+              bollingerBands[period] = {
+                upper: bbData.upper.map((value, index) => ({
+                  timestamp: cryptoData.historical[cryptoData.historical.length - bbData.upper.length + index].timestamp,
+                  value: Math.round(value * 100) / 100
+                })),
+                middle: bbData.middle.map((value, index) => ({
+                  timestamp: cryptoData.historical[cryptoData.historical.length - bbData.middle.length + index].timestamp,
+                  value: Math.round(value * 100) / 100
+                })),
+                lower: bbData.lower.map((value, index) => ({
+                  timestamp: cryptoData.historical[cryptoData.historical.length - bbData.lower.length + index].timestamp,
+                  value: Math.round(value * 100) / 100
+                }))
+              };
+            }
+          });
+
           analysisData.rsi = rsiData;
           analysisData.movingAverages = movingAverages;
+          analysisData.bollingerBands = bollingerBands;
           
           // Add current RSI status
           if (rsiData[14] && rsiData[14].length > 0) {

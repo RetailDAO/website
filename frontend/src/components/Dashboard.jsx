@@ -837,12 +837,12 @@ const CryptoDashboard = () => {
     }
   });
 
-  // Enhanced Bitcoin chart with Moving Averages - Professional Trader Grade
+  // Enhanced Bitcoin chart with Moving Averages and Bollinger Bands - Professional Trader Grade
   const getBitcoinChartOptions = () => {
     if (!marketData?.bitcoin?.prices || !Array.isArray(marketData.bitcoin.prices)) {
       return {
         series: [],
-        options: getLoadingOptions('BTC Price with Moving Averages')
+        options: getLoadingOptions('BTC Price with Technical Analysis')
       };
     }
 
@@ -858,7 +858,7 @@ const CryptoDashboard = () => {
     if (validPrices.length === 0) {
       return {
         series: [],
-        options: getLoadingOptions('BTC Price with Moving Averages')
+        options: getLoadingOptions('BTC Price with Technical Analysis')
       };
     }
 
@@ -870,8 +870,87 @@ const CryptoDashboard = () => {
       }
     ];
 
+    // Add Bollinger Bands first (background indicators)
+    if (marketData.bitcoin.bollingerBands && marketData.bitcoin.bollingerBands[20]) {
+      const bb = marketData.bitcoin.bollingerBands[20];
+      
+      // Upper Band
+      if (bb.upper && bb.upper.length > 0) {
+        const validUpperBB = bb.upper
+          .filter(item => item && item.timestamp && typeof item.value === 'number' && !isNaN(item.value))
+          .map(item => {
+            const timestamp = item.timestamp instanceof Date ? item.timestamp.getTime() : new Date(item.timestamp).getTime();
+            return [timestamp, Math.round(item.value)];
+          })
+          .filter(([timestamp, value]) => !isNaN(timestamp) && !isNaN(value));
+
+        if (validUpperBB.length > 0) {
+          series.push({
+            name: 'BB Upper (20,2)',
+            type: 'line',
+            data: validUpperBB,
+            stroke: {
+              width: 1,
+              dashArray: 2,
+              opacity: 0.7
+            },
+            fill: { opacity: 0 }
+          });
+        }
+      }
+
+      // Lower Band  
+      if (bb.lower && bb.lower.length > 0) {
+        const validLowerBB = bb.lower
+          .filter(item => item && item.timestamp && typeof item.value === 'number' && !isNaN(item.value))
+          .map(item => {
+            const timestamp = item.timestamp instanceof Date ? item.timestamp.getTime() : new Date(item.timestamp).getTime();
+            return [timestamp, Math.round(item.value)];
+          })
+          .filter(([timestamp, value]) => !isNaN(timestamp) && !isNaN(value));
+
+        if (validLowerBB.length > 0) {
+          series.push({
+            name: 'BB Lower (20,2)',
+            type: 'line',
+            data: validLowerBB,
+            stroke: {
+              width: 1,
+              dashArray: 2,
+              opacity: 0.7
+            },
+            fill: { opacity: 0 }
+          });
+        }
+      }
+
+      // Middle Band (20-day SMA)
+      if (bb.middle && bb.middle.length > 0) {
+        const validMiddleBB = bb.middle
+          .filter(item => item && item.timestamp && typeof item.value === 'number' && !isNaN(item.value))
+          .map(item => {
+            const timestamp = item.timestamp instanceof Date ? item.timestamp.getTime() : new Date(item.timestamp).getTime();
+            return [timestamp, Math.round(item.value)];
+          })
+          .filter(([timestamp, value]) => !isNaN(timestamp) && !isNaN(value));
+
+        if (validMiddleBB.length > 0) {
+          series.push({
+            name: 'BB Middle (20d SMA)',
+            type: 'line',
+            data: validMiddleBB,
+            stroke: {
+              width: 1.5,
+              dashArray: 3
+            },
+            fill: { opacity: 0 }
+          });
+        }
+      }
+    }
+
     // Add moving averages with distinct styles - with data validation
-    const maPeriods = [20, 50, 100, 200];
+    const maPeriods = [50, 100, 200]; // Skip 20-day as it's included in BB middle
     maPeriods.forEach((period, index) => {
       if (marketData.bitcoin.movingAverages && marketData.bitcoin.movingAverages[period]) {
         const validMAData = marketData.bitcoin.movingAverages[period]
@@ -888,7 +967,8 @@ const CryptoDashboard = () => {
             type: 'line',
             data: validMAData,
             stroke: {
-              dashArray: index % 2 === 0 ? 0 : 5 // Dashed for some MAs for distinction
+              width: period === 200 ? 2.5 : 2, // 200-day MA is thicker
+              dashArray: period === 200 ? 0 : (index % 2 === 0 ? 0 : 5) // 200-day solid, others alternating
             }
           });
         }
@@ -928,14 +1008,20 @@ const CryptoDashboard = () => {
           }
         },
         theme: { mode: darkMode ? 'dark' : 'light' },
-        colors: ['#10B981', '#7e7cf8ff', '#ff5c5cff', '#81a011ff'], // Green for BTC area, other colors for MAs
+        colors: [
+          '#10B981', // BTC Price (green)
+          '#9CA3AF', // BB Upper (gray)
+          '#9CA3AF', // BB Lower (gray)
+          '#6B7280', // BB Middle (darker gray)
+          '#7C3AED', // 50d MA (purple)
+          '#F59E0B', // 100d MA (amber)
+          '#EF4444'  // 200d MA (red)
+        ],
         stroke: {
-          width: [2, 1.5, 1.5, 1.5], // Thicker main line
-          curve: 'smooth',
-          dashArray: [0, 0, 5, 5] // Dashed for longer MAs
+          curve: 'smooth'
         },
         fill: {
-          type: ['gradient', 'solid', 'solid', 'solid'], // Gradient only for BTC area
+          type: ['gradient', 'solid', 'solid', 'solid', 'solid', 'solid', 'solid'], // Gradient only for BTC area
           gradient: {
             shadeIntensity: 1,
             opacityFrom: 0.3,
@@ -1798,7 +1884,7 @@ const PriceCards = () => {
               dataUpdated.btc ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
             }`}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-lg font-semibold ${colors.text.primary}`}>BTC Price with Moving Averages</h3>
+                <h3 className={`text-lg font-semibold ${colors.text.primary}`}>BTC Technical Analysis</h3>
                 <Tooltip
                   title={CryptoTooltips.MovingAverages.title}
                   content={CryptoTooltips.MovingAverages.content}
