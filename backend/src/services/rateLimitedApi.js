@@ -1,3 +1,5 @@
+const Bottleneck = require('bottleneck');
+
 class RateLimitedApiService {
   constructor() {
     this.queues = new Map(); // Track queues per API provider
@@ -5,6 +7,38 @@ class RateLimitedApiService {
     this.pendingRequests = new Map(); // Track pending requests to avoid duplicates
     this.requestQueue = []; // Global queue for batching requests
     this.processingQueue = false;
+    
+    // Initialize bottleneck limiters per API provider
+    this.limiters = {
+      coingecko: new Bottleneck({
+        reservoir: 50, // 50 calls per minute
+        reservoirRefreshAmount: 50,
+        reservoirRefreshInterval: 60 * 1000, // 1 minute
+        maxConcurrent: 1, // Only 1 concurrent request
+        minTime: 1200 // 1.2 seconds between requests
+      }),
+      'alpha-vantage': new Bottleneck({
+        reservoir: 5, // 5 calls per minute
+        reservoirRefreshAmount: 5,
+        reservoirRefreshInterval: 60 * 1000,
+        maxConcurrent: 1,
+        minTime: 12000 // 12 seconds between requests
+      }),
+      binance: new Bottleneck({
+        reservoir: 1200, // 1200 weight per minute
+        reservoirRefreshAmount: 1200,
+        reservoirRefreshInterval: 60 * 1000,
+        maxConcurrent: 5,
+        minTime: 100 // 0.1 seconds between requests
+      }),
+      polygon: new Bottleneck({
+        reservoir: 5, // 5 calls per minute
+        reservoirRefreshAmount: 5,
+        reservoirRefreshInterval: 60 * 1000,
+        maxConcurrent: 1,
+        minTime: 12000 // 12 seconds between requests
+      })
+    };
   }
 
   // Rate limits per API provider (milliseconds between requests)
@@ -19,6 +53,36 @@ class RateLimitedApiService {
   }
 
   async makeRequest(provider, requestFn, retries = 3) {
+    const limiter = this.limiters[provider];
+    if (!limiter) {
+      console.warn(`[${provider}] No rate limiter configured, falling back to basic implementation`);
+      return this.makeRequestBasic(provider, requestFn, retries);
+    }
+    
+    return limiter.schedule(async () => {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const result = await requestFn();
+          return result;
+        } catch (error) {
+          // Check if it's a rate limit error (429) and we have retries left
+          if ((error.response?.status === 429 || error.code === 'ECONNRESET') && attempt < retries) {
+            // Exponential backoff: 2^attempt * base delay (2, 4, 8 seconds)
+            const backoffDelay = Math.pow(2, attempt + 1) * 1000;
+            console.log(`[${provider}] Rate limit hit (attempt ${attempt + 1}/${retries + 1}), backing off for ${backoffDelay}ms`);
+            await new Promise(resolve => setTimeout(resolve, backoffDelay));
+            continue;
+          }
+          
+          console.error(`[${provider}] API request failed:`, error.message);
+          throw error;
+        }
+      }
+    });
+  }
+  
+  // Fallback method for providers without bottleneck configuration
+  async makeRequestBasic(provider, requestFn, retries = 3) {
     const rateLimit = this.getRateLimit(provider);
     const lastRequest = this.lastRequestTime.get(provider) || 0;
     const timeSinceLastRequest = Date.now() - lastRequest;
@@ -36,9 +100,7 @@ class RateLimitedApiService {
         const result = await requestFn();
         return result;
       } catch (error) {
-        // Check if it's a rate limit error (429) and we have retries left
         if ((error.response?.status === 429 || error.code === 'ECONNRESET') && attempt < retries) {
-          // Exponential backoff: 2^attempt * base delay (2, 4, 8 seconds)
           const backoffDelay = Math.pow(2, attempt + 1) * 1000;
           console.log(`[${provider}] Rate limit hit (attempt ${attempt + 1}/${retries + 1}), backing off for ${backoffDelay}ms`);
           await new Promise(resolve => setTimeout(resolve, backoffDelay));
@@ -58,13 +120,13 @@ class RateLimitedApiService {
       const existingRequest = this.pendingRequests.get(requestKey);
       if (existingRequest) {
         console.log(`[coingecko] Reusing pending request for: ${requestKey}`);
-        return existingRequest.catch(() => null); // Handle errors gracefully
+        return existingRequest.catch(() => null);
       }
     }
     
     const requestPromise = this.makeRequest('coingecko', requestFn).catch(error => {
       console.log(`[coingecko] Request failed gracefully, will use fallback data`);
-      return null; // Return null instead of throwing for graceful degradation
+      return null;
     });
     
     // Store pending request to avoid duplicates
@@ -78,6 +140,19 @@ class RateLimitedApiService {
     }
     
     return requestPromise;
+  }
+  
+  // Get limiter statistics for monitoring
+  getLimiterStats() {
+    const stats = {};
+    Object.entries(this.limiters).forEach(([provider, limiter]) => {
+      stats[provider] = {
+        running: limiter.running(),
+        queued: limiter.queued(),
+        reservoir: limiter.reservoir
+      };
+    });
+    return stats;
   }
 
   // Batch multiple CoinGecko requests with intelligent spacing

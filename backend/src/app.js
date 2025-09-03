@@ -9,10 +9,11 @@ const rateLimiter = require('./middleware/rateLimit');
 const { errorHandler } = require('./middleware/errorHandler');
 
 // Import routes
-const apiRoutes = require('./routes/api_test');
+const apiRoutes = require('./routes/api');
 
 // Import services that need to be initialized
 const websocketService = require('./services/websocket/websocketService');
+const cronJobService = require('./services/scheduler/cronJobs');
 
 const app = express();
 
@@ -52,20 +53,27 @@ app.use((req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// Initialize WebSocket connections for real-time data
+// Initialize services for real-time data and scheduled tasks
 if (process.env.NODE_ENV !== 'test') {
   console.log('🚀 Initializing WebSocket connections...');
   websocketService.connectToBinance();
+  
+  console.log('🚀 Initializing scheduled tasks...');
+  cronJobService.initializeJobs();
   
   // Graceful shutdown handling
   process.on('SIGTERM', () => {
     console.log('📡 Closing WebSocket connections...');
     websocketService.closeAllConnections();
+    console.log('⏹️ Stopping scheduled tasks...');
+    cronJobService.stopAllJobs();
   });
   
   process.on('SIGINT', () => {
     console.log('📡 Closing WebSocket connections...');
     websocketService.closeAllConnections();
+    console.log('⏹️ Stopping scheduled tasks...');
+    cronJobService.stopAllJobs();
     process.exit(0);
   });
 }

@@ -250,8 +250,31 @@ export const LiveRSIDisplay = ({
       
       <div className="flex justify-center items-end space-x-12 py-4">
         {[14, 21, 30].map(period => {
-          const rsiValue = rsi[period]?.current || 50;
-          const status = rsi[period]?.status || 'Unknown';
+          // Extract current RSI value from array (last item) or use .current property if available
+          let rsiValue = 50;
+          let status = 'Unknown';
+          
+          if (rsi[period]) {
+            if (Array.isArray(rsi[period]) && rsi[period].length > 0) {
+              // Array format from mock data - get last item
+              rsiValue = rsi[period][rsi[period].length - 1]?.value || 50;
+            } else if (rsi[period].current !== undefined) {
+              // Object format with current property
+              rsiValue = rsi[period].current;
+              status = rsi[period].status || 'Unknown';
+            }
+          }
+
+          // Determine status based on RSI value
+          if (status === 'Unknown') {
+            if (rsiValue >= 70) {
+              status = 'Overbought';
+            } else if (rsiValue <= 30) {
+              status = 'Oversold';
+            } else {
+              status = 'Normal';
+            }
+          }
           
           return (
             <div key={period} className="text-center">

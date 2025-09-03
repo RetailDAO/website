@@ -43,7 +43,12 @@ class MockDataService {
         volume24h: 28500000000,
         source: 'Mock Data',
         prices: timeSeriesData.ethPrices,
-        volumes: timeSeriesData.ethVolumes
+        volumes: timeSeriesData.ethVolumes,
+        rsi: {
+          14: timeSeriesData.rsi14,
+          21: timeSeriesData.rsi21,
+          30: timeSeriesData.rsi30
+        }
       },
       solana: {
         currentPrice: 204.09,
@@ -457,16 +462,25 @@ class MockDataService {
 
     const rsiGenerator = scenarios[scenario] || scenarios['normal'];
     
-    // Update current RSI values for all periods
+    // Update current RSI values for all periods for both BTC and ETH
     const periods = [14, 21, 30];
-    periods.forEach(period => {
-      if (this.mockData.bitcoin.rsi[period] && this.mockData.bitcoin.rsi[period].length > 0) {
-        const lastRSI = this.mockData.bitcoin.rsi[period][this.mockData.bitcoin.rsi[period].length - 1];
-        lastRSI.value = parseFloat(rsiGenerator().toFixed(1));
-      }
+    const coins = ['bitcoin', 'ethereum'];
+    
+    coins.forEach(coin => {
+      periods.forEach(period => {
+        if (this.mockData[coin].rsi[period] && this.mockData[coin].rsi[period].length > 0) {
+          const lastRSI = this.mockData[coin].rsi[period][this.mockData[coin].rsi[period].length - 1];
+          lastRSI.value = parseFloat(rsiGenerator().toFixed(1));
+        }
+      });
     });
 
-    return this.mockData.bitcoin.rsi;
+    console.log(`🎭 [Mock] Generated RSI scenario: ${scenario} - BTC 14d RSI: ${this.mockData.bitcoin.rsi[14][this.mockData.bitcoin.rsi[14].length - 1]?.value}`);
+    
+    return {
+      bitcoin: this.mockData.bitcoin.rsi,
+      ethereum: this.mockData.ethereum.rsi
+    };
   }
 }
 

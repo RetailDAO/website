@@ -1,5 +1,5 @@
 require('dotenv').config();
-const app = require('./src/app_fixed');
+const app = require('./src/app');
 const WebSocket = require('ws');
 const websocketService = require('./src/services/websocket/websocketService');
 const { indicatorStreamController } = require('./src/controllers/indicatorStreamController');

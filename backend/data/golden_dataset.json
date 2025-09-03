@@ -2,32 +2,43 @@
   "btc_1D": {
     "data": {
       "current": {
-        "price": 67500,
-        "change24h": 2.5,
-        "volume24h": 25000000000,
-        "marketCap": 1330000000000
+        "price": 56999.63,
+        "change24h": 0,
+        "volume24h": 29548856675,
+        "marketCap": 1122892711000,
+        "timestamp": "2025-09-02T23:29:48.453Z"
       },
       "historical": [
         {
-          "timestamp": "2025-09-01T03:23:40.071Z",
-          "price": 66000
+          "timestamp": "2025-09-01T23:29:48.453Z",
+          "price": 79947.03,
+          "volume": 29542707479
         },
         {
-          "timestamp": "2025-09-01T15:23:40.071Z",
-          "price": 66800
-        },
-        {
-          "timestamp": "2025-09-02T03:23:40.071Z",
-          "price": 67500
+          "timestamp": "2025-09-02T23:29:48.453Z",
+          "price": 56999.63,
+          "volume": 29548856675
         }
       ],
-      "dataSource": "test_api"
+      "trend": {
+        "direction": "neutral",
+        "strength": 0.9672619047619048,
+        "pattern": "consolidation",
+        "overallChange": 0.04384615384615385,
+        "recentChange": 0.009672619047619048
+      },
+      "confidence": 24,
+      "rsi": {},
+      "movingAverages": {},
+      "dataSource": "intelligent_mock",
+      "goldenSource": "golden_adapted_btc_30D",
+      "generated": "2025-09-02T23:29:48.453Z"
     },
-    "timestamp": "2025-09-02T03:23:40.072Z",
-    "tier": "archived",
-    "expiresAt": "2025-09-03T11:56:48.383Z",
+    "timestamp": "2025-09-02T23:29:48.454Z",
+    "tier": "stale",
+    "expiresAt": "2025-09-03T00:40:45.866Z",
     "source": "api_success",
-    "dataPoints": 4
+    "dataPoints": 3
   },
   "btc_30D": {
     "data": {
@@ -69,8 +80,8 @@
       ]
     },
     "timestamp": "2025-09-02T03:30:43.059Z",
-    "tier": "fresh",
-    "expiresAt": "2025-09-02T03:35:43.059Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-03T23:29:38.827Z",
     "source": "api_success",
     "dataPoints": 8
   }

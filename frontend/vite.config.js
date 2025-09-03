@@ -11,18 +11,18 @@ export default defineConfig({
     host: '0.0.0.0', // Allow external connections for WSL2 compatibility
     proxy: {
       '/api': {
-        target: 'http://localhost:8001', // Matches your backend port
+        target: 'http://localhost:8000', // Matches your backend port
         changeOrigin: true,
         secure: false,
         // No rewrite needed - frontend already uses /api/v1 paths
       },
       '/health': {
-        target: 'http://localhost:8001', // Health endpoint
+        target: 'http://localhost:8000', // Health endpoint
         changeOrigin: true,
         secure: false,
       },
       '/ws': {
-        target: 'ws://localhost:8001', // WebSocket proxy
+        target: 'ws://localhost:8000', // WebSocket proxy
         ws: true, // Enable WebSocket proxying
         changeOrigin: true,
       },
