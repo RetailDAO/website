@@ -1,26 +1,32 @@
 import { useCallback, useMemo, useEffect, useState } from 'react';
-import Particles from '@tsparticles/react';
-import { loadFull } from 'tsparticles';
+import Particles, { initParticlesEngine } from '@tsparticles/react';
+import { loadSlim } from '@tsparticles/slim';
 import { useTheme } from '../context/ThemeContext';
 
 const StarryBackground = () => {
   const { isDark } = useTheme();
   const [engineReady, setEngineReady] = useState(false);
 
-  const particlesInit = useCallback(async engine => {
+  useEffect(() => {
     console.log('🌟 Initializing TSParticles engine...');
-    try {
-      // Initialize the tsParticles instance (main entry point)
-      await loadFull(engine);
-      console.log('✅ TSParticles engine loaded successfully');
-      console.log('🔧 Engine details:', engine);
+    initParticlesEngine(async (engine) => {
+      try {
+        // Load the slim version for better performance
+        await loadSlim(engine);
+        console.log('✅ TSParticles engine loaded successfully');
+        console.log('🔧 Engine details:', engine);
+        return engine;
+      } catch (error) {
+        console.error('❌ TSParticles engine failed to load:', error);
+        throw error;
+      }
+    }).then(() => {
+      console.log('🎯 TSParticles engine initialization complete');
       setEngineReady(true);
-      return engine;
-    } catch (error) {
-      console.error('❌ TSParticles engine failed to load:', error);
+    }).catch((error) => {
+      console.error('❌ TSParticles engine initialization failed:', error);
       setEngineReady(false);
-      throw error;
-    }
+    });
   }, []);
 
   const particlesLoaded = useCallback(async (container) => {
@@ -140,21 +146,22 @@ const StarryBackground = () => {
       style={{ zIndex: -1 }}
     >
       {console.log('🖼️ Rendering TSParticles component, engineReady:', engineReady)}
-      <Particles
-        id="tsparticles"
-        init={particlesInit}
-        loaded={particlesLoaded}
-        options={options}
-        className="w-full h-full"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          zIndex: -1
-        }}
-      />
+      {engineReady && (
+        <Particles
+          id="tsparticles"
+          particlesLoaded={particlesLoaded}
+          options={options}
+          className="w-full h-full"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: -1
+          }}
+        />
+      )}
     </div>
   );
 };
