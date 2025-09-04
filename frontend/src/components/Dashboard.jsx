@@ -1955,7 +1955,7 @@ pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-purple-500/50 shadow
   }
 
   return (
-    <div className={`min-h-screen ${colors.bg.primary} ${colors.text.primary} flex flex-col md:flex-row transition-colors duration-300 relative`}>
+    <div className={`min-h-screen bg-transparent ${colors.text.primary} flex flex-col md:flex-row transition-colors duration-300 relative`}>
       {/* Starry Background */}
       <StarryBackground />
       
