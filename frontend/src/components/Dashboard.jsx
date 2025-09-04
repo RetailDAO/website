@@ -11,6 +11,7 @@ import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Tooltip, { CryptoTooltips } from './Tooltip';
 import { ETFFlowsSkeleton, ProgressiveLoader } from './SkeletonLoader';
+import StarryBackground from './StarryBackground';
  
 
 // Custom RetailDAO Loading Animation Component
@@ -358,9 +359,9 @@ const CryptoDashboard = () => {
     setTimeout(() => setDataUpdated(prev => ({ ...prev, rsi: false, btc: false })), 2000);
   }, []);
 
-  const { connectionStatus: indicatorConnectionStatus } = useIndicatorWebSocket(handleIndicatorUpdate);
+  useIndicatorWebSocket(handleIndicatorUpdate);
 
-  // Progressive data loading function (defined first to avoid reference errors)
+  // eslint-disable-next-line no-unused-vars
   const fetchProgressiveData = useCallback(async () => {
     try {
       console.log('🚀 Starting progressive data loading for fresh updates...');
@@ -655,6 +656,7 @@ const CryptoDashboard = () => {
   }, []);
 
   // Load cached data first for most accurate display
+  // eslint-disable-next-line no-unused-vars
   const loadCachedDataFirst = useCallback(async () => {
     try {
       console.log('💾 Loading cached data first for accuracy...');
@@ -1953,7 +1955,10 @@ pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-purple-500/50 shadow
   }
 
   return (
-    <div className={`min-h-screen ${colors.bg.primary} ${colors.text.primary} flex flex-col md:flex-row transition-colors duration-300`}>
+    <div className={`min-h-screen ${colors.bg.primary} ${colors.text.primary} flex flex-col md:flex-row transition-colors duration-300 relative`}>
+      {/* Starry Background */}
+      <StarryBackground />
+      
       {/* Enhanced Sidebar */}
       <Sidebar 
         isOpen={isSidebarOpen} 

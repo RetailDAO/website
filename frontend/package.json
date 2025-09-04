@@ -17,6 +17,8 @@
   "dependencies": {
     "@tanstack/react-query": "^5.85.9",
     "@tanstack/react-query-devtools": "^5.85.9",
+    "@tsparticles/react": "^3.0.0",
+    "@tsparticles/slim": "^3.9.1",
     "apexcharts": "^5.3.4",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",

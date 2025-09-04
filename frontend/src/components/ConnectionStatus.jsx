@@ -13,8 +13,7 @@ const ConnectionStatus = ({ websocketStatus = 'disconnected', className = '' }) 
     isConnected: indicatorConnected,
     streamStatus,
     hasData,
-    isHealthy: indicatorHealthy,
-    supportedSymbols
+    isHealthy: indicatorHealthy
   } = useIndicatorStream({
     autoSubscribe: [], // Don't auto-subscribe, just monitor
     enableDataMerging: false
@@ -334,7 +333,7 @@ const ConnectionStatus = ({ websocketStatus = 'disconnected', className = '' }) 
                   <div>• ~87% reduction in API calls achieved</div>
                   <div>• Real-time indicator updates every 5 minutes</div>
                   <div className="text-xs text-green-300 mt-1">
-                    You're getting the highest quality data available!
+                    You&apos;re getting the highest quality data available!
                   </div>
                 </div>
               </div>
