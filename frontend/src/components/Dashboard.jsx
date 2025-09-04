@@ -1180,13 +1180,15 @@ const CryptoDashboard = () => {
 //  DXY Chart 
 const getDXYChartOptions = () => {
   console.log('🔍 DXY Chart - marketData.dxy:', marketData?.dxy);
+  console.log('🔍 DXY Chart - marketData.dxyData:', marketData?.dxyData);
   // Check for different data structures: mock data has .prices, API response has .data.historical
   const dxyPrices = marketData?.dxy?.prices || 
                     marketData?.dxy?.historical || 
                     marketData?.dxy?.data?.historical ||
                     marketData?.dxyData?.prices || 
                     marketData?.dxyData?.historical ||
-                    marketData?.dxyData?.data?.historical;
+                    marketData?.dxyData?.data?.historical ||
+                    marketData?.dxyData; // Direct data if it's already an array
   console.log('🔍 DXY prices array:', dxyPrices);
   if (!dxyPrices || !Array.isArray(dxyPrices) || dxyPrices.length === 0) {
     return {
@@ -1325,7 +1327,10 @@ const getDXYChartOptions = () => {
   const getETFFlowsOptions = () => {
     console.log('🔍 ETF Chart - marketData.etfFlows:', marketData?.etfFlows);
     // Check for different data structures: mock has direct .btcFlows, API might have nested structure
-    const btcFlows = marketData?.etfFlows?.btcFlows || marketData?.etfFlows?.btc_flows || marketData?.etfFlows?.flows?.btc;
+    const btcFlows = marketData?.etfFlows?.btcFlows || 
+                     marketData?.etfFlows?.btc_flows || 
+                     marketData?.etfFlows?.flows?.btc ||
+                     marketData?.etfFlows?.flows; // Direct flows array
     console.log('🔍 ETF btcFlows array:', btcFlows);
     if (!btcFlows || !Array.isArray(btcFlows) || btcFlows.length === 0) {
       return {
@@ -1344,13 +1349,13 @@ const getDXYChartOptions = () => {
     // Safely filter and map ETF data to prevent ApexCharts errors
     const validETFData = btcFlows
       .filter(item => {
-        const hasTimestamp = item && (item.timestamp || item.date);
-        const hasValue = typeof (item.flow || item.value || item.amount) === 'number';
+        const hasTimestamp = item && (item.timestamp || item.date || item.x);
+        const hasValue = typeof (item.flow || item.netFlow || item.value || item.amount || item.y) === 'number';
         return hasTimestamp && hasValue;
       })
       .map(item => {
-        const timestamp = new Date(item.timestamp || item.date).getTime();
-        const value = Math.round((item.flow || item.value || item.amount) / 1000000); // Convert to millions
+        const timestamp = new Date(item.timestamp || item.date || item.x).getTime();
+        const value = Math.round((item.flow || item.netFlow || item.value || item.amount || item.y) / 1000000); // Convert to millions
         return { x: timestamp, y: value };
       })
       .filter(item => !isNaN(item.x) && !isNaN(item.y));

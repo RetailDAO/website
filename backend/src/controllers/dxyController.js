@@ -62,6 +62,7 @@ const dxyController = {
           ma50: ma50[ma50.length - 1]
         },
         historical: enrichedData,
+        prices: enrichedData, // Add prices array for frontend compatibility
         analysis: analysis,
         metadata: {
           timeframe,

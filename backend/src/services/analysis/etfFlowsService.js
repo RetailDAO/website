@@ -329,7 +329,12 @@ class ETFFlowsService {
   // Process and enhance aggregated ETF flows data
   processETFFlowsData(rawData, dateRange) {
     if (!rawData || rawData.length === 0) {
-      return { flows: [], summary: {}, metadata: {} };
+      return { 
+        flows: [], 
+        btcFlows: [], // Add btcFlows for frontend compatibility
+        summary: {}, 
+        metadata: {} 
+      };
     }
 
     // Handle aggregated flow data structure
@@ -358,6 +363,12 @@ class ETFFlowsService {
       netFlow = totalInflows + totalOutflows;
     }
 
+    // Convert data to format expected by frontend charts
+    const btcFlows = rawData.map(item => ({
+      x: item.date,
+      y: item.netFlow || item.flow || 0
+    }));
+
     // ETF breakdown
     const etfSummary = rawData.reduce((acc, item) => {
       if (!acc[item.etf]) {
@@ -373,7 +384,7 @@ class ETFFlowsService {
         };
       }
       
-      acc[item.etf].totalFlow += item.flow;
+      acc[item.etf].totalFlow += (item.netFlow || item.flow || 0);
       acc[item.etf].flowDays += 1;
       acc[item.etf].currentPrice = item.price; // Latest price
       
@@ -396,13 +407,27 @@ class ETFFlowsService {
       }
     });
 
+    // Calculate summary statistics for display
+    const sevenDayFlow = rawData
+      .slice(-7)
+      .reduce((sum, item) => sum + (item.netFlow || item.flow || 0), 0);
+    
+    const thirtyDayFlow = rawData
+      .slice(-30)
+      .reduce((sum, item) => sum + (item.netFlow || item.flow || 0), 0);
+
     return {
       flows: rawData,
+      btcFlows: btcFlows, // Add btcFlows for frontend compatibility
       summary: {
         totalInflows,
         totalOutflows,
         netFlow,
         flowTrend: netFlow > 0 ? 'positive' : 'negative',
+        sevenDayFlow: sevenDayFlow < 0 ? `-$${Math.abs(sevenDayFlow / 1000000).toFixed(0)}M` : `+$${(sevenDayFlow / 1000000).toFixed(0)}M`,
+        sevenDayTrend: sevenDayFlow > 0 ? 'Strong Inflows' : 'Strong Outflows',
+        thirtyDayFlow: thirtyDayFlow < 0 ? `-$${Math.abs(thirtyDayFlow / 1000000).toFixed(1)}B` : `+$${(thirtyDayFlow / 1000000000).toFixed(1)}B`,
+        thirtyDayTrend: thirtyDayFlow > 0 ? 'Strong Inflows' : 'Strong Outflows',
         etfBreakdown: Object.values(etfSummary)
           .sort((a, b) => b.totalFlow - a.totalFlow) // Sort by total flow desc
       },
