@@ -1180,8 +1180,11 @@ const CryptoDashboard = () => {
 //  DXY Chart 
 const getDXYChartOptions = () => {
   console.log('🔍 DXY Chart - marketData.dxy:', marketData?.dxy);
-  // Check for different data structures: mock data has .prices, API has .historical
-  const dxyPrices = marketData?.dxy?.prices || marketData?.dxy?.historical || marketData?.dxyData?.prices || marketData?.dxyData?.historical;
+  // Check for different data structures: mock data has .prices, API response has .historical
+  const dxyPrices = marketData?.dxy?.prices || 
+                    marketData?.dxy?.historical || 
+                    marketData?.dxyData?.prices || 
+                    marketData?.dxyData?.historical;
   console.log('🔍 DXY prices array:', dxyPrices);
   if (!dxyPrices || !Array.isArray(dxyPrices) || dxyPrices.length === 0) {
     return {
