@@ -11,7 +11,6 @@ import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 import Tooltip, { CryptoTooltips } from './Tooltip';
 import { ETFFlowsSkeleton, ProgressiveLoader } from './SkeletonLoader';
-import StarryBackground from './StarryBackground';
  
 
 // Custom RetailDAO Loading Animation Component
@@ -1955,9 +1954,7 @@ pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-purple-500/50 shadow
   }
 
   return (
-    <div className={`min-h-screen bg-transparent ${colors.text.primary} flex flex-col md:flex-row transition-colors duration-300 relative`}>
-      {/* Starry Background */}
-      <StarryBackground />
+    <div className={`min-h-screen ${colors.bg.primary} ${colors.text.primary} flex flex-col md:flex-row transition-colors duration-300`}>
       
       {/* Enhanced Sidebar */}
       <div className="relative z-20">

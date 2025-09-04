@@ -17,9 +17,6 @@
   "dependencies": {
     "@tanstack/react-query": "^5.85.9",
     "@tanstack/react-query-devtools": "^5.85.9",
-    "@tsparticles/engine": "^3.9.1",
-    "@tsparticles/react": "^3.0.0",
-    "@tsparticles/slim": "^3.9.1",
     "apexcharts": "^5.3.4",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
@@ -28,7 +25,6 @@
     "react-apexcharts": "^1.7.0",
     "react-dom": "^18.3.1",
     "recharts": "^2.15.4",
-    "tsparticles": "^3.9.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.2",
