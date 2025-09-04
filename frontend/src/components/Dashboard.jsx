@@ -110,8 +110,7 @@ const CryptoDashboard = () => {
   const [useRealAPI, setUseRealAPI] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Simple price update tracking for pulsating effects
-  const [priceUpdates, setPriceUpdates] = useState({});
+  // Price update tracking removed - using pulseEffects instead
   
   const [dataUpdated, setDataUpdated] = useState({
     prices: false,
@@ -133,13 +132,7 @@ const CryptoDashboard = () => {
     etfFlows: { active: false, type: 'api_fresh', intensity: 'subtle', timestamp: null }
   });
   
-  // Enhanced WebSocket connection status tracking
-  const [wsConnectionHealth, setWsConnectionHealth] = useState({
-    priceWs: 'connecting',
-    indicatorWs: 'connecting',
-    lastPriceUpdate: null,
-    lastIndicatorUpdate: null
-  });
+  // WebSocket health tracking removed - using connectionStatus from hooks instead
   
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -176,12 +169,7 @@ const CryptoDashboard = () => {
       return;
     }
     
-    // Update connection health tracking
-    setWsConnectionHealth(prev => ({
-      ...prev,
-      priceWs: 'connected',
-      lastPriceUpdate: Date.now()
-    }));
+    // Connection health tracked via connectionStatus from hook
 
     // Update market data with new price for price cards (both data paths)
     setMarketData(prevData => {
@@ -213,15 +201,7 @@ const CryptoDashboard = () => {
       };
     });
 
-    // Store price update for pulsating effect
-    setPriceUpdates(prev => ({
-      ...prev,
-      [symbolKey]: {
-        price: priceData.price,
-        timestamp: Date.now(),
-        change24h: priceData.change24h
-      }
-    }));
+    // Price updates now handled via pulseEffects state
 
     // Trigger enhanced pulsating animation for price cards
     setPulseEffects(prev => ({
@@ -960,7 +940,9 @@ const CryptoDashboard = () => {
               dashArray: 2,
               opacity: 0.7
             },
-            fill: { opacity: 0 }
+            fill: { opacity: 0 },
+            showInLegend: true,
+            visible: false // Hide by default
           });
         }
       }
@@ -985,7 +967,9 @@ const CryptoDashboard = () => {
               dashArray: 2,
               opacity: 0.7
             },
-            fill: { opacity: 0 }
+            fill: { opacity: 0 },
+            showInLegend: true,
+            visible: false // Hide by default
           });
         }
       }
@@ -1009,7 +993,9 @@ const CryptoDashboard = () => {
               width: 1.5,
               dashArray: 3
             },
-            fill: { opacity: 0 }
+            fill: { opacity: 0 },
+            showInLegend: true,
+            visible: false // Hide by default
           });
         }
       }
@@ -1017,7 +1003,7 @@ const CryptoDashboard = () => {
 
     // Add moving averages with distinct styles - with data validation
     const maPeriods = [50, 100, 200]; // Skip 20-day as it's included in BB middle
-    maPeriods.forEach((period, index) => {
+    maPeriods.forEach((period) => {
       if (marketData.bitcoin.movingAverages && marketData.bitcoin.movingAverages[period]) {
         const validMAData = marketData.bitcoin.movingAverages[period]
           .filter(item => item && item.timestamp && typeof item.value === 'number' && !isNaN(item.value))
@@ -1033,9 +1019,9 @@ const CryptoDashboard = () => {
             type: 'line',
             data: validMAData,
             stroke: {
-              width: period === 200 ? 2.5 : 2, // 200-day MA is thicker
-              dashArray: period === 200 ? 0 : (index % 2 === 0 ? 0 : 5) // 200-day solid, others alternating
-            }
+              width: 1.5 // All MAs have 1.5px width
+            },
+            fill: { opacity: 0 } // No area fill for MAs
           });
         }
       }
@@ -1048,7 +1034,7 @@ const CryptoDashboard = () => {
           id: 'btc-chart',
           height: 400,
           type: 'line',
-          background: 'transparent',
+          background: '#000000',
           toolbar: {
             show: true,
             tools: {
@@ -1075,24 +1061,34 @@ const CryptoDashboard = () => {
         },
         theme: { mode: darkMode ? 'dark' : 'light' },
         colors: [
-          '#10B981', // BTC Price (green)
+          '#FBBF24', // BTC Price (yellow)
           '#9CA3AF', // BB Upper (gray)
           '#9CA3AF', // BB Lower (gray)
           '#6B7280', // BB Middle (darker gray)
-          '#7C3AED', // 50d MA (purple)
-          '#F59E0B', // 100d MA (amber)
-          '#EF4444'  // 200d MA (red)
+          '#10B981', // 50d MA (green)
+          '#EF4444', // 100d MA (red)
+          '#38BDF8'  // 200d MA (light blue)
         ],
         stroke: {
-          curve: 'smooth'
+          curve: 'smooth',
+          width: [2, 1, 1, 1.5, 1.5, 1.5, 1.5] // BTC: 2px, BB: 1px, MAs: 1.5px
         },
         fill: {
           type: ['gradient', 'solid', 'solid', 'solid', 'solid', 'solid', 'solid'], // Gradient only for BTC area
           gradient: {
             shadeIntensity: 1,
-            opacityFrom: 0.3,
-            opacityTo: 0.1,
-            stops: [0, 100]
+            opacityFrom: 0.4,
+            opacityTo: 0.05,
+            stops: [0, 100],
+            colorStops: [{
+              offset: 0,
+              color: '#FBBF24',
+              opacity: 0.4
+            }, {
+              offset: 100,
+              color: '#FBBF24',
+              opacity: 0.05
+            }]
           }
         },
         title: {
@@ -1159,7 +1155,9 @@ const CryptoDashboard = () => {
           labels: { colors: darkMode ? '#D1D5DB' : '#4B5563' },
           fontSize: '12px',
           fontWeight: 500,
-          markers: { width: 12, height: 12 }
+          markers: { width: 12, height: 12 },
+          showForSingleSeries: false,
+          itemMargin: { horizontal: 8, vertical: 0 }
         },
         tooltip: {
           theme: darkMode ? 'dark' : 'light',
@@ -1813,7 +1811,7 @@ const PriceCards = () => {
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
       {/* Bitcoin Card */}
       <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-[#fbc318] transition-all duration-300 ${colors.shadow.card} hover:shadow-[#fbc318]/20 hover:scale-[1.01] transition-transform ${
-        dataUpdated.prices ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
+pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-[#fbc318]/50 shadow-2xl shadow-[#fbc318]/30' : ''
       }`}>
         <div className="flex items-center space-x-3 mb-3">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
@@ -1835,7 +1833,7 @@ const PriceCards = () => {
 
       {/* Ethereum Card */}
       <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-blue-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-blue-500/20 hover:scale-[1.01] transition-transform ${
-        dataUpdated.prices ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
+pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-blue-500/50 shadow-2xl shadow-blue-500/30' : ''
       }`}>
         <div className="flex items-center space-x-3 mb-3">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
@@ -1857,7 +1855,7 @@ const PriceCards = () => {
 
       {/* Solana Card */}
       <div className={`bg-gradient-to-br ${colors.bg.secondary} ${colors.bg.tertiary} rounded-xl p-4 md:p-4 ${colors.border.primary} border hover:border-purple-500 transition-all duration-300 ${colors.shadow.card} hover:shadow-purple-500/20 hover:scale-[1.01] transition-transform ${
-        dataUpdated.prices ? 'animate-pulse ring-4 ring-purple-500/50 shadow-2xl shadow-purple-500/30' : ''
+pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-purple-500/50 shadow-2xl shadow-purple-500/30' : ''
       }`}>
         <div className="flex items-center space-x-3 mb-3">
           <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
@@ -2209,7 +2207,7 @@ const PriceCards = () => {
           </p>
           {useRealAPI && (
             <p className="mt-1 text-xs text-blue-400">
-              ⚡ Live data powered by CoinGecko | BTC Chart: 220 days cached data | Ring animations show fresh updates
+              ⚡ Live data powered by CoinGecko | WebSocket: <span className={connectionStatus === 'connected' ? 'text-green-400' : 'text-red-400'}>{connectionStatus}</span> | Ring animations show fresh updates
             </p>
           )}
           {!useRealAPI && (
