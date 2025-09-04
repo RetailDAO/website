@@ -340,61 +340,11 @@ class ApiService {
     return data;
   }
 
-  // Helper method to get real DXY data
-  async getRealDXYData() {
-    try {
-      const response = await this.getDXYAnalysis('7D'); // Use shorter timeframe to reduce load
-      if (response && response.success && response.data) {
-        return {
-          currentPrice: response.data.current.price,
-          change24h: response.data.current.change24h,
-          analysis: response.data.analysis,
-          prices: response.data.historical.map(item => ({
-            timestamp: new Date(item.timestamp),
-            price: item.price
-          })),
-          dataSource: 'Alpha Vantage API'
-        };
-      }
-      // Fallback to mock data if API fails
-      console.warn('DXY API returned no data, using enhanced mock data');
-      return {
-        currentPrice: 104.25,
-        change24h: -0.12,
-        analysis: {
-          strength: 'neutral',
-          trend: 'sideways',
-          dollarImpact: {
-            crypto: 'neutral',
-            description: 'Dollar strength is neutral for crypto prices'
-          }
-        },
-        prices: this.generateDXYMockData(),
-        dataSource: 'Mock Data (API unavailable)'
-      };
-    } catch (error) {
-      console.warn('Failed to fetch real DXY data, using enhanced mock:', error.message);
-      return {
-        currentPrice: 104.25,
-        change24h: -0.12,
-        analysis: {
-          strength: 'neutral', 
-          trend: 'sideways',
-          dollarImpact: {
-            crypto: 'neutral',
-            description: 'Dollar strength is neutral for crypto prices'
-          }
-        },
-        prices: this.generateDXYMockData(),
-        dataSource: 'Mock Data (API Error)'
-      };
-    }
-  }
 
   // Helper method to get real ETF data
   async getRealETFData() {
     try {
-      const response = await this.getETFFlows('7D'); // Use shorter timeframe for reliability
+      const response = await this.getETFFlows('30D'); // Use 30D timeframe for comprehensive data
       if (response && response.success && response.data && response.data.flows) {
         const btcFlows = response.data.flows
           .filter(flow => flow.etf && (flow.etf.includes('BTC') || flow.etf === 'IBIT' || flow.etf === 'FBTC' || flow.etf === 'ARKB'))
@@ -593,7 +543,7 @@ class ApiService {
           source: 'Backend API with CoinGecko'
         },
         // Add real DXY and ETF data
-        dxy: await this.getRealDXYData(),
+        dxy: await this.getDXYAnalysis('30D'),
         etfFlows: await this.getRealETFData(),
         fundingRates: await this.getRealFundingRates()
       };
@@ -653,7 +603,7 @@ class ApiService {
           bitcoin: transformIndividualResponse(btcData, 'bitcoin'),
           ethereum: transformIndividualResponse(ethData, 'ethereum'),
           solana: transformIndividualResponse(solData, 'solana'),
-          dxy: await this.getRealDXYData(),
+          dxy: await this.getDXYAnalysis('30D'),
           etfFlows: await this.getRealETFData(),
           fundingRates: await this.getRealFundingRates()
         }

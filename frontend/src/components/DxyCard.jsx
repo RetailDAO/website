@@ -4,7 +4,7 @@ import Tooltip, { CryptoTooltips } from './Tooltip';
 
 function DxyCard() {
   const { colors } = useTheme();
-  const { data, loading, error } = useDxyAnalysis('1D');
+  const { data, loading, error } = useDxyAnalysis('30D');
 
   if (loading) {
     return (
