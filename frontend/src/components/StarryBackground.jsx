@@ -1,21 +1,35 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useState } from 'react';
 import Particles from '@tsparticles/react';
-import { loadSlim } from '@tsparticles/slim';
+import { loadFull } from 'tsparticles';
 import { useTheme } from '../context/ThemeContext';
 
 const StarryBackground = () => {
   const { isDark } = useTheme();
+  const [engineReady, setEngineReady] = useState(false);
 
   const particlesInit = useCallback(async engine => {
-    await loadSlim(engine);
+    console.log('🌟 Initializing TSParticles engine...');
+    try {
+      // Initialize the tsParticles instance (main entry point)
+      await loadFull(engine);
+      console.log('✅ TSParticles engine loaded successfully');
+      console.log('🔧 Engine details:', engine);
+      setEngineReady(true);
+      return engine;
+    } catch (error) {
+      console.error('❌ TSParticles engine failed to load:', error);
+      setEngineReady(false);
+      throw error;
+    }
   }, []);
 
-  const particlesLoaded = useCallback(async (_container) => {
-    // Optional callback when particles are loaded
+  const particlesLoaded = useCallback(async (container) => {
+    console.log('🎯 TSParticles container loaded:', container);
   }, []);
 
   const options = useMemo(() => {
-    return {
+    console.log('🎨 Generating particle options, isDark:', isDark);
+    const config = {
       background: {
         color: {
           value: 'transparent',
@@ -115,6 +129,8 @@ const StarryBackground = () => {
         },
       ],
     };
+    console.log('🔧 Final particle config:', config);
+    return config;
   }, [isDark]);
 
   return (
@@ -123,12 +139,21 @@ const StarryBackground = () => {
       className="fixed inset-0 pointer-events-none"
       style={{ zIndex: -1 }}
     >
+      {console.log('🖼️ Rendering TSParticles component, engineReady:', engineReady)}
       <Particles
         id="tsparticles"
         init={particlesInit}
         loaded={particlesLoaded}
         options={options}
         className="w-full h-full"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: -1
+        }}
       />
     </div>
   );

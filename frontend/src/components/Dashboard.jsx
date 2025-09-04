@@ -1299,12 +1299,12 @@ const getDXYChartOptions = () => {
         enabled: false
       },
       title: {
-        text: 'US Dollar Index (DXY)',
+        text: 'Note: Plotting USD/EUR as DXY proxy',
         align: 'left',
         style: { 
-          color: darkMode ? '#fff' : '#000', 
-          fontSize: '14px',
-          fontWeight: 600,
+          color: darkMode ? '#9CA3AF' : '#6B7280', 
+          fontSize: '12px',
+          fontWeight: 400,
           fontFamily: 'Inter, sans-serif'
         },
         margin: 0, // Reduce title margin
