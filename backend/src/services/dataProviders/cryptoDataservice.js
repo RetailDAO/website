@@ -26,7 +26,7 @@ class CryptoDataService {
 
     // Binance Futures client for more data sources
     this.binanceFuturesClient = axios.create({
-      baseURL: 'https://fapi.binance.com/fapi',
+      baseURL: 'https://fapi.binance.com',
       timeout: 15000
     });
   }
@@ -273,9 +273,10 @@ class CryptoDataService {
     const symbolMap = {
       'BTC': 'bitcoin',
       'ETH': 'ethereum',
+      'SOL': 'solana',
       'BITCOIN': 'bitcoin',
-      'ETHEREUM': 'ethereum'
-      // Removed SOL to reduce API calls
+      'ETHEREUM': 'ethereum',
+      'SOLANA': 'solana'
     };
     
     const validSymbols = symbols.filter(symbol => symbolMap[symbol.toUpperCase()]);
@@ -339,15 +340,23 @@ class CryptoDataService {
         return response.data;
       }, `batch_prices_${fetchCoinIdsString}_${timeframe}`);
 
-      // Optimized: Use specific timeframes per asset (BTC: 90d, ETH: 30d)
+      // Optimized: Use specific timeframes per asset based on actual needs
       
       const historicalRequests = symbolsToFetch.map(symbol => {
         const coinId = symbolMap[symbol.toUpperCase()];
         
-        // Strategic periods: BTC gets 220 days, ETH gets 50 days for enhanced calculations
+        // Strategic periods optimized for actual usage:
+        // - BTC: 220 days (needed for 200-day MA calculations)
+        // - ETH: 50 days (needed for RSI calculations) 
+        // - SOL: 7 days ONLY (minimal data for Sparkline chart - last 30 points)
         const optimizedDays = symbol.toUpperCase() === 'BTC' ? 220 : 
-                            symbol.toUpperCase() === 'ETH' ? 50 : 30;
-        console.log(`📊 Strategic request: ${symbol} using ${optimizedDays} days (BTC: 220d for MAs, ETH: 50d for RSI)`);
+                            symbol.toUpperCase() === 'ETH' ? 50 :
+                            symbol.toUpperCase() === 'SOL' ? 7 : 30; // SOL gets minimal 7-day data
+        
+        const rationale = symbol.toUpperCase() === 'BTC' ? '220d for MAs' :
+                         symbol.toUpperCase() === 'ETH' ? '50d for RSI' :
+                         symbol.toUpperCase() === 'SOL' ? '7d for Sparkline only' : '30d default';
+        console.log(`📊 Strategic request: ${symbol} using ${optimizedDays} days (${rationale})`);
         
         return {
           key: `historical_${coinId}_${optimizedDays}d`,
@@ -489,14 +498,22 @@ class CryptoDataService {
         return response.data;
       });
 
-      // Get historical data with rate limiting - ensure we have enough for RSI/MA calculations
+      // Get historical data with rate limiting - optimize based on symbol usage
       const requestedDays = this.timeframeToDays(timeframe);
-      // Enhanced approach: BTC gets up to 220 days, ETH gets up to 50 days
+      
+      // Strategic data limits based on actual frontend needs:
+      // - BTC: Up to 220 days for MA calculations
+      // - ETH: Up to 50 days for RSI calculations  
+      // - SOL: Only 7 days for Sparkline (price card chart)
       const minDaysForCalculations = Math.max(requestedDays, 
         symbol.toUpperCase() === 'BTC' ? 220 : 
-        symbol.toUpperCase() === 'ETH' ? 50 : 30);
+        symbol.toUpperCase() === 'ETH' ? 50 :
+        symbol.toUpperCase() === 'SOL' ? 7 : 30); // SOL limited to 7 days
+        
       // CoinGecko allows up to 365 days - use strategically
       const safeDaysLimit = Math.min(minDaysForCalculations, 365); // Full CoinGecko limit
+      
+      console.log(`📊 ${symbol} data request: ${requestedDays}d requested → ${safeDaysLimit}d optimized (${symbol === 'SOL' ? 'Sparkline only' : 'full analysis'})`);
       
       const historicalData = await rateLimitedApi.coinGeckoRequest(async () => {
         const response = await this.coinGeckoClient.get(`/coins/${coinId}/market_chart`, {
@@ -577,6 +594,7 @@ class CryptoDataService {
     const dataPoints = timeframe === '1D' ? 24 : 
                       symbol.toUpperCase() === 'BTC' ? Math.max(requestedDays, 250) : // BTC needs 220+ days + buffer
                       symbol.toUpperCase() === 'ETH' ? Math.max(requestedDays, 50) :   // ETH needs 50 days
+                      symbol.toUpperCase() === 'SOL' ? Math.max(requestedDays, 7) :    // SOL needs only 7 days for Sparkline
                       Math.max(requestedDays, 30);  // Others need 30 days
     
     const historical = [];
@@ -651,6 +669,7 @@ class CryptoDataService {
       const dataPoints = timeframe === '1D' ? 24 : 
                         symbol.toUpperCase() === 'BTC' ? Math.max(requestedDays, 250) : // BTC needs 220+ days + buffer
                         symbol.toUpperCase() === 'ETH' ? Math.max(requestedDays, 50) :   // ETH needs 50 days
+                        symbol.toUpperCase() === 'SOL' ? Math.max(requestedDays, 7) :    // SOL needs only 7 days for Sparkline
                         Math.max(requestedDays, 30);  // Others need 30 days
       
       const historical = [];
@@ -766,10 +785,10 @@ class CryptoDataService {
 
           // Get funding rates directly from premiumIndex endpoint
           const [btcFundingRate, ethFundingRate] = await Promise.all([
-            this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
+            this.binanceFuturesClient.get('/v1/premiumIndex', {
               params: { symbol: 'BTCUSDT' }
             }),
-            this.binanceFuturesClient.get('/fapi/v1/premiumIndex', {
+            this.binanceFuturesClient.get('/v1/premiumIndex', {
               params: { symbol: 'ETHUSDT' }
             })
           ]);
@@ -807,17 +826,31 @@ class CryptoDataService {
           console.warn('⚠️ [Binance] Funding rate API failed, using fallback:', binanceError.message);
           
           // Fallback to price + mock funding rate
-          const priceResponse = await this.binanceClient.get('/v3/ticker/price', {
-            params: { symbol: 'BTCUSDT' }
-          });
+          const [btcPriceResponse, ethPriceResponse] = await Promise.all([
+            this.binanceClient.get('/api/v3/ticker/price', {
+              params: { symbol: 'BTCUSDT' }
+            }),
+            this.binanceClient.get('/api/v3/ticker/price', {
+              params: { symbol: 'ETHUSDT' }
+            })
+          ]);
           
-          const binanceRates = [{
-            symbol: priceResponse.data.symbol,
-            fundingRate: (Math.random() - 0.5) * 0.002, // Random funding rate between -0.1% to +0.1%
-            nextFundingTime: new Date(Date.now() + (8 - new Date().getHours() % 8) * 60 * 60 * 1000).toISOString(),
-            exchange: 'Binance',
-            price: parseFloat(priceResponse.data.price)
-          }];
+          const binanceRates = [
+            {
+              symbol: 'BTCUSDT',
+              fundingRate: (Math.random() - 0.5) * 0.002, // Random funding rate between -0.1% to +0.1%
+              nextFundingTime: new Date(Date.now() + (8 - new Date().getHours() % 8) * 60 * 60 * 1000).toISOString(),
+              exchange: 'Binance',
+              price: parseFloat(btcPriceResponse.data.price)
+            },
+            {
+              symbol: 'ETHUSDT',
+              fundingRate: (Math.random() - 0.5) * 0.0015,
+              nextFundingTime: new Date(Date.now() + (8 - new Date().getHours() % 8) * 60 * 60 * 1000).toISOString(),
+              exchange: 'Binance',
+              price: parseFloat(ethPriceResponse.data.price)
+            }
+          ];
           
           data = [...data, ...binanceRates];
           console.log('🎭 [Binance] Using mock funding rate with real price');

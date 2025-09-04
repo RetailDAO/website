@@ -117,14 +117,32 @@ class ETFFlowsService {
 
     for (const etf of etfsToQuery) {
       try {
-        // Get ETF price data (basic implementation)
-        const response = await axios.get(
-          `${this.dataSources.polygon.baseURL}/aggs/ticker/${etf.symbol}/range/1/day/${startDate.toISOString().split('T')[0]}/${endDate.toISOString().split('T')[0]}`,
-          {
-            headers: { 'Authorization': `Bearer ${this.dataSources.polygon.apiKey}` },
-            timeout: 10000
+        // Get ETF price data with retry logic for rate limiting
+        let response;
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        while (retryCount <= maxRetries) {
+          try {
+            response = await axios.get(
+              `${this.dataSources.polygon.baseURL}/aggs/ticker/${etf.symbol}/range/1/day/${startDate.toISOString().split('T')[0]}/${endDate.toISOString().split('T')[0]}`,
+              {
+                headers: { 'Authorization': `Bearer ${this.dataSources.polygon.apiKey}` },
+                timeout: 15000
+              }
+            );
+            break; // Success, exit retry loop
+          } catch (error) {
+            if (error.response?.status === 429 && retryCount < maxRetries) {
+              const backoffTime = (retryCount + 1) * 5000; // 5s, 10s backoff
+              console.warn(`⚠️ Rate limited by Polygon for ${etf.symbol}, retrying in ${backoffTime}ms...`);
+              await new Promise(resolve => setTimeout(resolve, backoffTime));
+              retryCount++;
+            } else {
+              throw error;
+            }
           }
-        );
+        }
 
         if (response.data.results) {
           response.data.results.forEach(dayData => {
@@ -146,8 +164,9 @@ class ETFFlowsService {
           });
         }
 
-        // Respect rate limits
-        await new Promise(resolve => setTimeout(resolve, this.dataSources.polygon.rateLimit));
+        // Respect rate limits with increased delay for 429 handling
+        const delayTime = this.dataSources.polygon.rateLimit * 1.5; // 50% longer delays
+        await new Promise(resolve => setTimeout(resolve, delayTime));
         
       } catch (error) {
         console.error(`Failed to get ${etf.symbol} data from Polygon:`, error.message);
