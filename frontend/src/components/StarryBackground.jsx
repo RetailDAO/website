@@ -64,20 +64,20 @@ const StarryBackground = () => {
         number: {
           density: {
             enable: true,
-            area: 1000,
+            area: 800,
           },
-          value: 60,
+          value: 80,
         },
         opacity: {
-          value: isDark ? 0.8 : 0.4,
+          value: isDark ? 0.9 : 0.6,
           random: {
             enable: true,
-            minimumValue: 0.1,
+            minimumValue: 0.2,
           },
           animation: {
             enable: true,
             speed: 1,
-            minimumValue: 0.1,
+            minimumValue: 0.2,
             sync: false,
           },
         },
@@ -85,15 +85,15 @@ const StarryBackground = () => {
           type: 'circle',
         },
         size: {
-          value: { min: 0.5, max: 2 },
+          value: { min: 1, max: 3 },
           random: {
             enable: true,
-            minimumValue: 0.5,
+            minimumValue: 1,
           },
           animation: {
             enable: true,
             speed: 2,
-            minimumValue: 0.5,
+            minimumValue: 1,
             sync: false,
           },
         },
@@ -118,7 +118,11 @@ const StarryBackground = () => {
   }, [isDark]);
 
   return (
-    <div className="fixed inset-0 z-[-1] pointer-events-none">
+    <div 
+      id="tsparticles-background"
+      className="fixed inset-0 pointer-events-none"
+      style={{ zIndex: -1 }}
+    >
       <Particles
         id="tsparticles"
         init={particlesInit}
