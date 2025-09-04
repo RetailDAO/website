@@ -311,8 +311,15 @@ class PersistentMockDataService {
 
     return {
       currentPrice: currentPrice,
+      current: {
+        price: currentPrice,
+        change24h: 0
+      },
       prices: prices,
       historical: prices,
+      analysis: {
+        trend: 'neutral'
+      },
       source: 'Pattern-Based Mock'
     };
   }
