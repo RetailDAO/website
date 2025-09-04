@@ -28,10 +28,6 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:3000',
     'https://retaildao-terminal.vercel.app',
-    'https://retaildaoanalyticsdashboard.vercel.app',
-    'https://retaildaoanalyticsdash-git-91969a-tripl3tr3s-gmailcoms-projects.vercel.app',
-    'https://retaildaoanalyticsdashboard-kzo9w9srs.vercel.app',
-    'https://retaildaoanalyticsdashboard-1yeoabr5m.vercel.app',
     'http://localhost:3001',
     'http://localhost:3002'
   ],
