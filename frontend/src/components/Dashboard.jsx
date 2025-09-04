@@ -1076,19 +1076,14 @@ const CryptoDashboard = () => {
         fill: {
           type: ['gradient', 'solid', 'solid', 'solid', 'solid', 'solid', 'solid'], // Gradient only for BTC area
           gradient: {
+            shade: 'light',
+            type: 'vertical',
             shadeIntensity: 1,
+            gradientToColors: ['rgba(251, 191, 36, 0.05)'],
+            inverseColors: false,
             opacityFrom: 0.4,
             opacityTo: 0.05,
-            stops: [0, 100],
-            colorStops: [{
-              offset: 0,
-              color: '#FBBF24',
-              opacity: 0.4
-            }, {
-              offset: 100,
-              color: '#FBBF24',
-              opacity: 0.05
-            }]
+            stops: [0, 100]
           }
         },
         title: {
