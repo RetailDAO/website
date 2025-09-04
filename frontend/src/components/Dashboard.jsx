@@ -580,15 +580,21 @@ const CryptoDashboard = () => {
           let processedETF = {};
           
           if (etfData.success && etfData.data) {
-            // API format: {success: true, data: {flows: [...], summary: {...}}}
-            if (etfData.data.flows && Array.isArray(etfData.data.flows)) {
-              // Convert flows array to btcFlows/ethFlows structure
+            // API format: {success: true, data: {flows: [...], btcFlows: [...], summary: {...}}}
+            if (etfData.data.btcFlows && Array.isArray(etfData.data.btcFlows)) {
+              // Use the pre-processed btcFlows from API response
+              processedETF.btcFlows = etfData.data.btcFlows;
+              processedETF.ethFlows = etfData.data.ethFlows || [];
+              processedETF.summary = etfData.data.summary;
+              processedETF.dataSource = 'API Data';
+              console.log('✅ Using API btcFlows data:', processedETF.btcFlows.length, 'data points');
+            } else if (etfData.data.flows && Array.isArray(etfData.data.flows)) {
+              // Fallback: Convert flows array to btcFlows/ethFlows structure
               processedETF.btcFlows = etfData.data.flows.map(flow => ({
-                timestamp: flow.date,
-                flow: flow.value || flow.netFlow || 0
+                x: flow.date,
+                y: flow.value || flow.netFlow || 0
               }));
-            } else if (etfData.data.btcFlows) {
-              processedETF = etfData.data;
+              console.log('⚠️ Using converted flows data:', processedETF.btcFlows.length, 'data points');
             }
           } else if (etfData.btcFlows) {
             processedETF = etfData;
@@ -711,13 +717,25 @@ const CryptoDashboard = () => {
       if (cachedETF?.success || (cachedETF && !cachedETF.success)) {
         console.log('💾 Found cached ETF data, overlaying...', cachedETF?.source || 'direct');
         const etfData = cachedETF?.data || cachedETF;
-        if (etfData?.flows || etfData?.btcFlows) {
-          initialData.etfFlows = etfData.flows ? {
+        if (etfData?.btcFlows) {
+          // Use pre-processed btcFlows directly from API cache
+          initialData.etfFlows = {
+            btcFlows: etfData.btcFlows,
+            ethFlows: etfData.ethFlows || [],
+            summary: etfData.summary,
+            dataSource: 'API Data (Cached)'
+          };
+          console.log('✅ Using cached API ETF data:', etfData.btcFlows.length, 'data points');
+        } else if (etfData?.flows) {
+          // Fallback for old cache format
+          initialData.etfFlows = {
             btcFlows: etfData.flows.map(flow => ({
-              timestamp: flow.date,
-              flow: flow.value || flow.netFlow || 0
-            }))
-          } : etfData;
+              x: flow.date,
+              y: flow.value || flow.netFlow || 0
+            })),
+            dataSource: 'API Data (Converted Cache)'
+          };
+          console.log('⚠️ Using converted cached ETF data:', etfData.flows.length, 'data points');
         }
       }
       
