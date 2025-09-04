@@ -901,8 +901,12 @@ const CryptoDashboard = () => {
 
   // Enhanced Bitcoin chart with Moving Averages and Bollinger Bands - Professional Trader Grade
   const getBitcoinChartOptions = () => {
-    // FIX: Check both possible data paths - historical (from API) and prices (legacy)
-    const priceData = marketData?.bitcoin?.historical || marketData?.bitcoin?.prices;
+    // Robust price data extraction with fallbacks for different data loading phases
+    const priceData = marketData?.bitcoin?.historical || 
+                      marketData?.bitcoin?.prices ||
+                      marketData?.bitcoin?.data?.historical ||
+                      marketData?.bitcoin?.current?.historical ||
+                      marketData?.cryptoPrices?.bitcoin?.historical;
     if (!priceData || !Array.isArray(priceData)) {
       return {
         series: [],
@@ -934,9 +938,14 @@ const CryptoDashboard = () => {
       }
     ];
 
-    // Add Bollinger Bands first (background indicators)
-    if (marketData.bitcoin.bollingerBands && marketData.bitcoin.bollingerBands[20]) {
-      const bb = marketData.bitcoin.bollingerBands[20];
+    // Add Bollinger Bands first (background indicators) with robust fallbacks
+    const bollingerData = marketData.bitcoin?.bollingerBands?.[20] ||
+                         marketData.bitcoin?.data?.bollingerBands?.[20] ||
+                         marketData.bitcoin?.current?.bollingerBands?.[20] ||
+                         marketData.cryptoPrices?.bitcoin?.bollingerBands?.[20];
+    
+    if (bollingerData) {
+      const bb = bollingerData;
       
       // Upper Band
       if (bb.upper && bb.upper.length > 0) {
@@ -1019,11 +1028,17 @@ const CryptoDashboard = () => {
       }
     }
 
-    // Add moving averages with distinct styles - with data validation
+    // Add moving averages with distinct styles - with data validation and robust fallbacks
     const maPeriods = [50, 100, 200]; // Skip 20-day as it's included in BB middle
     maPeriods.forEach((period) => {
-      if (marketData.bitcoin.movingAverages && marketData.bitcoin.movingAverages[period]) {
-        const validMAData = marketData.bitcoin.movingAverages[period]
+      // Robust MA data extraction with fallbacks for different data loading phases
+      const maData = marketData.bitcoin?.movingAverages?.[period] ||
+                     marketData.bitcoin?.data?.movingAverages?.[period] ||
+                     marketData.bitcoin?.current?.movingAverages?.[period] ||
+                     marketData.cryptoPrices?.bitcoin?.movingAverages?.[period];
+      
+      if (maData && Array.isArray(maData)) {
+        const validMAData = maData
           .filter(item => item && item.timestamp && typeof item.value === 'number' && !isNaN(item.value))
           .map(item => {
             const timestamp = item.timestamp instanceof Date ? item.timestamp.getTime() : new Date(item.timestamp).getTime();
@@ -1203,6 +1218,7 @@ const getDXYChartOptions = () => {
   const dxyPrices = marketData?.dxy?.prices || 
                     marketData?.dxy?.historical || 
                     marketData?.dxy?.data?.historical ||
+                    marketData?.dxy?.success && marketData?.dxy?.data?.historical || // Handle wrapped API response
                     marketData?.dxyData?.prices || 
                     marketData?.dxyData?.historical ||
                     marketData?.dxyData?.data?.historical ||
@@ -1569,7 +1585,7 @@ const getDXYChartOptions = () => {
           {/* Total Volume Summary */}
           <div className={`mt-6 p-4 ${colors.bg.card} rounded-lg ${colors.border.secondary} border ${colors.shadow.card}`}>
             <div className="text-center">
-              <div className={`text-xs ${colors.text.muted} mb-1`}>Total 24h Volume</div>
+              <div className={`text-xs ${colors.text.muted} mb-1`}>Total (BTC, ETH, SOL) 24h Volume</div>
               <div className={`text-2xl font-bold ${colors.text.primary}`}>{formatVolume(totalVolume)}</div>
               <div className="text-xs text-green-400 mt-1">📊 Live Data</div>
             </div>
@@ -1765,14 +1781,33 @@ const FundingRatesCard = () => {
 const PriceCards = () => {
   if (!marketData) return null;
 
-  const btcPrice = marketData.bitcoin?.currentPrice || 0;
-  const btcChangePercent = marketData.bitcoin?.priceChangePercent24h || 0;
+  // Robust price extraction with fallbacks for different data loading phases
+  const btcPrice = marketData.bitcoin?.currentPrice || 
+                   marketData.bitcoin?.current?.price ||
+                   marketData.bitcoin?.data?.current?.price ||
+                   marketData.cryptoPrices?.bitcoin?.price || 0;
+  const btcChangePercent = marketData.bitcoin?.priceChangePercent24h || 
+                          marketData.bitcoin?.priceChange24h ||
+                          marketData.bitcoin?.current?.change24h ||
+                          marketData.cryptoPrices?.bitcoin?.change || 0;
   
-  const ethPrice = marketData.ethereum?.currentPrice || 0;
-  const ethChangePercent = marketData.ethereum?.priceChangePercent24h || 0;
+  const ethPrice = marketData.ethereum?.currentPrice || 
+                   marketData.ethereum?.current?.price ||
+                   marketData.ethereum?.data?.current?.price ||
+                   marketData.cryptoPrices?.ethereum?.price || 0;
+  const ethChangePercent = marketData.ethereum?.priceChangePercent24h || 
+                          marketData.ethereum?.priceChange24h ||
+                          marketData.ethereum?.current?.change24h ||
+                          marketData.cryptoPrices?.ethereum?.change || 0;
   
-  const solPrice = marketData.solana?.currentPrice || 0;
-  const solChangePercent = marketData.solana?.priceChangePercent24h || 0;
+  const solPrice = marketData.solana?.currentPrice || 
+                   marketData.solana?.current?.price ||
+                   marketData.solana?.data?.current?.price ||
+                   marketData.cryptoPrices?.solana?.price || 0;
+  const solChangePercent = marketData.solana?.priceChangePercent24h || 
+                          marketData.solana?.priceChange24h ||
+                          marketData.solana?.current?.change24h ||
+                          marketData.cryptoPrices?.solana?.change || 0;
 
   const formatPrice = (price) => {
     if (price < 0.001) return `$${price.toFixed(6)}`;
@@ -2208,7 +2243,10 @@ pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-purple-500/50 shadow
               <div className="flex justify-between">
                 <span className="text-orange-400">Current:</span>
                 <span className={`font-mono ${colors.text.primary}`}>
-                  ${marketData?.bitcoin?.currentPrice?.toLocaleString() || '115,260'}
+                  ${(marketData?.bitcoin?.currentPrice || 
+                     marketData?.bitcoin?.current?.price ||
+                     marketData?.bitcoin?.data?.current?.price ||
+                     marketData?.cryptoPrices?.bitcoin?.price)?.toLocaleString() || '115,260'}
                 </span>
               </div>
               <div className="flex justify-between">

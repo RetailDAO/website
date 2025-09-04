@@ -267,6 +267,15 @@ class IntelligentCacheService {
         baseData.dxyData = cacheData.dxy.data;
       }
       
+      // Enhance with ETF flows data if available
+      if (cacheData.etf && cacheData.etf.btcFlows) {
+        baseData.etfFlows = {
+          ...baseData.etfFlows,
+          ...cacheData.etf,
+          dataSource: 'Cached Real Data'
+        };
+      }
+      
       return baseData;
     } catch (error) {
       console.warn('⚠️ Failed to combine cached data:', error.message);

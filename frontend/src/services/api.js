@@ -345,28 +345,42 @@ class ApiService {
   async getRealETFData() {
     try {
       const response = await this.getETFFlows('30D'); // Use 30D timeframe for comprehensive data
-      if (response && response.success && response.data && response.data.flows) {
-        const btcFlows = response.data.flows
-          .filter(flow => flow.etf && (flow.etf.includes('BTC') || flow.etf === 'IBIT' || flow.etf === 'FBTC' || flow.etf === 'ARKB'))
-          .map(flow => ({
-            timestamp: new Date(flow.date),
-            flow: flow.flow || 0,
-            etf: flow.etf
+      if (response && response.success && response.data) {
+        // Use pre-processed chart data if available, otherwise process raw flows
+        let btcFlows = [];
+        if (response.data.btcFlows && Array.isArray(response.data.btcFlows)) {
+          // API provides pre-processed chart data
+          btcFlows = response.data.btcFlows.map(flow => ({
+            timestamp: new Date(flow.x),
+            flow: flow.y || 0,
+            etf: 'AGGREGATE'
           }));
+        } else if (response.data.flows) {
+          // Process raw flows data (includes AGGREGATE and individual ETFs)
+          btcFlows = response.data.flows
+            .filter(flow => flow.etf && (flow.etf.includes('BTC') || flow.etf === 'AGGREGATE' || flow.etf === 'IBIT' || flow.etf === 'FBTC' || flow.etf === 'ARKB'))
+            .map(flow => ({
+              timestamp: new Date(flow.date),
+              flow: flow.flow || 0,
+              etf: flow.etf
+            }));
+        }
         
-        const ethFlows = response.data.flows
-          .filter(flow => flow.etf && flow.etf.includes('ETH'))
-          .map(flow => ({
-            timestamp: new Date(flow.date), 
-            flow: flow.flow || 0,
-            etf: flow.etf
-          }));
+        const ethFlows = response.data.flows 
+          ? response.data.flows
+              .filter(flow => flow.etf && flow.etf.includes('ETH'))
+              .map(flow => ({
+                timestamp: new Date(flow.date), 
+                flow: flow.flow || 0,
+                etf: flow.etf
+              }))
+          : this.generateETFMockData('eth');
 
         return {
           btcFlows: btcFlows.length > 0 ? btcFlows : this.generateETFMockData('btc'),
           ethFlows: ethFlows.length > 0 ? ethFlows : this.generateETFMockData('eth'),
           summary: response.data.summary || null,
-          dataSource: btcFlows.length > 0 ? 'Enhanced Mock with Real Structure' : 'Mock Data'
+          dataSource: btcFlows.length > 0 ? 'Real API Data' : 'Mock Data'
         };
       }
       // Fallback to mock data if API fails
