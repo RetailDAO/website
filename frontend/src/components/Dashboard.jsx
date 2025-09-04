@@ -1960,20 +1960,22 @@ pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-purple-500/50 shadow
       <StarryBackground />
       
       {/* Enhanced Sidebar */}
-      <Sidebar 
-        isOpen={isSidebarOpen} 
-        toggleSidebar={toggleSidebar}
-        fetchMarketData={fetchMarketData}
-        loading={loading}
-        useRealAPI={useRealAPI}
-        setUseRealAPI={setUseRealAPI}
-        testRSIScenario={testRSIScenario}
-        rsiScenario={rsiScenario}
-        connectionStatus={connectionStatus}
-      />
+      <div className="relative z-20">
+        <Sidebar 
+          isOpen={isSidebarOpen} 
+          toggleSidebar={toggleSidebar}
+          fetchMarketData={fetchMarketData}
+          loading={loading}
+          useRealAPI={useRealAPI}
+          setUseRealAPI={setUseRealAPI}
+          testRSIScenario={testRSIScenario}
+          rsiScenario={rsiScenario}
+          connectionStatus={connectionStatus}
+        />
+      </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 md:p-6 overflow-x-hidden">
+      <div className="flex-1 p-4 md:p-6 overflow-x-hidden relative z-10">
         {/* Mobile Menu Toggle */}
         <button 
           onClick={toggleSidebar}

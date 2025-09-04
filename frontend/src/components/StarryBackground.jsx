@@ -143,7 +143,13 @@ const StarryBackground = () => {
     <div 
       id="tsparticles-background"
       className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: -1 }}
+      style={{ 
+        zIndex: 1,
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh'
+      }}
     >
       {console.log('🖼️ Rendering TSParticles component, engineReady:', engineReady)}
       {engineReady && (
@@ -151,14 +157,13 @@ const StarryBackground = () => {
           id="tsparticles"
           particlesLoaded={particlesLoaded}
           options={options}
-          className="w-full h-full"
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
             width: '100%',
             height: '100%',
-            zIndex: -1
+            zIndex: 1
           }}
         />
       )}
