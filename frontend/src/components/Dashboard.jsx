@@ -1180,11 +1180,13 @@ const CryptoDashboard = () => {
 //  DXY Chart 
 const getDXYChartOptions = () => {
   console.log('🔍 DXY Chart - marketData.dxy:', marketData?.dxy);
-  // Check for different data structures: mock data has .prices, API response has .historical
+  // Check for different data structures: mock data has .prices, API response has .data.historical
   const dxyPrices = marketData?.dxy?.prices || 
                     marketData?.dxy?.historical || 
+                    marketData?.dxy?.data?.historical ||
                     marketData?.dxyData?.prices || 
-                    marketData?.dxyData?.historical;
+                    marketData?.dxyData?.historical ||
+                    marketData?.dxyData?.data?.historical;
   console.log('🔍 DXY prices array:', dxyPrices);
   if (!dxyPrices || !Array.isArray(dxyPrices) || dxyPrices.length === 0) {
     return {
@@ -2034,7 +2036,11 @@ pulseEffects.priceCards.active ? 'animate-pulse ring-4 ring-purple-500/50 shadow
           <span className={`${colors.text.muted}`}>Current Value:</span>
           <span className={`${colors.text.primary} font-mono`}>
             {(() => {
-              const dxyValue = marketData?.dxyData?.currentPrice || marketData?.dxy?.currentPrice || marketData?.dxy?.current?.value;
+              const dxyValue = marketData?.dxyData?.currentPrice || 
+                               marketData?.dxy?.currentPrice || 
+                               marketData?.dxy?.current?.value ||
+                               marketData?.dxy?.current?.price ||
+                               marketData?.dxy?.data?.current?.price;
               return typeof dxyValue === 'number' && !isNaN(dxyValue) ? dxyValue.toFixed(2) : '102.61';
             })()}
           </span>
