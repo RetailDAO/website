@@ -1,17 +1,51 @@
-// Futures Basis Card (Priority 4) - Placeholder for Market Overview v2
+// Futures Basis Card (Priority 4) - Real Deribit API Integration
 import React, { useMemo } from 'react';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
+import { useOptimizedFuturesBasis } from '../../../hooks/useOptimizedFuturesBasis';
 
-// Mock data for now - will be replaced with real Deribit API integration
-const generateMockFuturesData = () => ({
-  spotPrice: 67234 + (Math.random() - 0.5) * 1000,
-  futuresPrice: 68500 + (Math.random() - 0.5) * 1500,
-  daysToExpiry: 89 + Math.floor(Math.random() * 5),
-  annualizedBasis: 8.2 + (Math.random() - 0.5) * 4,
-  regime: Math.random() > 0.7 ? 'danger' : Math.random() > 0.3 ? 'healthy' : 'caution',
-  timestamp: Date.now()
-});
+// Error states for graceful handling with retry functionality
+const ErrorState = ({ colors, error, onRetry }) => (
+  <div className="h-full flex flex-col items-center justify-center p-4" style={{ minHeight: '280px' }}>
+    <div className={`text-center ${colors.text.muted}`}>
+      <div className="text-2xl mb-2">⚠️</div>
+      <div className="text-sm font-mono uppercase tracking-wider mb-2">[API_ERROR]</div>
+      <div className="text-xs mb-3">Futures data temporarily unavailable</div>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className={`px-3 py-1 text-xs rounded border ${colors.border.primary} ${colors.text.accent} hover:${colors.bg.tertiary} transition-colors`}
+          style={{ borderRadius: '0px' }}
+        >
+          [RETRY]
+        </button>
+      )}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-xs mt-2 opacity-60">{error?.message}</div>
+      )}
+    </div>
+  </div>
+);
+
+const LoadingState = ({ colors }) => (
+  <div className="h-full flex flex-col p-4 animate-pulse" style={{ minHeight: '280px', maxHeight: '320px' }}>
+    <div className="flex justify-between items-center mb-4">
+      <div>
+        <div className={`h-4 w-32 rounded mb-2 ${colors.bg.tertiary}`}></div>
+        <div className={`h-3 w-24 rounded ${colors.bg.tertiary}`}></div>
+      </div>
+      <div className={`h-6 w-20 rounded ${colors.bg.tertiary}`}></div>
+    </div>
+    <div className="flex-1 flex flex-col items-center justify-center">
+      <div className={`h-12 w-32 rounded mb-4 ${colors.bg.tertiary}`}></div>
+      <div className={`h-16 w-full rounded mb-4 ${colors.bg.tertiary}`}></div>
+      <div className="grid grid-cols-2 gap-4 w-full px-2">
+        <div className={`h-8 w-full rounded ${colors.bg.tertiary}`}></div>
+        <div className={`h-8 w-full rounded ${colors.bg.tertiary}`}></div>
+      </div>
+    </div>
+  </div>
+);
 
 // Terminal-style regime configuration
 const getRegimeConfig = (regime, colors) => {
@@ -54,13 +88,61 @@ const FuturesBasisCard = React.memo(() => {
   // Performance tracking
   usePerformanceTracking('FuturesBasisCard');
   
-  // Generate mock data
-  const data = useMemo(() => generateMockFuturesData(), []);
+  // Get real futures basis data with optimized caching
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    spotPrice,
+    futuresPrice,
+    annualizedBasis,
+    regime,
+    regimeData,
+    daysToExpiry,
+    dataSource,
+    lastUpdate,
+    isUsingMockData,
+    refetch
+  } = useOptimizedFuturesBasis({
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    cacheTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    retry: 2
+  });
   
-  // Memoized regime configuration
+  // Memoized regime configuration - use regimeData from API if available
   const regimeConfig = useMemo(() => {
-    return getRegimeConfig(data.regime, colors);
-  }, [data.regime, colors]);
+    if (regimeData) {
+      // Use regime data from API
+      return {
+        ...regimeData,
+        color: colors.text[
+          regimeData.color === 'green' ? 'positive' :
+          regimeData.color === 'red' ? 'negative' : 'accent'
+        ],
+        bg: regimeData.color === 'green' ? 'bg-green-100 dark:bg-green-900/20' :
+           regimeData.color === 'red' ? 'bg-red-100 dark:bg-red-900/20' :
+           'bg-yellow-100 dark:bg-yellow-900/20',
+        border: regimeData.color === 'green' ? 'border-green-200 dark:border-green-800' :
+                regimeData.color === 'red' ? 'border-red-200 dark:border-red-800' :
+                'border-yellow-200 dark:border-yellow-800'
+      };
+    }
+    
+    // Fallback to local regime config
+    return getRegimeConfig(regime, colors);
+  }, [regimeData, regime, colors]);
+
+  // Handle loading state
+  if (isLoading) {
+    return <LoadingState colors={colors} />;
+  }
+
+  // Handle error state with retry functionality
+  if (isError) {
+    return <ErrorState colors={colors} error={error} onRetry={refetch} />;
+  }
 
   return (
     <div className="h-full flex flex-col p-4" style={{ minHeight: '280px', maxHeight: '320px' }}>
@@ -88,7 +170,7 @@ const FuturesBasisCard = React.memo(() => {
         {/* Basis Display */}
         <div className="text-center mb-4">
           <div className={`text-3xl font-bold mb-2 ${colors.text.primary}`}>
-            {data.annualizedBasis > 0 ? '+' : ''}{data.annualizedBasis.toFixed(2)}%
+            {annualizedBasis > 0 ? '+' : ''}{annualizedBasis.toFixed(2)}%
           </div>
           <div className={`text-xs ${colors.text.secondary}`}>
             Annualized Basis
@@ -113,7 +195,7 @@ const FuturesBasisCard = React.memo(() => {
         <div className="grid grid-cols-2 gap-4 w-full px-2">
           <div className="text-center">
             <div className={`text-sm font-mono ${colors.text.primary}`}>
-              ${data.spotPrice.toLocaleString()}
+              ${spotPrice.toLocaleString()}
             </div>
             <div className={`text-xs ${colors.text.muted} uppercase tracking-wide`}>
               Spot Price
@@ -121,7 +203,7 @@ const FuturesBasisCard = React.memo(() => {
           </div>
           <div className="text-center">
             <div className={`text-sm font-mono ${colors.text.primary}`}>
-              ${data.futuresPrice.toLocaleString()}
+              ${futuresPrice.toLocaleString()}
             </div>
             <div className={`text-xs ${colors.text.muted} uppercase tracking-wide`}>
               Futures Price
@@ -131,14 +213,17 @@ const FuturesBasisCard = React.memo(() => {
 
         {/* Expiry Info */}
         <div className={`mt-4 text-xs ${colors.text.muted} text-center`}>
-          Expires in {data.daysToExpiry} days
+          Expires in {daysToExpiry} days
         </div>
       </div>
 
       {/* Footer with metadata - only in development */}
       {process.env.NODE_ENV === 'development' && (
         <div className={`mt-2 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
-          🎭 Mock data • {new Date(data.timestamp).toLocaleTimeString()}
+          {isUsingMockData() ? '🎭' : '✅'} {dataSource} • {lastUpdate ? new Date(lastUpdate).toLocaleTimeString() : 'No timestamp'}
+          {data?._metadata?.fetchTime && (
+            <span className="ml-2">• {data._metadata.fetchTime}ms</span>
+          )}
         </div>
       )}
     </div>

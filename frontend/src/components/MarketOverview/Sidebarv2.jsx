@@ -1,9 +1,11 @@
 // Interactive Terminal-style Sidebar with fixed positioning
 import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 
 const Sidebarv2 = React.memo(() => {
   const { colors } = useTheme();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const sidebarRef = useRef(null);
@@ -38,17 +40,65 @@ const Sidebarv2 = React.memo(() => {
   };
 
   const navItems = [
-    { id: 'overview', label: 'Market Overview', icon: '📊', active: true },
-    { id: 'analysis', label: 'Technical Analysis', icon: '📈', active: false },
-    { id: 'alerts', label: 'Price Alerts', icon: '🔔', active: false, badge: '3' },
-    { id: 'portfolio', label: 'Portfolio', icon: '💼', active: false },
-    { id: 'research', label: 'Research Hub', icon: '🔍', active: false },
-    { id: 'settings', label: 'Terminal Settings', icon: '⚙️', active: false }
+    { 
+      id: 'overview', 
+      label: 'Market Overview', 
+      icon: '📊', 
+      active: true, 
+      route: '/',
+      status: 'LIVE'
+    },
+    { 
+      id: 'opportunity', 
+      label: 'Opportunity Radar', 
+      icon: '🎯', 
+      active: false, 
+      route: '/opportunity-radar',
+      status: 'COMING_SOON',
+      description: 'Advanced DeFi opportunity scanner'
+    },
+    { 
+      id: 'resources', 
+      label: 'Resources', 
+      icon: '📚', 
+      active: false, 
+      route: '/resources',
+      status: 'COMING_SOON',
+      description: 'Educational hub & guides'
+    },
+    { 
+      id: 'kol-tracker', 
+      label: 'KOL Call Tracker', 
+      icon: '📢', 
+      active: false, 
+      route: '/kol-tracker',
+      status: 'COMING_SOON',
+      description: 'Track influencer predictions'
+    },
+    { 
+      id: 'tokenomics', 
+      label: 'Tokenomics Dashboard', 
+      icon: '🪙', 
+      active: false, 
+      route: '/tokenomics',
+      status: 'COMING_SOON',
+      description: 'Deep tokenomics analysis'
+    }
   ];
+
+  // Handle navigation
+  const handleNavigation = (item) => {
+    if (item.status === 'LIVE') {
+      navigate(item.route);
+    } else {
+      navigate(item.route);
+    }
+    setIsOpen(false); // Close sidebar after navigation
+  };
 
   return (
     <>
-      {/* Toggle Button - Fixed position with high z-index */}
+      {/* Enhanced Toggle Button - More visible when sidebar is hidden */}
       <div 
         className="fixed left-0 top-1/2 -translate-y-1/2 z-[60]"
         onMouseEnter={() => setIsHovered(true)}
@@ -59,27 +109,36 @@ const Sidebarv2 = React.memo(() => {
           className={`
             ${colors.bg.secondary} ${colors.border.primary} ${colors.text.accent}
             border-r-2 border-t-2 border-b-2 border-l-0
-            px-2 py-4 font-mono text-xs uppercase tracking-wider
+            px-3 py-6 font-mono text-xs uppercase tracking-wider
             transition-all duration-300 ease-in-out
-            hover:${colors.text.primary} focus:outline-none
-            ${isHovered || isOpen ? 'translate-x-0' : '-translate-x-1/2'}
+            hover:${colors.text.primary} hover:${colors.bg.tertiary} focus:outline-none
+            shadow-lg hover:shadow-xl
+            ${isHovered || isOpen ? 'translate-x-0' : '-translate-x-2'}
+            ${!isOpen ? 'hover:scale-105' : ''}
           `}
           style={{ 
             borderRadius: '0px',
             borderTopLeftRadius: '0px',
             borderBottomLeftRadius: '0px',
-            borderTopRightRadius: '8px',
-            borderBottomRightRadius: '8px'
+            borderTopRightRadius: '12px',
+            borderBottomRightRadius: '12px'
           }}
           title="Toggle Terminal Navigation"
         >
-          <div className="flex flex-col items-center space-y-1">
-            <span className="text-[10px] opacity-60">NAV</span>
-            <div className="w-4 h-3 flex flex-col justify-between">
-              <div className={`w-full h-0.5 ${colors.bg.tertiary} transition-transform duration-300 ${isOpen ? 'rotate-45 translate-y-1' : ''}`}></div>
-              <div className={`w-full h-0.5 ${colors.bg.tertiary} transition-opacity duration-300 ${isOpen ? 'opacity-0' : ''}`}></div>
-              <div className={`w-full h-0.5 ${colors.bg.tertiary} transition-transform duration-300 ${isOpen ? '-rotate-45 -translate-y-1' : ''}`}></div>
+          <div className="flex flex-col items-center space-y-2">
+            <span className={`text-[10px] opacity-80 ${!isOpen ? 'animate-pulse' : ''}`}>
+              {isOpen ? 'CLOSE' : 'MENU'}
+            </span>
+            <div className="w-5 h-4 flex flex-col justify-between">
+              <div className={`w-full h-0.5 ${colors.bg.accent} transition-all duration-300 ${isOpen ? 'rotate-45 translate-y-1.5 bg-red-400' : ''}`}></div>
+              <div className={`w-full h-0.5 ${colors.bg.accent} transition-all duration-300 ${isOpen ? 'opacity-0' : ''}`}></div>
+              <div className={`w-full h-0.5 ${colors.bg.accent} transition-all duration-300 ${isOpen ? '-rotate-45 -translate-y-1.5 bg-red-400' : ''}`}></div>
             </div>
+            {!isOpen && (
+              <div className={`text-[8px] ${colors.text.muted} mt-1 opacity-60`}>
+                5
+              </div>
+            )}
           </div>
         </button>
       </div>
@@ -143,43 +202,82 @@ const Sidebarv2 = React.memo(() => {
         </div>
 
         {/* Navigation Menu */}
-        <div className="flex-1 p-4">
+        <div className="flex-1 p-4 overflow-y-auto">
           <h3 className={`${colors.text.secondary} font-mono text-sm uppercase mb-4`}>
             [NAVIGATION]
           </h3>
-          <nav className="space-y-2">
+          <nav className="space-y-3">
             {navItems.map((item) => (
               <button
                 key={item.id}
+                onClick={() => handleNavigation(item)}
                 className={`
-                  w-full flex items-center justify-between p-3 font-mono text-sm
+                  w-full text-left p-3 font-mono text-sm
                   ${colors.border.primary} border rounded-none
                   ${item.active 
                     ? `${colors.text.primary} ${colors.bg.tertiary}` 
                     : `${colors.text.secondary} hover:${colors.text.primary} hover:${colors.bg.hover}`
                   }
-                  transition-all duration-200 uppercase tracking-wide
+                  transition-all duration-200 group
+                  ${item.status === 'COMING_SOON' ? 'hover:border-yellow-500' : ''}
                 `}
-                disabled={item.id === 'overview'}
               >
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg">{item.icon}</span>
-                  <span>{item.label}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-lg">{item.icon}</span>
+                    <div className="flex flex-col">
+                      <span className="uppercase tracking-wide text-xs">
+                        {item.label}
+                      </span>
+                      {item.description && (
+                        <span className={`text-[10px] ${colors.text.muted} opacity-60 mt-0.5`}>
+                          {item.description}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end space-y-1">
+                    {item.status === 'LIVE' && (
+                      <span className={`${colors.text.positive} text-[10px] font-bold`}>
+                        ● LIVE
+                      </span>
+                    )}
+                    {item.status === 'COMING_SOON' && (
+                      <span className={`text-yellow-500 text-[10px] font-bold animate-pulse`}>
+                        ⚡ SOON
+                      </span>
+                    )}
+                    {item.active && (
+                      <span className={`${colors.text.accent} text-xs`}>◀</span>
+                    )}
+                  </div>
                 </div>
-                {item.badge && (
-                  <span className={`
-                    ${colors.text.primary} ${colors.bg.secondary} 
-                    px-2 py-1 text-xs rounded-none font-bold
-                  `}>
-                    {item.badge}
-                  </span>
-                )}
-                {item.active && (
-                  <span className={`${colors.text.positive} text-xs`}>●</span>
+                
+                {/* Coming Soon Indicator */}
+                {item.status === 'COMING_SOON' && (
+                  <div className={`mt-2 pt-2 border-t ${colors.border.primary} opacity-60`}>
+                    <div className={`text-[10px] ${colors.text.muted} flex items-center space-x-1`}>
+                      <span>🚧</span>
+                      <span>Under Development</span>
+                    </div>
+                  </div>
                 )}
               </button>
             ))}
           </nav>
+          
+          {/* Future Features Preview */}
+          <div className={`mt-6 p-3 border ${colors.border.primary} ${colors.bg.tertiary} rounded-none`}>
+            <h4 className={`${colors.text.accent} font-mono text-xs uppercase mb-2`}>
+              [ROADMAP_2025]
+            </h4>
+            <div className={`text-[10px] ${colors.text.muted} space-y-1`}>
+              <div>Q1: KOL Tracker + Tokenomics</div>
+              <div>Q2: Opportunity Radar</div>
+              <div>Q4: Educational Resources</div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

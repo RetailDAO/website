@@ -1,4 +1,5 @@
 // Performance monitoring utilities for Market Overview v2
+import { useEffect } from 'react';
 import { onCLS, onINP, onFCP, onLCP, onTTFB } from 'web-vitals';
 
 // Performance thresholds based on our targets
@@ -142,7 +143,7 @@ const monitorAPIPerformance = () => {
 
 // Performance tracking hook for components
 export const usePerformanceTracking = (componentName) => {
-  React.useEffect(() => {
+  useEffect(() => {
     const startTime = performance.now();
     performance.mark(`${componentName}-start`);
     

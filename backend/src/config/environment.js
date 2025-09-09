@@ -9,6 +9,7 @@ module.exports = {
   BINANCE_SECRET_KEY: process.env.BINANCE_SECRET_KEY,
   POLYGON_API_KEY: process.env.POLYGON_API_KEY,
   COINGLASS_API_KEY: process.env.COINGLASS_API_KEY,
+  FRED_API_KEY: process.env.FRED_API_KEY,
   
   // Redis
   REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -20,4 +21,5 @@ module.exports = {
   BINANCE_BASE_URL: 'https://api.binance.com',
   POLYGON_BASE_URL: 'https://api.polygon.io/v2',
   COINGLASS_BASE_URL: 'https://open-api.coinglass.com/public/v2',
+  FRED_BASE_URL: 'https://api.stlouisfed.org/fred',
 };

@@ -10,6 +10,7 @@ const { cryptoController } = require('../controllers/cryptoController');
 const { indicatorStreamController } = require('../controllers/indicatorStreamController');
 const { liquidityController } = require('../controllers/liquidityController');
 const { leverageController } = require('../controllers/leverageController');
+const { futuresController } = require('../controllers/futuresController');
 
 const router = express.Router();
 
@@ -61,6 +62,15 @@ router.get('/market-overview/liquidity-pulse',
 
 // Market Overview v2: State of Leverage endpoint
 router.get('/market-overview/leverage-state', leverageController.getLeverageState);
+
+// Market Overview v2: Futures Basis endpoint
+router.get('/market-overview/futures-basis', futuresController.getFuturesBasis);
+
+// Market Overview v2: Futures Health Check endpoint
+router.get('/market-overview/futures-basis/health', futuresController.getFuturesHealth);
+
+// Market Overview v2: Clear Futures Cache endpoint (development)
+router.delete('/market-overview/futures-basis/cache', futuresController.clearFuturesCache);
 
 // Treasury yields endpoint
 router.get('/treasury/yields',
