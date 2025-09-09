@@ -5,31 +5,28 @@ import { usePerformanceTracking } from '../../utils/performance';
 import useIntersectionObserver from './hooks/useIntersectionObserver';
 import GridLayout from './layout/GridLayout';
 import CardContainer from './layout/CardContainer';
+import Sidebarv2 from './Sidebarv2';
 import { 
-  MovingAveragesSkeleton,
-  LeverageSkeleton,
-  LargeCardSkeleton,
-  FuturesBasisSkeleton,
-  RotationSkeleton
+  MovingAveragesSkeleton
 } from './layout/OptimizedSkeletons';
 
-// Lazy load all cards for optimal performance
+// Lazy load all 6 cards
 const MovingAveragesCard = lazy(() => import('./cards/MovingAveragesCard'));
 const LiquidityPulseCard = lazy(() => import('./cards/LiquidityPulseCard'));
 const StateOfLeverageCard = lazy(() => import('./cards/StateOfLeverageCard'));
+const FuturesBasisCard = lazy(() => import('./cards/FuturesBasisCard'));
 const RotationBreadthCard = lazy(() => import('./cards/RotationBreadthCard'));
 const ETFFlowsCard = lazy(() => import('./cards/ETFFlowsCard'));
-const FuturesBasisCard = lazy(() => import('./cards/FuturesBasisCard'));
 
 const MarketOverviewContainer = React.memo(() => {
-  const { colors } = useTheme();
+  const { colors, cycleTheme, themeName } = useTheme();
   const [visibleCards, setVisibleCards] = useState(new Set());
   const [performanceMetrics, setPerformanceMetrics] = useState({});
 
   // Performance tracking for the entire container
   usePerformanceTracking('MarketOverviewContainer');
 
-  // Card configuration optimized for progressive loading
+  // Card configuration - all 6 cards (Priority 1-6) for hero section layout
   const cardConfigs = useMemo(() => [
     { 
       id: 'moving-averages', 
@@ -37,47 +34,53 @@ const MarketOverviewContainer = React.memo(() => {
       skeleton: MovingAveragesSkeleton,
       size: 'medium',
       priority: 1, // Load first (fastest API, simple UI)
-      estimatedLoadTime: 100
-    },
-    { 
-      id: 'leverage-state', 
-      component: StateOfLeverageCard,
-      skeleton: LeverageSkeleton, 
-      size: 'medium',
-      priority: 2, // Quick to load, existing CoinGlass API
-      estimatedLoadTime: 150
-    },
-    { 
-      id: 'futures-basis', 
-      component: FuturesBasisCard,
-      skeleton: FuturesBasisSkeleton,
-      size: 'medium',
-      priority: 3, // Simple UI, new API
-      estimatedLoadTime: 200
+      estimatedLoadTime: 100,
+      name: 'Moving Averages'
     },
     { 
       id: 'liquidity-pulse', 
       component: LiquidityPulseCard,
-      skeleton: LargeCardSkeleton,
-      size: 'large',
-      priority: 4, // Chart component, FRED API
-      estimatedLoadTime: 300
+      skeleton: MovingAveragesSkeleton, // Uniform skeleton for all cards
+      size: 'medium', // Standardized size
+      priority: 2, // FRED API with 30min cache, sparkline not full chart
+      estimatedLoadTime: 200,
+      name: 'Liquidity Pulse'
+    },
+    { 
+      id: 'leverage-state', 
+      component: StateOfLeverageCard,
+      skeleton: MovingAveragesSkeleton, // Uniform skeleton for all cards
+      size: 'medium', // Standardized size
+      priority: 3, // Mock data for now, 3min cache, traffic light UI
+      estimatedLoadTime: 150,
+      name: 'State of Leverage'
+    },
+    { 
+      id: 'futures-basis', 
+      component: FuturesBasisCard,
+      skeleton: MovingAveragesSkeleton, // Uniform skeleton for all cards
+      size: 'medium', // Standardized size
+      priority: 4, // Mock data, basis calculation UI
+      estimatedLoadTime: 120,
+      name: 'Futures Basis'
     },
     { 
       id: 'rotation-breadth', 
       component: RotationBreadthCard,
-      skeleton: RotationSkeleton,
-      size: 'medium',
-      priority: 5, // Complex calculation, many API calls
-      estimatedLoadTime: 400
+      skeleton: MovingAveragesSkeleton, // Uniform skeleton for all cards
+      size: 'medium', // Standardized size
+      priority: 5, // Mock data, gauge UI
+      estimatedLoadTime: 140,
+      name: 'Rotation Breadth'
     },
     { 
       id: 'etf-flows', 
       component: ETFFlowsCard,
-      skeleton: LargeCardSkeleton,
-      size: 'large',
-      priority: 6, // Most complex - new API, chart, fallbacks
-      estimatedLoadTime: 600
+      skeleton: MovingAveragesSkeleton, // Uniform skeleton for all cards
+      size: 'medium', // Standardized size
+      priority: 6, // Mock data, bar chart UI
+      estimatedLoadTime: 180,
+      name: 'ETF Flows'
     }
   ], []);
 
@@ -106,91 +109,124 @@ const MarketOverviewContainer = React.memo(() => {
   });
 
   return (
-    <div ref={containerRef} className="market-overview-container">
-      {/* Header with performance indicator */}
-      <header className="mb-6">
+    <div ref={containerRef} className={`market-overview-container ${colors.bg.primary} min-h-screen`}>
+      {/* Interactive Terminal Sidebar */}
+      <Sidebarv2 />
+      {/* Terminal-style header with theme switcher - compact */}
+      <header className="mb-4 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className={`text-3xl font-bold ${colors.text.primary}`}>
-              Market Overview
+            <h1 className={`text-2xl md:text-3xl font-bold ${colors.text.primary} tracking-wide`}>
+              MARKET OVERVIEW
             </h1>
-            <p className={`text-sm ${colors.text.secondary} mt-1`}>
-              Real-time institutional-grade market analysis
+            <p className={`text-xs md:text-sm ${colors.text.muted} mt-1 font-mono`}>
+              [INSTITUTIONAL-GRADE ANALYSIS] • REAL-TIME
             </p>
           </div>
           
-          {/* Performance indicator */}
-          {Object.keys(performanceMetrics).length > 0 && (
-            <div className={`text-xs ${colors.text.muted} flex items-center space-x-2`}>
-              <div className="flex space-x-1">
-                {cardConfigs.map(config => (
-                  <div
-                    key={config.id}
-                    className={`w-2 h-2 rounded-full ${
-                      visibleCards.has(config.id) 
-                        ? 'bg-green-500' 
-                        : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                    title={`${config.id}: ${visibleCards.has(config.id) ? 'Loaded' : 'Loading'}`}
-                  />
-                ))}
-              </div>
-              <span>
-                {visibleCards.size}/6 loaded
-              </span>
+          {/* Terminal theme switcher and performance indicator */}
+          <div className="flex items-center space-x-6">
+            {/* Theme switcher with clear description */}
+            <div className="text-center">
+              <button
+                onClick={cycleTheme}
+                className={`
+                  px-4 py-2 text-xs font-mono uppercase tracking-wider
+                  ${colors.border.primary} border-2 rounded-none
+                  ${colors.text.accent} ${colors.bg.hover}
+                  transition-all duration-200 hover:scale-105
+                  focus:outline-none focus:ring-2 focus:ring-orange-500/50
+                `}
+                title={`Toggle Terminal Theme (Current: ${themeName})\nCycle: Traditional → High Contrast → Retro Terminal`}
+              >
+                <div className="flex flex-col items-center space-y-1">
+                  <span className="text-[10px] opacity-60">TOGGLE THEME</span>
+                  <span className="font-semibold">[{themeName.toUpperCase()}]</span>
+                </div>
+              </button>
             </div>
-          )}
+            
+            {/* Performance indicator */}
+            {Object.keys(performanceMetrics).length > 0 && (
+              <div className={`text-xs ${colors.text.muted} flex items-center space-x-3 font-mono`}>
+                <div className="flex space-x-1">
+                  {cardConfigs.map(config => (
+                    <div
+                      key={config.id}
+                      className={`w-2 h-2 rounded-none ${
+                        visibleCards.has(config.id) 
+                          ? colors.text.positive.replace('text-', 'bg-')
+                          : 'bg-gray-700'
+                      }`}
+                      title={`${config.id.toUpperCase()}: ${visibleCards.has(config.id) ? 'ONLINE' : 'LOADING'}`}
+                    />
+                  ))}
+                </div>
+                <span className={colors.text.secondary}>
+                  [{visibleCards.size}/{cardConfigs.length}] MODULES_LOADED
+                </span>
+              </div>
+            )}
+          </div>
         </div>
+        
+        {/* Terminal-style divider */}
+        <div className={`mt-4 h-px ${colors.border.primary}`}></div>
       </header>
 
-      {/* Grid Layout with Cards */}
-      <GridLayout>
-        {cardConfigs
-          .sort((a, b) => a.priority - b.priority) // Load by priority order
-          .map(({ id, component: Component, skeleton: Skeleton, size, priority }) => (
-            <CardContainer 
-              key={id}
-              size={size}
-              data-card-id={id}
-              style={{
-                // Ensure consistent heights to prevent CLS
-                minHeight: size === 'large' ? '500px' : '400px'
-              }}
-            >
-              {visibleCards.has(id) ? (
-                <Suspense fallback={<Skeleton />}>
-                  <Component />
-                </Suspense>
-              ) : (
-                // Show skeleton until card becomes visible
-                <Skeleton />
-              )}
-            </CardContainer>
-          ))}
-      </GridLayout>
+      {/* Terminal-style grid layout with cards */}
+      <div className="px-4">
+        <GridLayout>
+          {cardConfigs
+            .sort((a, b) => a.priority - b.priority) // Load by priority order
+            .map(({ id, component: Component, skeleton: Skeleton, size, priority }) => (
+              <CardContainer 
+                key={id}
+                size={size}
+                data-card-id={id}
+                className={`${colors.bg.card} ${colors.border.primary} border-0 ${colors.shadow.card}`}
+                style={{
+                  // Optimized height for hero section fit
+                  minHeight: '280px',
+                  maxHeight: '320px',
+                  borderRadius: '0px' // Sharp corners for terminal aesthetic
+                }}
+              >
+                {visibleCards.has(id) ? (
+                  <Suspense fallback={<Skeleton />}>
+                    <Component />
+                  </Suspense>
+                ) : (
+                  // Show skeleton until card becomes visible
+                  <Skeleton />
+                )}
+              </CardContainer>
+            ))}
+        </GridLayout>
+      </div>
 
-      {/* Development Performance Info */}
+      {/* Terminal-style development performance panel */}
       {process.env.NODE_ENV === 'development' && (
-        <div className={`mt-8 p-4 rounded-lg ${colors.bg.secondary} border ${colors.border.primary}`}>
-          <h3 className={`text-lg font-semibold ${colors.text.primary} mb-2`}>
-            Performance Metrics
+        <div className={`mt-8 mx-6 p-6 ${colors.bg.secondary} ${colors.border.primary} border-0`} style={{borderRadius: '0px'}}>
+          <h3 className={`text-lg font-mono uppercase tracking-wider ${colors.text.primary} mb-4`}>
+            [SYSTEM_PERFORMANCE_METRICS]
           </h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <strong>Bundle Target:</strong> &lt;350KB
+          <div className="grid grid-cols-2 gap-4 text-sm font-mono">
+            <div className={colors.text.secondary}>
+              <span className={colors.text.muted}>BUNDLE_TARGET:</span> <span className={colors.text.highlight}>&lt;350KB</span>
             </div>
-            <div>
-              <strong>TBT Target:</strong> &lt;200ms
+            <div className={colors.text.secondary}>
+              <span className={colors.text.muted}>TBT_TARGET:</span> <span className={colors.text.highlight}>&lt;200ms</span>
             </div>
-            <div>
-              <strong>Cards Loaded:</strong> {visibleCards.size}/6
+            <div className={colors.text.secondary}>
+              <span className={colors.text.muted}>MODULES_LOADED:</span> <span className={colors.text.positive}>{visibleCards.size}/{cardConfigs.length}</span>
             </div>
-            <div>
-              <strong>Lighthouse Target:</strong> 85+
+            <div className={colors.text.secondary}>
+              <span className={colors.text.muted}>LIGHTHOUSE_TARGET:</span> <span className={colors.text.highlight}>85+</span>
             </div>
           </div>
-          <div className="mt-2 text-xs text-gray-500">
-            Run <code>npm run perf:monitor</code> to check performance metrics
+          <div className={`mt-4 pt-4 border-t ${colors.border.primary} text-xs font-mono ${colors.text.muted}`}>
+            EXECUTE: <code className={`${colors.text.accent} px-1`}>npm run perf:monitor</code> TO_VERIFY_METRICS
           </div>
         </div>
       )}

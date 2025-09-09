@@ -8,6 +8,8 @@ const { fundingController } = require('../controllers/fundingController');
 const { rsiController } = require('../controllers/rsiController');
 const { cryptoController } = require('../controllers/cryptoController');
 const { indicatorStreamController } = require('../controllers/indicatorStreamController');
+const { liquidityController } = require('../controllers/liquidityController');
+const { leverageController } = require('../controllers/leverageController');
 
 const router = express.Router();
 
@@ -43,6 +45,31 @@ router.get('/btc/ma-ribbon',
   ],
   validateRequest,
   btcController.getMARibbon
+);
+
+// Market Overview v2: Optimized Moving Averages endpoint
+router.get('/market-overview/moving-averages', btcController.getMovingAverages);
+
+// Market Overview v2: Liquidity Pulse endpoint
+router.get('/market-overview/liquidity-pulse',
+  [
+    query('timeframe').optional().isIn(['7D', '30D', '90D', '1Y'])
+  ],
+  validateRequest,
+  liquidityController.getLiquidityPulse
+);
+
+// Market Overview v2: State of Leverage endpoint
+router.get('/market-overview/leverage-state', leverageController.getLeverageState);
+
+// Treasury yields endpoint
+router.get('/treasury/yields',
+  [
+    query('series').optional().isIn(['DGS2', 'DGS10', 'DGS30', 'DFF']),
+    query('timeframe').optional().isIn(['7D', '30D', '90D', '1Y'])
+  ],
+  validateRequest,
+  liquidityController.getTreasuryYields
 );
 
 // DXY routes
