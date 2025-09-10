@@ -122,12 +122,14 @@ const btcController = {
     try {
       const startTime = performance.now();
       
-      // Use enhanced cache with 5-minute TTL for performance
-      const cacheKey = `moving_averages_v2_${Math.floor(Date.now() / 300000)}`;
+      // Use ultra-conservative 1-hour cache for moving averages
+      const hourPeriod = Math.floor(Date.now() / (60 * 60 * 1000)); // 1-hour periods
+      const cacheKey = `market:moving_averages:btc_${hourPeriod}`;
       
-      // Try to get cached data first
+      // Get cache service and try cache with fallback support
       const cacheService = require('../services/cache/cacheService');
-      let result = await cacheService.get(cacheKey);
+      const cacheResult = await cacheService.getWithFallback(cacheKey, 'moving_averages');
+      let result = cacheResult.data;
       
       if (!result) {
         console.log('🔄 Computing fresh MA data for Market Overview v2');
@@ -192,12 +194,22 @@ const btcController = {
           }
         };
         
-        // Cache for 5 minutes with performance metadata
-        await cacheService.set(cacheKey, result, 300);
+        // Use ultra-conservative moving averages caching (1-hour TTL)
+        await cacheService.setMovingAverages(cacheKey, result);
+        
+        // Store fallback data for stale-while-revalidate pattern
+        await cacheService.setFallbackData(cacheKey, result, 'moving_averages');
+        
         console.log(`✅ MA calculation completed in ${Math.round(performance.now() - startTime)}ms`);
+        console.log(`🎯 Ultra-conservative cache: Next refresh in 1 hour`);
       } else {
-        result.metadata.fresh = false;
-        console.log(`⚡ Serving cached MA data (${Math.round(performance.now() - startTime)}ms)`);
+        const freshness = cacheResult.fresh ? 'fresh' : 'stale';
+        const source = cacheResult.source;
+        result.metadata.fresh = cacheResult.fresh;
+        console.log(`⚡ Serving ${freshness} MA data from ${source} (${Math.round(performance.now() - startTime)}ms)`);
+        if (!cacheResult.fresh) {
+          console.log(`🔄 Stale MA data acceptable - will refresh in background`);
+        }
       }
 
       res.json({

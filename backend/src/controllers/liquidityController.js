@@ -19,12 +19,14 @@ const liquidityController = {
         });
       }
       
-      // Use enhanced cache with 30-minute TTL for FRED data (updates daily)
-      const cacheKey = `liquidity_pulse_v2_${timeframe}_${Math.floor(Date.now() / 1800000)}`; // 30min cache
+      // Use ultra-conservative 20-hour cache for liquidity pulse (95% API reduction)
+      const twentyHourPeriod = Math.floor(Date.now() / (20 * 60 * 60 * 1000)); // 20-hour periods
+      const cacheKey = `market:liquidity:us2y_${timeframe}_${twentyHourPeriod}`;
       
-      // Try to get cached data first
+      // Get cache service and try cache with fallback support
       const cacheService = require('../services/cache/cacheService');
-      let result = await cacheService.get(cacheKey);
+      const cacheResult = await cacheService.getWithFallback(cacheKey, 'liquidity');
+      let result = cacheResult.data;
       
       if (!result) {
         console.log('🔄 Computing fresh Liquidity Pulse data for Market Overview v2');
@@ -32,12 +34,22 @@ const liquidityController = {
         // Get liquidity data from FRED via macroDataService
         result = await macroService.getLiquidityData(timeframe);
         
-        // Cache for 30 minutes (FRED data updates once daily)
-        await cacheService.set(cacheKey, result, 1800);
+        // Use ultra-conservative liquidity caching (20-hour TTL)
+        await cacheService.setLiquidityPulse(cacheKey, result);
+        
+        // Store fallback data for stale-while-revalidate pattern
+        await cacheService.setFallbackData(cacheKey, result, 'liquidity');
+        
         console.log(`✅ Liquidity Pulse calculation completed in ${Math.round(performance.now() - startTime)}ms`);
+        console.log(`🎯 Ultra-conservative cache: Next refresh in 20 hours (95% API reduction)`);
       } else {
-        result.metadata.fresh = false;
-        console.log(`⚡ Serving cached Liquidity Pulse data (${Math.round(performance.now() - startTime)}ms)`);
+        const freshness = cacheResult.fresh ? 'fresh' : 'stale';
+        const source = cacheResult.source;
+        result.metadata.fresh = cacheResult.fresh;
+        console.log(`⚡ Serving ${freshness} liquidity data from ${source} (${Math.round(performance.now() - startTime)}ms)`);
+        if (!cacheResult.fresh) {
+          console.log(`🔄 Stale liquidity data acceptable - 48-hour fallback window`);
+        }
       }
 
       res.json({

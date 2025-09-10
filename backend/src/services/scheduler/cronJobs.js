@@ -1,5 +1,4 @@
 const cron = require('node-cron');
-const { dxyController } = require('../../controllers/dxyController');
 const { etfController } = require('../../controllers/etfController');
 const cacheService = require('../cache/cacheService');
 
@@ -17,16 +16,6 @@ class CronJobService {
     }
 
     try {
-      // Daily DXY refresh at 2:00 AM UTC
-      this.scheduleJob('dxy-refresh', '0 2 * * *', async () => {
-        console.log('🕐 Running daily DXY refresh...');
-        try {
-          await this.refreshDXYData();
-          console.log('✅ DXY data refreshed successfully');
-        } catch (error) {
-          console.error('❌ DXY refresh failed:', error.message);
-        }
-      });
 
       // ETF flows refresh every 3 days at 3:00 AM UTC
       this.scheduleJob('etf-refresh', '0 3 */3 * *', async () => {
@@ -87,21 +76,6 @@ class CronJobService {
     return job;
   }
 
-  // Refresh DXY data
-  async refreshDXYData() {
-    const mockReq = { query: { timeframe: '30D' } };
-    const mockRes = {
-      json: (data) => {
-        if (data.success) {
-          console.log('📈 DXY data refreshed with', data.data?.historical?.length || 0, 'data points');
-        }
-        return data;
-      },
-      status: (code) => ({ json: (data) => data })
-    };
-
-    return await dxyController.getAnalysis(mockReq, mockRes);
-  }
 
   // Refresh ETF flows data
   async refreshETFData() {
@@ -186,8 +160,6 @@ class CronJobService {
   // Manual trigger for testing
   async triggerJob(jobName) {
     switch (jobName) {
-    case 'dxy-refresh':
-      return await this.refreshDXYData();
     case 'etf-refresh':
       return await this.refreshETFData();
     case 'cache-maintenance':

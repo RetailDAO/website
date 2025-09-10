@@ -6,6 +6,9 @@ const { btcController } = require('../controllers/btcController');
 const { liquidityController } = require('../controllers/liquidityController');
 const { leverageController } = require('../controllers/leverageController');
 const { futuresController } = require('../controllers/futuresController');
+const { rotationController } = require('../controllers/rotationController');
+const { etfController } = require('../controllers/etfController');
+const { marketOverviewController } = require('../controllers/marketOverviewController');
 
 const router = express.Router();
 
@@ -24,6 +27,19 @@ const validateRequest = (req, res, next) => {
 
 // ========== MARKET OVERVIEW V2 ENDPOINTS ==========
 
+// Market Overview v2: Main aggregated endpoint (ultra-conservative caching)
+router.get('/market-overview', marketOverviewController.getMarketOverview);
+
+// Market Overview v2: Health status endpoint
+router.get('/market-overview/health', marketOverviewController.getHealthStatus);
+
+// Market Overview v2: Monitoring dashboard endpoint
+router.get('/market-overview/monitoring', marketOverviewController.getMonitoringDashboard);
+
+// Market Overview v2: Reset monitoring metrics (admin)
+router.post('/market-overview/monitoring/reset', marketOverviewController.resetMonitoring);
+
+// Market Overview v2: Individual indicator endpoints
 // Market Overview v2: Optimized Moving Averages endpoint
 router.get('/market-overview/moving-averages', btcController.getMovingAverages);
 
@@ -47,6 +63,18 @@ router.get('/market-overview/futures-basis/health', futuresController.getFutures
 
 // Market Overview v2: Clear Futures Cache endpoint (development)
 router.delete('/market-overview/futures-basis/cache', futuresController.clearFuturesCache);
+
+// Market Overview v2: Rotation Breadth endpoint
+router.get('/market-overview/rotation-breadth', rotationController.getRotationBreadth);
+
+// Market Overview v2: ETF Flows endpoint
+router.get('/market-overview/etf-flows',
+  [
+    query('period').optional().isIn(['2W', '1M'])
+  ],
+  validateRequest,
+  etfController.getETFFlows
+);
 
 // ========== ESSENTIAL UTILITY ENDPOINTS ==========
 

@@ -124,8 +124,18 @@ class WebSocketService {
             timestamp: new Date().toISOString()
           };
 
-          // Cache with tier1 (realtime) TTL
+          // Cache with tier1 (realtime) TTL - this is the ONLY real-time data in ultra-conservative strategy
           await cacheService.setRealtime(`ws_price_${symbol}`, priceData);
+          
+          // Store in ultra-conservative BTC price cache for Market Overview
+          if (symbol.toUpperCase() === 'BTCUSDT') {
+            await cacheService.setRealtime(`market:btc:realtime_price`, {
+              price: priceData.price,
+              change24h: priceData.change24h,
+              timestamp: priceData.timestamp,
+              source: 'binance_websocket'
+            });
+          }
           
           // Update price history for indicator calculations
           await this.updatePriceHistory(symbol.toUpperCase(), priceData.price, priceData.timestamp);
@@ -164,6 +174,63 @@ class WebSocketService {
   async getRealtimePrice(symbol) {
     const cacheKey = `ws_price_${symbol.toLowerCase()}usdt`;
     return await cacheService.get(cacheKey);
+  }
+
+  // Get ultra-conservative real-time BTC price for Market Overview
+  async getMarketOverviewBTCPrice() {
+    try {
+      // This is the ONLY real-time endpoint in the ultra-conservative strategy
+      const btcPrice = await cacheService.get('market:btc:realtime_price');
+      
+      if (btcPrice) {
+        console.log(`📊 Market Overview BTC Price: $${btcPrice.price} (WebSocket source)`);
+        return {
+          success: true,
+          data: btcPrice,
+          metadata: {
+            strategy: 'ultra_conservative_realtime',
+            source: 'binance_websocket',
+            cacheStrategy: 'realtime_only',
+            description: 'Only real-time data point in ultra-conservative caching'
+          }
+        };
+      } else {
+        // Fallback to regular WebSocket cache
+        const fallbackPrice = await this.getRealtimePrice('btc');
+        if (fallbackPrice) {
+          return {
+            success: true,
+            data: {
+              price: fallbackPrice.price,
+              change24h: fallbackPrice.change24h,
+              timestamp: fallbackPrice.timestamp,
+              source: 'binance_websocket_fallback'
+            },
+            metadata: {
+              strategy: 'ultra_conservative_fallback',
+              source: 'websocket_fallback'
+            }
+          };
+        }
+      }
+      
+      return {
+        success: false,
+        message: 'BTC price not available via WebSocket',
+        metadata: {
+          strategy: 'ultra_conservative_failed'
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error getting Market Overview BTC price:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        metadata: {
+          strategy: 'ultra_conservative_error'
+        }
+      };
+    }
   }
 
   // Get latest OHLCV data

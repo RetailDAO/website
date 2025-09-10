@@ -13,7 +13,6 @@ const apiRoutes = require('./routes/api');
 
 // Import services that need to be initialized
 const websocketService = require('./services/websocket/websocketService');
-const cronJobService = require('./services/scheduler/cronJobs');
 
 const app = express();
 
@@ -115,12 +114,6 @@ if (process.env.NODE_ENV !== 'test') {
       websocketService.startIndicatorStreaming('SOLUSDT');
     }, 2000);
     
-    console.log('🚀 Initializing scheduled tasks...');
-    try {
-      cronJobService.initializeJobs();
-    } catch (error) {
-      console.error('⚠️ Cron job initialization failed, continuing without scheduled tasks:', error.message);
-    }
   }, 2000); // Reduced from 5s to 2s for faster initialization
 }
 
@@ -128,15 +121,11 @@ if (process.env.NODE_ENV !== 'test') {
 process.on('SIGTERM', () => {
   console.log('📡 Closing WebSocket connections...');
   websocketService.closeAllConnections();
-  console.log('⏹️ Stopping scheduled tasks...');
-  cronJobService.stopAllJobs();
 });
 
 process.on('SIGINT', () => {
   console.log('📡 Closing WebSocket connections...');
   websocketService.closeAllConnections();
-  console.log('⏹️ Stopping scheduled tasks...');
-  cronJobService.stopAllJobs();
   process.exit(0);
 });
 

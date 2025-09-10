@@ -39,7 +39,7 @@ class OptimizedFuturesDataService {
         // Parallel fetch for better performance
         const [spotData, futuresData] = await Promise.allSettled([
           this.getOptimizedSpotPrice('BTC'),
-          this.getDeribitFuturesPrice('BTC-PERPETUAL') // Using perpetual for more liquid data
+          this.getDeribitFuturesPrice('BTC-26DEC25') // Using 3-month futures as per client requirements
         ]);
 
         if (spotData.status === 'rejected' || futuresData.status === 'rejected') {
@@ -88,28 +88,22 @@ class OptimizedFuturesDataService {
   }
 
   /**
-   * Get spot price from reliable source (using existing crypto data service)
+   * Get spot price from Deribit index (most accurate for basis calculation)
    */
   async getOptimizedSpotPrice(symbol = 'BTC') {
-    try {
-      // Use existing crypto data service for consistency
-      const cryptoDataService = require('./cryptoDataservice');
-      const priceData = await cryptoDataService.getCurrentPrice(symbol);
-      return priceData.currentPrice;
-    } catch (error) {
-      // Fallback to direct API call
+    return this.deribitLimiter.schedule(async () => {
       const response = await axios.get(`${this.deribitBaseUrl}/get_index_price`, {
         params: { index_name: `${symbol.toLowerCase()}_usd` },
         timeout: this.requestTimeout
       });
       return response.data.result.index_price;
-    }
+    });
   }
 
   /**
    * Get Deribit futures price with rate limiting
    */
-  async getDeribitFuturesPrice(instrument = 'BTC-PERPETUAL') {
+  async getDeribitFuturesPrice(instrument = 'BTC-26DEC25') {
     return this.deribitLimiter.schedule(async () => {
       const response = await axios.get(`${this.deribitBaseUrl}/ticker`, {
         params: { instrument_name: instrument },
@@ -119,8 +113,8 @@ class OptimizedFuturesDataService {
       const data = response.data.result;
       
       return {
-        price: data.index_price || data.mark_price, // Use index price for perpetual
-        expiry: data.expiration_timestamp || Date.now() + (90 * 24 * 60 * 60 * 1000), // 90 days for perpetual
+        price: data.last_price || data.mark_price, // Use last_price for actual futures
+        expiry: 1766736000000, // Dec 26, 2025 timestamp for BTC-26DEC25
         instrumentName: instrument
       };
     });
@@ -157,22 +151,23 @@ class OptimizedFuturesDataService {
   }
 
   /**
-   * Classify basis regime for trading insights
+   * Classify basis regime according to client requirements
+   * States: Backwardation (Danger), Healthy, Overheated (Danger)
    */
   classifyBasisRegime(basis) {
     if (basis < -5) {
       return {
-        state: 'caution',
-        label: 'Backwardation',
-        color: 'yellow',
-        terminalLabel: '[CAUTION]',
-        description: 'Futures below spot - supply constraints possible',
+        state: 'backwardation',
+        label: 'Backwardation (Danger)',
+        color: 'red',
+        terminalLabel: '[DANGER]',
+        description: 'Futures trading below spot - potential supply shortage',
         sentiment: 'bearish'
       };
     } else if (basis > 15) {
       return {
-        state: 'danger',
-        label: 'Extreme Premium',
+        state: 'overheated',
+        label: 'Overheated (Danger)',
         color: 'red',
         terminalLabel: '[DANGER]',
         description: 'Excessive premium - potential correction ahead',
@@ -181,10 +176,10 @@ class OptimizedFuturesDataService {
     } else {
       return {
         state: 'healthy',
-        label: 'Healthy Premium',
+        label: 'Healthy',
         color: 'green',
         terminalLabel: '[NORMAL]',
-        description: 'Normal market conditions with healthy premium',
+        description: 'Normal premium reflecting healthy market conditions',
         sentiment: 'bullish'
       };
     }
