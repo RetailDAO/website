@@ -22,7 +22,7 @@ class CacheService {
       
       // Market Overview v2 ultra-conservative caching
       leverage_data: 10800,         // 3 hours - State of Leverage (target: 98.6% reduction)
-      etf_flows: 345600,            // 4 days - ETF Flows (ultra-conservative for low volatility data)
+      etf_flows: 86400,             // 24 hours - ETF Flows (daily refresh for freshness)
       futures_basis: 18000,         // 5 hours - Futures Basis calculation  
       rotation_breadth: 36000,      // 10 hours - Rotation analysis (CoinGecko protection)
       liquidity_pulse: 72000,       // 20 hours - US 2Y yield data
@@ -30,7 +30,7 @@ class CacheService {
       
       // Fallback cache tiers (stale-while-revalidate pattern)
       leverage_fallback: 21600,     // 6 hours stale acceptable
-      etf_fallback: 864000,         // 10 days stale acceptable  
+      etf_fallback: 86400,          // 24 hours stale acceptable (increased freshness)
       futures_fallback: 43200,      // 12 hours stale acceptable
       rotation_fallback: 86400,     // 24 hours stale acceptable
       liquidity_fallback: 172800,   // 48 hours stale acceptable

@@ -71,10 +71,13 @@ export const usePriceWebSocket = () => {
 
   const connect = useCallback(() => {
     try {
-      // Use relative URL for Vite proxy to handle correctly
-      const wsUrl = window.location.protocol === 'https:' 
-        ? `wss://${window.location.host}/ws/prices`
-        : `ws://${window.location.host}/ws/prices`;
+      // Use environment variable for WebSocket URL, fallback to current host
+      const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL;
+      const wsUrl = wsBaseUrl 
+        ? `${wsBaseUrl}/ws/prices`
+        : window.location.protocol === 'https:' 
+          ? `wss://${window.location.host}/ws/prices`
+          : `ws://${window.location.host}/ws/prices`;
       console.log('🔌 Connecting to price WebSocket:', wsUrl);
       
       wsRef.current = new WebSocket(wsUrl);

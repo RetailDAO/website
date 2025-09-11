@@ -12,7 +12,7 @@ const cryptoService = new CryptoDataService();
  * - Moving Averages: 1-hour (high volatility)
  * - Leverage State: 3-hour (medium volatility) 
  * - Futures Basis: 5-hour (medium volatility)
- * - ETF Flows: 4-day (low volatility)
+ * - ETF Flows: 24-hour (daily refresh for freshness)
  * - Rotation Breadth: 10-hour (low volatility)
  * - Liquidity Pulse: 20-hour (very low volatility)
  */
@@ -51,7 +51,7 @@ class BackgroundJobScheduler {
     this.scheduleRotationBreadthJob();
     this.scheduleLiquidityPulseJob();
     
-    // Tier 4: Very Low Volatility (4 days) - ETF Flows
+    // Tier 4: Daily Refresh (24 hours) - ETF Flows
     this.scheduleETFFlowsJob();
     
     // Health monitoring job (every 30 minutes)
@@ -273,10 +273,10 @@ class BackgroundJobScheduler {
   }
 
   /**
-   * Tier 4: ETF Flows (Every 4 days at 02:00 UTC)
+   * Tier 4: ETF Flows (Every day at 02:00 UTC)
    */
   scheduleETFFlowsJob() {
-    const job = cron.schedule('0 2 */4 * *', async () => {
+    const job = cron.schedule('0 2 * * *', async () => {
       await this.executeWithErrorHandling('etf-flows', async () => {
         console.log('🔄 [Background] Updating ETF Flows cache...');
         // Placeholder for ETF flows calculation
@@ -288,7 +288,7 @@ class BackgroundJobScheduler {
             calculatedAt: new Date().toISOString(),
             source: 'background_job',
             fresh: true,
-            nextUpdate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString()
+            nextUpdate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
           }
         };
         
@@ -401,7 +401,7 @@ class BackgroundJobScheduler {
     console.log('  Futures Basis: Every 5 hours (Tier 2 - Medium volatility)');
     console.log('  Rotation Breadth: Every 10 hours (Tier 3 - Low volatility)');
     console.log('  Liquidity Pulse: Every 20 hours (Tier 3 - Low volatility)');
-    console.log('  ETF Flows: Every 4 days (Tier 4 - Very low volatility)');
+    console.log('  ETF Flows: Every day (Tier 4 - Daily refresh)');
     console.log('  Health Monitor: Every 30 minutes');
   }
 

@@ -7,8 +7,9 @@ class LeverageController {
     this.coinglassLimiter = rateLimitedApiService.limiters.coingecko; // Reuse coingecko limiter for now
     this.baseURL = 'https://open-api.coinglass.com/public/v2';
     
-    // Cache service
-    this.cacheService = require('../services/cache/cacheService');
+    // Cache service  
+    const CacheService = require('../services/cache/cacheService');
+    this.cacheService = new CacheService();
     
     // Fallback data for when APIs fail
     this.fallbackData = {
