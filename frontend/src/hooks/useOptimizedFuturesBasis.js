@@ -10,7 +10,6 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -23,20 +22,30 @@ const fetchFuturesBasis = async () => {
   try {
     console.log('🔍 [useFuturesBasis] Fetching futures basis data...');
     
-    const response = await axios.get(`${API_BASE_URL}/api/v1/market-overview/futures-basis`, {
-      timeout: 10000, // 10 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/market-overview/futures-basis`, {
+      signal: controller.signal,
       headers: {
         'Accept': 'application/json'
       }
     });
 
-    const processingTime = Math.round(performance.now() - startTime);
-    
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'API returned unsuccessful response');
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = response.data.data;
+    const responseData = await response.json();
+    const processingTime = Math.round(performance.now() - startTime);
+    
+    if (!responseData.success) {
+      throw new Error(responseData.message || 'API returned unsuccessful response');
+    }
+
+    const data = responseData.data;
     
     console.log(`✅ [useFuturesBasis] Data fetched in ${processingTime}ms - Basis: ${data.annualizedBasis}%, Regime: ${data.regime}`);
     
