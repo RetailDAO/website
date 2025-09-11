@@ -13,6 +13,7 @@ module.exports = {
   
   // Redis - Railway will provide this automatically in production
   REDIS_URL: process.env.REDIS_URL,
+  REDIS_PRIVATE_URL: process.env.REDIS_PRIVATE_URL,
   CACHE_TTL: parseInt(process.env.CACHE_TTL) || 300, // 5 minutes
   
   // External APIs

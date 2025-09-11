@@ -1,27 +1,28 @@
 const Redis = require('ioredis');
 const config = require('./environment');
 
-// Use REDIS_URL from environment - Railway provides this automatically
+// Use Railway's provided Redis connection variables
 const getRedisConfig = () => {
   const baseConfig = {
     retryDelayOnFailover: 100,
     maxRetriesPerRequest: 3,
-    lazyConnect: false, // Connect immediately to detect issues
+    lazyConnect: true, // Changed to true to prevent immediate connection issues
     keepAlive: 30000,
-    connectTimeout: 5000,
-    commandTimeout: 5000,
+    connectTimeout: 10000, // Increased timeout
+    commandTimeout: 10000, // Increased timeout
     reconnectOnError: (err) => {
-      const targetError = "READONLY";
+      const targetError = 'READONLY';
       if (err.message.includes(targetError)) {
         return true;
       }
       return false;
     },
     retryDelayOnClusterDown: 300,
-    enableReadyCheck: true, // Enable ready check for proper connection detection
+    enableReadyCheck: true,
+    retryDelayOnError: 2000 // Add retry delay
   };
 
-  // Railway Redis URLs support TLS
+  // Railway Redis URLs support TLS for external connections
   const tlsConfig = config.REDIS_URL && config.REDIS_URL.includes('rediss://') ? {} : null;
 
   return {
@@ -34,24 +35,29 @@ let redisClient = null;
 
 const createRedisConnection = () => {
   if (!redisClient) {
-    // Check if Redis URL is properly configured
-    if (!config.REDIS_URL) {
+    // Priority order for Redis connection:
+    // 1. REDIS_PRIVATE_URL (for Railway internal network)
+    // 2. REDIS_URL (standard Railway Redis URL)
+    const redisUrl = config.REDIS_PRIVATE_URL || config.REDIS_URL;
+    
+    if (!redisUrl) {
       console.log('🔶 Redis URL not configured - using fallback mock cache');
-      console.log('🔶 In production, Railway will provide REDIS_URL automatically');
+      console.log('🔶 Available env vars:', Object.keys(process.env).filter(key => key.includes('REDIS')));
       return null;
     }
 
     try {
       const redisConfig = getRedisConfig();
-      console.log('🔄 Attempting to connect to Redis:', config.REDIS_URL.replace(/\/\/.*@/, '//***@'));
+      console.log('🔄 Attempting to connect to Redis via:', redisUrl.replace(/\/\/.*@/, '//***@'));
       
-      // Create Redis client using the URL provided by Railway
-      redisClient = new Redis(config.REDIS_URL, redisConfig);
+      // Create Redis client using Railway's provided URL
+      redisClient = new Redis(redisUrl, redisConfig);
       
       redisClient.on('error', (err) => {
         console.error('❌ Redis connection error:', err.message);
         if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED') {
           console.log('🔶 Redis unavailable - application will use mock cache mode');
+          console.log('🔶 Attempted connection to:', redisUrl.replace(/\/\/.*@/, '//***@'));
         }
       });
 
@@ -71,12 +77,19 @@ const createRedisConnection = () => {
         console.log('🚀 Redis client ready for operations');
       });
 
+      // Test connection immediately
+      redisClient.ping().then(() => {
+        console.log('✅ Initial Redis ping successful');
+      }).catch((err) => {
+        console.error('❌ Initial Redis ping failed:', err.message);
+      });
+
     } catch (error) {
       console.error('❌ Failed to create Redis client:', error.message);
       return null;
     }
   }
-  
+
   return redisClient;
 };
 
