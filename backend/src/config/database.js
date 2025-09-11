@@ -10,6 +10,7 @@ const getRedisConfig = () => {
     keepAlive: 30000,
     connectTimeout: 10000, // Increased timeout
     commandTimeout: 10000, // Increased timeout
+    family: 0, // Enable dual-stack (IPv4/IPv6) resolution for Railway
     reconnectOnError: (err) => {
       const targetError = 'READONLY';
       if (err.message.includes(targetError)) {
