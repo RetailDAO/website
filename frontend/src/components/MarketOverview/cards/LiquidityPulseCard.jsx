@@ -149,15 +149,17 @@ const LiquidityPulseCard = React.memo(() => {
   // Performance tracking
   usePerformanceTracking('LiquidityPulseCard');
   
-  // Optimized data fetching with intelligent caching
-  const { data, isLoading, error, isStale } = useQuery({
+  // Instant cache-first data fetching
+  const { data, isLoading, error, isFetching } = useQuery({
     queryKey: ['liquidity-pulse'],
     queryFn: () => fetchLiquidityPulse('30D'),
-    staleTime: 30 * 60 * 1000, // 30 minutes - FRED data updates daily
+    staleTime: 0, // Always show cached data instantly
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    networkMode: 'offlineFirst'
   });
 
   // Memoize sparkline data for performance
@@ -176,14 +178,17 @@ const LiquidityPulseCard = React.memo(() => {
     return getPulseLevelConfig(data.pulse.level, colors);
   }, [data?.pulse?.level, colors]);
 
-  // Loading state
-  if (isLoading) {
+  // Only show loading for initial load (no cached data)
+  if (isLoading && !data) {
     return (
       <div className="h-full flex flex-col p-4" style={{ minHeight: '280px', maxHeight: '320px' }}>
         {/* Header skeleton */}
         <div className="mb-2">
           <div className={`h-4 w-28 rounded ${colors.bg.tertiary} animate-pulse mb-1`}></div>
           <div className={`h-3 w-20 rounded ${colors.bg.tertiary} animate-pulse`}></div>
+          <span className={`text-xs font-mono ${colors.text.highlight} animate-pulse`}>
+            [LOADING_CACHE...]
+          </span>
         </div>
         
         {/* Main content skeleton */}
@@ -192,6 +197,9 @@ const LiquidityPulseCard = React.memo(() => {
             <div className={`h-12 w-12 rounded-full ${colors.bg.tertiary} animate-pulse mx-auto mb-2`}></div>
             <div className={`h-4 w-28 rounded ${colors.bg.tertiary} animate-pulse mx-auto mb-2`}></div>
             <div className={`h-3 w-20 rounded ${colors.bg.tertiary} animate-pulse mx-auto`}></div>
+            <div className={`mt-4 text-xs ${colors.text.muted} font-mono`}>
+              RETRIEVING_CACHED_DATA
+            </div>
           </div>
         </div>
       </div>
@@ -216,7 +224,7 @@ const LiquidityPulseCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Compact Header */}
+      {/* Compact Header with Cache Status */}
       <div className="flex justify-between items-center mb-2">
         <div>
           <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
@@ -226,11 +234,30 @@ const LiquidityPulseCard = React.memo(() => {
             2Y Treasury Analysis
           </p>
         </div>
-        {isStale && (
-          <span className="text-xs text-yellow-500" title="Data refresh in progress">
-            ⏳
-          </span>
-        )}
+        
+        <div className="flex items-center space-x-1">
+          {/* Cache/Fetching Status Indicators */}
+          {data?._fromCache && (
+            <span 
+              className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
+              title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
+            >
+              [{data._isStale ? 'CACHE*' : 'CACHE'}]
+            </span>
+          )}
+          
+          {isFetching && (
+            <span className={`text-xs font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
+              [UPD...]
+            </span>
+          )}
+          
+          {!data?._fromCache && !isFetching && (
+            <span className={`text-xs font-mono ${colors.text.positive}`} title="Live data from server">
+              [LIVE]
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Main Display - Compact */}

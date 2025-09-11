@@ -9,16 +9,45 @@ class APIService {
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache for most data
   }
 
-  // Core request method with improved error handling
+  // Core request method with instant cache-first loading
   async request(endpoint, options = {}) {
     const cacheKey = `${endpoint}_${JSON.stringify(options)}`;
     const cachedData = this.cache.get(cacheKey);
     
-    if (cachedData && Date.now() - cachedData.timestamp < this.cacheTimeout) {
-      console.log(`📦 [Cache] ${endpoint}`);
-      return cachedData.data;
+    // Always return cached data immediately if available (even if stale)
+    if (cachedData) {
+      const isStale = Date.now() - cachedData.timestamp >= this.cacheTimeout;
+      console.log(`📦 [Cache${isStale ? ' Stale' : ''}] ${endpoint}`);
+      
+      // Return cached data immediately, but trigger background refresh if stale
+      if (isStale) {
+        // Background refresh without waiting
+        this.backgroundRefresh(endpoint, options, cacheKey).catch(error => {
+          console.warn(`🔄 Background refresh failed for ${endpoint}:`, error.message);
+        });
+      }
+      
+      return { ...cachedData.data, _fromCache: true, _isStale: isStale };
     }
 
+    // No cache available, make the request
+    return this.fetchAndCache(endpoint, options, cacheKey);
+  }
+
+  // Background refresh method
+  async backgroundRefresh(endpoint, options, cacheKey) {
+    try {
+      const data = await this.fetchAndCache(endpoint, options, cacheKey);
+      console.log(`🔄 [Background Refresh] ${endpoint}`);
+      return data;
+    } catch (error) {
+      console.warn(`⚠️ Background refresh failed for ${endpoint}:`, error.message);
+      throw error;
+    }
+  }
+
+  // Fetch and cache method
+  async fetchAndCache(endpoint, options, cacheKey) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
 
@@ -47,7 +76,7 @@ class APIService {
         timestamp: Date.now(),
       });
 
-      return data;
+      return { ...data, _fromCache: false, _isStale: false };
     } catch (error) {
       clearTimeout(timeoutId);
       

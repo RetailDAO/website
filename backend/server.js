@@ -283,13 +283,24 @@ process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
   
   // Shutdown indicator streaming
-  indicatorStreamController.shutdown();
-  websocketService.closeAllConnections();
-  backgroundJobScheduler.stop();
+  try {
+    indicatorStreamController.shutdown();
+    websocketService.closeAllConnections();
+    backgroundJobScheduler.stop();
+  } catch (shutdownError) {
+    console.error('❌ Error during SIGTERM shutdown:', shutdownError);
+  }
   
   server.close(() => {
     console.log('Process terminated');
+    process.exit(0);
   });
+  
+  // Force exit if graceful shutdown takes too long
+  setTimeout(() => {
+    console.log('⏰ Forced exit due to SIGTERM timeout');
+    process.exit(0);
+  }, 10000);
 });
 
 process.on('SIGINT', () => {

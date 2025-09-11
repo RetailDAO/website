@@ -23,14 +23,21 @@ const SkeletonBase = React.memo(({
   );
 });
 
-// Moving Averages Card Skeleton
+// Enhanced Moving Averages Card Skeleton with cache-first messaging
 export const MovingAveragesSkeleton = React.memo(() => {
+  const { colors } = useTheme();
+  
   return (
     <div className="h-full flex flex-col p-6" style={{ minHeight: '400px' }}>
-      {/* Header */}
+      {/* Header with Cache Status */}
       <div className="mb-6">
         <SkeletonBase height="h-6" width="w-32" className="mb-2" />
-        <SkeletonBase height="h-4" width="w-16" />
+        <div className="flex items-center space-x-2">
+          <SkeletonBase height="h-4" width="w-16" />
+          <span className={`text-xs font-mono ${colors.text.highlight} animate-pulse`}>
+            [LOADING_CACHE...]
+          </span>
+        </div>
       </div>
       
       {/* Price Display */}
@@ -51,6 +58,11 @@ export const MovingAveragesSkeleton = React.memo(() => {
           <SkeletonBase height="h-4" width="w-20" />
           <SkeletonBase height="h-4" width="w-16" />
         </div>
+      </div>
+      
+      {/* Cache-first indicator */}
+      <div className={`mt-auto pt-4 text-center text-xs ${colors.text.muted} font-mono`}>
+        RETRIEVING_CACHED_DATA
       </div>
     </div>
   );

@@ -10,9 +10,9 @@ import {
   MovingAveragesSkeleton
 } from './layout/OptimizedSkeletons';
 
-// Lazy load all 6 cards
-const MovingAveragesCard = lazy(() => import('./cards/MovingAveragesCard'));
-const LiquidityPulseCard = lazy(() => import('./cards/LiquidityPulseCard'));
+// Instant load priority cards (1-2), lazy load others for performance balance
+import MovingAveragesCard from './cards/MovingAveragesCard';
+import LiquidityPulseCard from './cards/LiquidityPulseCard';
 const StateOfLeverageCard = lazy(() => import('./cards/StateOfLeverageCard'));
 const FuturesBasisCard = lazy(() => import('./cards/FuturesBasisCard'));
 const RotationBreadthCard = lazy(() => import('./cards/RotationBreadthCard'));
@@ -178,7 +178,7 @@ const MarketOverviewContainer = React.memo(() => {
         <GridLayout>
           {cardConfigs
             .sort((a, b) => a.priority - b.priority) // Load by priority order
-            .map(({ id, component: Component, skeleton: Skeleton, size }) => (
+            .map(({ id, component: Component, skeleton: Skeleton, size, priority }) => (
               <CardContainer 
                 key={id}
                 size={size}
@@ -192,9 +192,14 @@ const MarketOverviewContainer = React.memo(() => {
                 }}
               >
                 {visibleCards.has(id) ? (
-                  <Suspense fallback={<Skeleton />}>
+                  // Priority 1-2 cards load instantly (no lazy loading), others use Suspense
+                  priority <= 2 ? (
                     <Component />
-                  </Suspense>
+                  ) : (
+                    <Suspense fallback={<Skeleton />}>
+                      <Component />
+                    </Suspense>
+                  )
                 ) : (
                   // Show skeleton until card becomes visible
                   <Skeleton />

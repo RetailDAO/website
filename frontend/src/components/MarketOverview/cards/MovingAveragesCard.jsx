@@ -267,15 +267,19 @@ const MovingAveragesCard = React.memo(() => {
   // WebSocket price data
   const { prices: liveData, isConnected } = usePriceWebSocket();
   
-  // Optimized data fetching with intelligent caching
-  const { data, isLoading, error, isStale } = useQuery({
+  // Instant cache-first data fetching
+  const { data, isLoading, error, isFetching } = useQuery({
     queryKey: ['moving-averages'],
     queryFn: fetchMovingAverages,
-    staleTime: 5 * 60 * 1000, // 5 minutes - longer stale time for performance
+    staleTime: 0, // Always consider cached data immediately available
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    // Show cached data instantly while refetching in background
+    refetchOnReconnect: 'always',
+    networkMode: 'offlineFirst'
   });
   
   // Get current price data based on selected crypto
@@ -319,13 +323,14 @@ const MovingAveragesCard = React.memo(() => {
     };
   }, [data?.ma50.deviation]);*/
 
-  // Loading state
-  if (isLoading) {
+  // Only show loading for initial load (no cached data)
+  if (isLoading && !data) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className={`text-center ${colors.text.secondary}`}>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
           <p className="text-sm">Loading Moving Averages...</p>
+          <p className="text-xs mt-1 opacity-60">Fetching from server...</p>
         </div>
       </div>
     );
@@ -345,16 +350,33 @@ const MovingAveragesCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Compact Header */}
+      {/* Compact Header with Cache/WebSocket Status */}
       <div className="flex justify-between items-center mb-2">
         <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
           [MOVING_AVERAGES]
         </h3>
         <div className="flex items-center space-x-1">
           <RegimeIndicator regime={data.ma200.regime} colors={colors} />
-          {isStale && (
-            <span className={`text-xs font-mono ${colors.text.accent}`} title="Data refresh in progress">
-              [REF...]
+          
+          {/* Cache/Fetching Status Indicators */}
+          {data?._fromCache && (
+            <span 
+              className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
+              title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
+            >
+              [{data._isStale ? 'CACHE*' : 'CACHE'}]
+            </span>
+          )}
+          
+          {isFetching && (
+            <span className={`text-xs font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
+              [UPD...]
+            </span>
+          )}
+          
+          {!data?._fromCache && !isFetching && (
+            <span className={`text-xs font-mono ${colors.text.positive}`} title="Live data from server">
+              [LIVE]
             </span>
           )}
         </div>
@@ -366,12 +388,28 @@ const MovingAveragesCard = React.memo(() => {
           <span className={`text-xs font-mono uppercase tracking-wider ${colors.text.secondary}`}>
             📊 LIVE PRICES
           </span>
-          {isConnected && (
-            <div className="flex items-center space-x-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div>
-              <span className={`text-xs ${colors.text.positive}`}>CONN</span>
-            </div>
-          )}
+          
+          {/* Enhanced WebSocket Connection Status */}
+          <div className="flex items-center space-x-1">
+            {isConnected ? (
+              <>
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div>
+                <span className={`text-xs ${colors.text.positive}`}>WS_LIVE</span>
+              </>
+            ) : (
+              <>
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></div>
+                <span className={`text-xs ${colors.text.accent}`}>WS_CONN...</span>
+              </>
+            )}
+            
+            {/* Show if we have cached price data while WS is connecting */}
+            {!isConnected && Object.keys(liveData).length > 0 && (
+              <span className={`text-xs ${colors.text.highlight}`} title="Using last known WebSocket prices">
+                [LAST]
+              </span>
+            )}
+          </div>
         </div>
         
         <CryptoSelector 
