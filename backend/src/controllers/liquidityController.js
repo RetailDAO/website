@@ -40,15 +40,15 @@ const liquidityController = {
         // Store fallback data for stale-while-revalidate pattern
         await cacheService.setFallbackData(cacheKey, result, 'liquidity');
         
-        console.log(`✅ Liquidity Pulse calculation completed in ${Math.round(performance.now() - startTime)}ms`);
-        console.log(`🎯 Ultra-conservative cache: Next refresh in 20 hours (95% API reduction)`);
+        console.log('✅ Liquidity Pulse calculation completed in ${Math.round(performance.now() - startTime)}ms');
+        console.log('🎯 Ultra-conservative cache: Next refresh in 20 hours (95% API reduction)');
       } else {
         const freshness = cacheResult.fresh ? 'fresh' : 'stale';
         const source = cacheResult.source;
         result.metadata.fresh = cacheResult.fresh;
         console.log(`⚡ Serving ${freshness} liquidity data from ${source} (${Math.round(performance.now() - startTime)}ms)`);
         if (!cacheResult.fresh) {
-          console.log(`🔄 Stale liquidity data acceptable - 48-hour fallback window`);
+          console.log('🔄 Stale liquidity data acceptable - 48-hour fallback window');
         }
       }
 

@@ -79,13 +79,13 @@ class LeverageController {
         await this.cacheService.setFallbackData(cacheKey, result, 'leverage');
         
         console.log(`✅ Leverage calculation completed in ${Math.round(performance.now() - startTime)}ms`);
-        console.log(`🎯 Ultra-conservative cache: Next refresh in 3 hours (98.6% API reduction)`);
+        console.log('🎯 Ultra-conservative cache: Next refresh in 3 hours (98.6% API reduction)');
       } else {
         const freshness = cacheResult.fresh ? 'fresh' : 'stale';
         const source = cacheResult.source;
         console.log(`⚡ Serving ${freshness} leverage data from ${source} (${Math.round(performance.now() - startTime)}ms)`);
         if (!cacheResult.fresh) {
-          console.log(`🔄 Stale data acceptable for leverage - 6-hour fallback window`);
+          console.log('🔄 Stale data acceptable for leverage - 6-hour fallback window');
         }
       }
 

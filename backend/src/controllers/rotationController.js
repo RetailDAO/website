@@ -66,8 +66,8 @@ class RotationController {
           // Store fallback data for stale-while-revalidate pattern
           await cacheService.setFallbackData(cacheKey, result, 'rotation');
           
-          console.log(`✅ Rotation breadth calculation completed in ${Math.round(performance.now() - startTime)}ms`);
-          console.log(`🎯 Ultra-conservative cache: Next refresh in 10 hours (95% API reduction)`);
+          console.log('✅ Rotation breadth calculation completed in ${Math.round(performance.now() - startTime)}ms');
+          console.log('🎯 Ultra-conservative cache: Next refresh in 10 hours (95% API reduction)');
         } catch (error) {
           console.log('🎭 Error calculating rotation breadth, using fallback:', error.message);
           result = await this.getFallbackData();
@@ -77,7 +77,7 @@ class RotationController {
         const source = cacheResult.source;
         console.log(`⚡ Serving ${freshness} rotation data from ${source} (${Math.round(performance.now() - startTime)}ms)`);
         if (!cacheResult.fresh) {
-          console.log(`🔄 Stale rotation data acceptable - 24-hour fallback window`);
+          console.log('🔄 Stale rotation data acceptable - 24-hour fallback window');
         }
       }
 
