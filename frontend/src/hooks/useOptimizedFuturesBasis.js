@@ -10,8 +10,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+import apiService from '../services/api';
 
 /**
  * Fetch futures basis data from optimized API
@@ -22,23 +21,7 @@ const fetchFuturesBasis = async () => {
   try {
     console.log('🔍 [useFuturesBasis] Fetching futures basis data...');
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-    const response = await fetch(`${API_BASE_URL}/api/v1/market-overview/futures-basis`, {
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const responseData = await response.json();
+    const responseData = await apiService.getFuturesBasis();
     const processingTime = Math.round(performance.now() - startTime);
     
     if (!responseData.success) {

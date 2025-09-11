@@ -146,16 +146,14 @@ const PriceDisplay = React.memo(({ priceData, config, isConnected, colors }) => 
   );
 });
 
+// Import API service
+import apiService from '../../../services/api';
+
 // Optimized API service
 const fetchMovingAverages = async () => {
   const startTime = performance.now();
   
-  const response = await fetch('/api/v1/market-overview/moving-averages');
-  if (!response.ok) {
-    throw new Error(`Moving Averages API error: ${response.status}`);
-  }
-  
-  const result = await response.json();
+  const result = await apiService.getMovingAverages();
   const duration = performance.now() - startTime;
   
   console.log(`📊 Moving Averages API: ${Math.round(duration)}ms`);

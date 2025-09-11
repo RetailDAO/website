@@ -4,16 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 
+// Import API service
+import apiService from '../../../services/api';
+
 // Optimized API service
 const fetchLeverageState = async () => {
   const startTime = performance.now();
   
-  const response = await fetch('/api/v1/market-overview/leverage-state');
-  if (!response.ok) {
-    throw new Error(`Leverage State API error: ${response.status}`);
-  }
-  
-  const result = await response.json();
+  const result = await apiService.getLeverageState();
   const duration = performance.now() - startTime;
   
   console.log(`📊 Leverage State API: ${Math.round(duration)}ms`);

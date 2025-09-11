@@ -3,7 +3,7 @@
 
 class APIService {
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
     this.requestTimeout = 10000; // 10 seconds
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache for most data

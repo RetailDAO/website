@@ -10,7 +10,11 @@ export const useConnectionStatus = () => {
 
   const checkApiHealth = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/market-overview/health');
+      // Use the proper API base URL from environment
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      const healthUrl = `${apiBaseUrl}/api/v1/market-overview/health`;
+      
+      const response = await fetch(healthUrl);
       if (response.ok) {
         setStatus(prev => ({
           ...prev,
@@ -71,13 +75,27 @@ export const usePriceWebSocket = () => {
 
   const connect = useCallback(() => {
     try {
-      // Use environment variable for WebSocket URL, fallback to current host
+      // Use environment variable for WebSocket URL, with proper fallback
       const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL;
-      const wsUrl = wsBaseUrl 
-        ? `${wsBaseUrl}/ws/prices`
-        : window.location.protocol === 'https:' 
-          ? `wss://${window.location.host}/ws/prices`
-          : `ws://${window.location.host}/ws/prices`;
+      let wsUrl;
+      
+      if (wsBaseUrl) {
+        // Use the configured WebSocket base URL
+        wsUrl = `${wsBaseUrl}/ws/prices`;
+      } else {
+        // Fallback logic for development
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        if (apiBaseUrl) {
+          // Convert HTTP(S) API URL to WebSocket URL
+          wsUrl = apiBaseUrl.replace(/^https?:/, apiBaseUrl.startsWith('https:') ? 'wss:' : 'ws:') + '/ws/prices';
+        } else {
+          // Last resort: use current host (development only)
+          wsUrl = window.location.protocol === 'https:' 
+            ? `wss://${window.location.host}/ws/prices`
+            : `ws://${window.location.host}/ws/prices`;
+        }
+      }
+      
       console.log('🔌 Connecting to price WebSocket:', wsUrl);
       
       wsRef.current = new WebSocket(wsUrl);

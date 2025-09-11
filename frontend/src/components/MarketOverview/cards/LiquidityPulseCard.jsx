@@ -56,16 +56,14 @@ const Sparkline = React.memo(({ data, color = '#10b981', height = 40 }) => {
   );
 });
 
+// Import API service
+import apiService from '../../../services/api';
+
 // Optimized API service
 const fetchLiquidityPulse = async (timeframe = '30D') => {
   const startTime = performance.now();
   
-  const response = await fetch(`/api/v1/market-overview/liquidity-pulse?timeframe=${timeframe}`);
-  if (!response.ok) {
-    throw new Error(`Liquidity Pulse API error: ${response.status}`);
-  }
-  
-  const result = await response.json();
+  const result = await apiService.getLiquidityPulse(timeframe);
   const duration = performance.now() - startTime;
   
   console.log(`📈 Liquidity Pulse API: ${Math.round(duration)}ms`);
