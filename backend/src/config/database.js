@@ -1,7 +1,7 @@
 const Redis = require('ioredis');
 const config = require('./environment');
 
-// Use REDIS_URL if provided, otherwise default to localhost
+// Use REDIS_URL from environment - Railway provides this automatically
 const getRedisConfig = () => {
   const baseConfig = {
     retryDelayOnFailover: 100,
@@ -21,21 +21,12 @@ const getRedisConfig = () => {
     enableReadyCheck: true, // Enable ready check for proper connection detection
   };
 
-  // If REDIS_URL is provided, use it directly
-  if (config.REDIS_URL && config.REDIS_URL !== 'redis://localhost:6379') {
-    return {
-      ...baseConfig,
-      // ioredis will parse the URL automatically
-      tls: config.REDIS_URL.includes('rediss://') ? {} : null
-    };
-  }
+  // Railway Redis URLs support TLS
+  const tlsConfig = config.REDIS_URL && config.REDIS_URL.includes('rediss://') ? {} : null;
 
-  // Otherwise use localhost default
   return {
     ...baseConfig,
-    host: 'localhost',
-    port: 6379,
-    tls: null
+    tls: tlsConfig
   };
 };
 
@@ -46,16 +37,7 @@ const createRedisConnection = () => {
     // Check if Redis URL is properly configured
     if (!config.REDIS_URL) {
       console.log('🔶 Redis URL not configured - using fallback mock cache');
-      return null;
-    }
-    
-    // Allow localhost Redis for development/testing, require proper Redis URL for production
-    const isLocalhost = config.REDIS_URL === 'redis://localhost:6379';
-    const isProduction = config.NODE_ENV === 'production';
-    
-    if (isProduction && isLocalhost) {
-      // In production, don't use localhost - wait for proper Redis service
-      console.log('🔶 Production mode: Redis service required - using fallback mock cache');
+      console.log('🔶 In production, Railway will provide REDIS_URL automatically');
       return null;
     }
 
@@ -63,12 +45,8 @@ const createRedisConnection = () => {
       const redisConfig = getRedisConfig();
       console.log('🔄 Attempting to connect to Redis:', config.REDIS_URL.replace(/\/\/.*@/, '//***@'));
       
-      // Create Redis client with URL if provided, otherwise use config object
-      if (config.REDIS_URL && config.REDIS_URL !== 'redis://localhost:6379') {
-        redisClient = new Redis(config.REDIS_URL, redisConfig);
-      } else {
-        redisClient = new Redis(redisConfig);
-      }
+      // Create Redis client using the URL provided by Railway
+      redisClient = new Redis(config.REDIS_URL, redisConfig);
       
       redisClient.on('error', (err) => {
         console.error('❌ Redis connection error:', err.message);

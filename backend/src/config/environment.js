@@ -11,8 +11,8 @@ module.exports = {
   COINGLASS_API_KEY: process.env.COINGLASS_API_KEY,
   FRED_API_KEY: process.env.FRED_API_KEY,
   
-  // Redis
-  REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
+  // Redis - Railway will provide this automatically in production
+  REDIS_URL: process.env.REDIS_URL,
   CACHE_TTL: parseInt(process.env.CACHE_TTL) || 300, // 5 minutes
   
   // External APIs

@@ -1,7 +1,6 @@
 const WebSocket = require('ws');
 const { calculateRSI, calculateMovingAverage, calculateEMA, calculateBollingerBands, calculateMACD } = require('../utils/technical_indicators');
 const { CryptoDataService } = require('../services/dataProviders/cryptoDataservice');
-const websocketService = require('../services/websocket/websocketService');
 
 class IndicatorStreamController {
   constructor() {
@@ -17,7 +16,7 @@ class IndicatorStreamController {
    * @param {WebSocket} ws - WebSocket connection
    * @param {Request} req - HTTP request object
    */
-  handleIndicatorWebSocket(ws, req) {
+  handleIndicatorWebSocket(ws) {
     console.log('📊 New indicator streaming client connected');
     this.clients.add(ws);
 
@@ -65,35 +64,37 @@ class IndicatorStreamController {
    */
   handleClientMessage(ws, data) {
     switch (data.type) {
-      case 'subscribe':
-        this.handleSubscription(ws, data);
-        break;
-        
-      case 'unsubscribe':
-        this.handleUnsubscription(ws, data);
-        break;
-        
-      case 'get_indicators':
-        this.handleIndicatorRequest(ws, data);
-        break;
-        
-      case 'ping':
-        const pong = {
-          type: 'pong',
-          timestamp: new Date().toISOString()
-        };
-        ws.send(JSON.stringify(pong));
-        break;
-        
-      default:
-        console.warn(`⚠️ Unknown message type in indicator WebSocket: ${data.type}`);
-        const errorResponse = {
-          type: 'error',
-          message: `Message type '${data.type}' is not supported`,
-          timestamp: new Date().toISOString()
-        };
-        ws.send(JSON.stringify(errorResponse));
-        break;
+    case 'subscribe':
+      this.handleSubscription(ws, data);
+      break;
+      
+    case 'unsubscribe':
+      this.handleUnsubscription(ws, data);
+      break;
+      
+    case 'get_indicators':
+      this.handleIndicatorRequest(ws, data);
+      break;
+      
+    case 'ping': {
+      const pong = {
+        type: 'pong',
+        timestamp: new Date().toISOString()
+      };
+      ws.send(JSON.stringify(pong));
+      break;
+    }
+      
+    default: {
+      console.warn(`⚠️ Unknown message type in indicator WebSocket: ${data.type}`);
+      const errorResponse = {
+        type: 'error',
+        message: `Message type '${data.type}' is not supported`,
+        timestamp: new Date().toISOString()
+      };
+      ws.send(JSON.stringify(errorResponse));
+      break;
+    }
     }
   }
 
@@ -128,7 +129,7 @@ class IndicatorStreamController {
    * @param {WebSocket} ws - WebSocket connection
    * @param {Object} data - Unsubscription data
    */
-  handleUnsubscription(ws, data) {
+  handleUnsubscription(ws) {
     if (ws.subscription) {
       ws.subscription.subscribed = false;
       delete ws.subscription;
@@ -192,78 +193,80 @@ class IndicatorStreamController {
     for (const indicator of indicators) {
       try {
         switch (indicator.toLowerCase()) {
-          case 'rsi':
-            results.rsi = {
-              values: calculateRSI(prices, 14),
-              period: 14,
-              latest: null
+        case 'rsi':
+          results.rsi = {
+            values: calculateRSI(prices, 14),
+            period: 14,
+            latest: null
+          };
+          if (results.rsi.values.length > 0) {
+            results.rsi.latest = results.rsi.values[results.rsi.values.length - 1];
+          }
+          break;
+          
+        case 'sma':
+        case 'ma':
+          results.sma = {
+            sma20: calculateMovingAverage(prices, 20),
+            sma50: calculateMovingAverage(prices, 50),
+            sma200: calculateMovingAverage(prices, 200),
+            latest: {}
+          };
+          // Get latest values
+          if (results.sma.sma20.length > 0) results.sma.latest.sma20 = results.sma.sma20[results.sma.sma20.length - 1];
+          if (results.sma.sma50.length > 0) results.sma.latest.sma50 = results.sma.sma50[results.sma.sma50.length - 1];
+          if (results.sma.sma200.length > 0) results.sma.latest.sma200 = results.sma.sma200[results.sma.sma200.length - 1];
+          break;
+          
+        case 'ema':
+          results.ema = {
+            ema12: calculateEMA(prices, 12),
+            ema26: calculateEMA(prices, 26),
+            latest: {}
+          };
+          // Get latest values
+          if (results.ema.ema12.length > 0) results.ema.latest.ema12 = results.ema.ema12[results.ema.ema12.length - 1];
+          if (results.ema.ema26.length > 0) results.ema.latest.ema26 = results.ema.ema26[results.ema.ema26.length - 1];
+          break;
+          
+        case 'bollinger':
+        case 'bb': {
+          const bollinger = calculateBollingerBands(prices, 20, 2);
+          results.bollinger = {
+            ...bollinger,
+            latest: {}
+          };
+          // Get latest values
+          if (bollinger.upper.length > 0) {
+            results.bollinger.latest = {
+              upper: bollinger.upper[bollinger.upper.length - 1],
+              middle: bollinger.middle[bollinger.middle.length - 1],
+              lower: bollinger.lower[bollinger.lower.length - 1]
             };
-            if (results.rsi.values.length > 0) {
-              results.rsi.latest = results.rsi.values[results.rsi.values.length - 1];
-            }
-            break;
-            
-          case 'sma':
-          case 'ma':
-            results.sma = {
-              sma20: calculateMovingAverage(prices, 20),
-              sma50: calculateMovingAverage(prices, 50),
-              sma200: calculateMovingAverage(prices, 200),
-              latest: {}
+          }
+          break;
+        }
+          
+        case 'macd': {
+          const macd = calculateMACD(prices, 12, 26, 9);
+          results.macd = {
+            ...macd,
+            latest: {}
+          };
+          // Get latest values
+          if (macd.macd.length > 0) {
+            results.macd.latest = {
+              macd: macd.macd[macd.macd.length - 1],
+              signal: macd.signal[macd.signal.length - 1],
+              histogram: macd.histogram[macd.histogram.length - 1]
             };
-            // Get latest values
-            if (results.sma.sma20.length > 0) results.sma.latest.sma20 = results.sma.sma20[results.sma.sma20.length - 1];
-            if (results.sma.sma50.length > 0) results.sma.latest.sma50 = results.sma.sma50[results.sma.sma50.length - 1];
-            if (results.sma.sma200.length > 0) results.sma.latest.sma200 = results.sma.sma200[results.sma.sma200.length - 1];
-            break;
-            
-          case 'ema':
-            results.ema = {
-              ema12: calculateEMA(prices, 12),
-              ema26: calculateEMA(prices, 26),
-              latest: {}
-            };
-            // Get latest values
-            if (results.ema.ema12.length > 0) results.ema.latest.ema12 = results.ema.ema12[results.ema.ema12.length - 1];
-            if (results.ema.ema26.length > 0) results.ema.latest.ema26 = results.ema.ema26[results.ema.ema26.length - 1];
-            break;
-            
-          case 'bollinger':
-          case 'bb':
-            const bollinger = calculateBollingerBands(prices, 20, 2);
-            results.bollinger = {
-              ...bollinger,
-              latest: {}
-            };
-            // Get latest values
-            if (bollinger.upper.length > 0) {
-              results.bollinger.latest = {
-                upper: bollinger.upper[bollinger.upper.length - 1],
-                middle: bollinger.middle[bollinger.middle.length - 1],
-                lower: bollinger.lower[bollinger.lower.length - 1]
-              };
-            }
-            break;
-            
-          case 'macd':
-            const macd = calculateMACD(prices, 12, 26, 9);
-            results.macd = {
-              ...macd,
-              latest: {}
-            };
-            // Get latest values
-            if (macd.macd.length > 0) {
-              results.macd.latest = {
-                macd: macd.macd[macd.macd.length - 1],
-                signal: macd.signal[macd.signal.length - 1],
-                histogram: macd.histogram[macd.histogram.length - 1]
-              };
-            }
-            break;
-            
-          default:
-            console.warn(`⚠️ Unknown indicator requested: ${indicator}`);
-            break;
+          }
+          break;
+        }
+          
+        default:
+          console.warn(`⚠️ Unknown indicator requested: ${indicator}`);
+          break;
         }
       } catch (error) {
         console.error(`❌ Error calculating ${indicator}:`, error);
