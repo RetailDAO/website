@@ -36,7 +36,7 @@ const Sparkline = React.memo(({ data, color = '#10b981', height = 40 }) => {
   if (!data || data.length < 2) {
     return (
       <div className="flex items-center justify-center" style={{ width: 120, height }}>
-        <span className="text-xs text-gray-400">No trend data</span>
+        <span className="text-sm text-gray-400">No trend data</span>
       </div>
     );
   }
@@ -128,7 +128,7 @@ const TrendIndicator = React.memo(({ trend, value, colors }) => {
   
   if (isNeutral) {
     return (
-      <span className={`inline-flex items-center text-xs ${colors.text.secondary}`}>
+      <span className={`inline-flex items-center text-sm ${colors.text.secondary}`}>
         <span className="mr-1">➡️</span>
         Stable
       </span>
@@ -136,7 +136,7 @@ const TrendIndicator = React.memo(({ trend, value, colors }) => {
   }
   
   return (
-    <span className={`inline-flex items-center text-xs ${
+    <span className={`inline-flex items-center text-sm ${
       isPositive ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'
     }`}>
       <span className="mr-1">{isPositive ? '📈' : '📉'}</span>
@@ -183,17 +183,17 @@ const LiquidityPulseCard = React.memo(() => {
     return (
       <div className="h-full flex flex-col p-4" style={{ minHeight: '280px', maxHeight: '320px' }}>
         {/* Header skeleton */}
-        <div className="mb-4">
-          <div className={`h-5 w-32 rounded ${colors.bg.tertiary} animate-pulse mb-2`}></div>
-          <div className={`h-3 w-24 rounded ${colors.bg.tertiary} animate-pulse`}></div>
+        <div className="mb-2">
+          <div className={`h-4 w-28 rounded ${colors.bg.tertiary} animate-pulse mb-1`}></div>
+          <div className={`h-3 w-20 rounded ${colors.bg.tertiary} animate-pulse`}></div>
         </div>
         
         {/* Main content skeleton */}
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className={`h-16 w-16 rounded-full ${colors.bg.tertiary} animate-pulse mx-auto mb-4`}></div>
-            <div className={`h-5 w-32 rounded ${colors.bg.tertiary} animate-pulse mx-auto mb-2`}></div>
-            <div className={`h-4 w-24 rounded ${colors.bg.tertiary} animate-pulse mx-auto`}></div>
+            <div className={`h-12 w-12 rounded-full ${colors.bg.tertiary} animate-pulse mx-auto mb-2`}></div>
+            <div className={`h-4 w-28 rounded ${colors.bg.tertiary} animate-pulse mx-auto mb-2`}></div>
+            <div className={`h-3 w-20 rounded ${colors.bg.tertiary} animate-pulse mx-auto`}></div>
           </div>
         </div>
       </div>
@@ -206,7 +206,7 @@ const LiquidityPulseCard = React.memo(() => {
       <div className="h-full flex items-center justify-center p-4">
         <div className={`text-center ${colors.text.secondary}`}>
           <p className="text-red-500 mb-2">⚠️ Failed to load Liquidity Pulse</p>
-          <p className="text-xs">{error.message}</p>
+          <p className="text-sm">{error.message}</p>
         </div>
       </div>
     );
@@ -217,53 +217,51 @@ const LiquidityPulseCard = React.memo(() => {
   const trend = data?.pulse?.analysis;
 
   return (
-    <div className="h-full flex flex-col p-4" style={{ minHeight: '280px', maxHeight: '320px' }}>
-      {/* Header - compact terminal style */}
-      <div className="mb-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className={`text-sm md:text-base font-mono uppercase tracking-wider ${colors.text.primary}`}>
-              [LIQUIDITY_PULSE]
-            </h3>
-            <p className={`text-xs ${colors.text.secondary} mt-1`}>
-              2Y Treasury Yield Analysis
-            </p>
-          </div>
-          {isStale && (
-            <span className="text-xs text-yellow-500" title="Data is stale, refreshing...">
-              ⏳
-            </span>
-          )}
+    <div className="h-full flex flex-col">
+      {/* Compact Header */}
+      <div className="flex justify-between items-center mb-2">
+        <div>
+          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+            [LIQUIDITY_PULSE]
+          </h3>
+          <p className={`text-xs ${colors.text.secondary} mt-1`}>
+            2Y Treasury Analysis
+          </p>
         </div>
+        {isStale && (
+          <span className="text-xs text-yellow-500" title="Data refresh in progress">
+            ⏳
+          </span>
+        )}
       </div>
 
-      {/* Main Display */}
-      <div className="flex-1 flex flex-col justify-center">
-        {/* Pulse Score Display */}
-        <div className="text-center mb-6">
-          <div className={`text-4xl font-bold mb-2 ${colors.text.primary}`}>
+      {/* Main Display - Compact */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Pulse Score Display - Compact */}
+        <div className="text-center mb-3">
+          <div className={`text-2xl font-bold mb-1 ${colors.text.primary}`}>
             {pulseScore}
-            <span className={`text-lg font-normal ${colors.text.secondary} ml-1`}>
+            <span className={`text-sm font-normal ${colors.text.secondary} ml-1`}>
               /100
             </span>
           </div>
           
-          {/* Pulse Level Badge */}
+          {/* Compact Pulse Level Badge */}
           {pulseConfig && (
             <div className={`
-              inline-flex items-center px-3 py-2 rounded-full text-sm font-medium
+              inline-flex items-center px-2 py-1 rounded text-xs font-medium
               ${pulseConfig.bg} ${pulseConfig.color} ${pulseConfig.border} border
             `}>
-              <span className="mr-2">{pulseConfig.icon}</span>
+              <span className="mr-1">{pulseConfig.icon}</span>
               {pulseConfig.label}
             </div>
           )}
         </div>
 
-        {/* Treasury Yield Info */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        {/* Treasury Yield Info - Compact Grid */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="text-center">
-            <div className={`text-2xl font-bold ${colors.text.primary}`}>
+            <div className={`text-lg font-bold ${colors.text.primary}`}>
               {currentYield}%
             </div>
             <div className={`text-xs ${colors.text.secondary}`}>
@@ -277,7 +275,8 @@ const LiquidityPulseCard = React.memo(() => {
                 <Sparkline 
                   data={sparklineData} 
                   color={pulseConfig?.color.includes('green') ? '#10b981' : 
-                         pulseConfig?.color.includes('red') ? '#ef4444' : '#6b7280'} 
+                         pulseConfig?.color.includes('red') ? '#ef4444' : '#6b7280'}
+                  height={32}
                 />
               )}
             </div>
@@ -287,10 +286,10 @@ const LiquidityPulseCard = React.memo(() => {
           </div>
         </div>
 
-        {/* Trend Analysis */}
+        {/* Compact Trend Analysis */}
         {trend && (
-          <div className="flex justify-between items-center">
-            <div className="text-center flex-1">
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="text-center">
               <div className={`text-sm font-medium ${colors.text.primary}`}>
                 {trend.trend7Day > 0 ? '+' : ''}{trend.trend7Day}bp
               </div>
@@ -299,7 +298,7 @@ const LiquidityPulseCard = React.memo(() => {
               </div>
             </div>
             
-            <div className="text-center flex-1">
+            <div className="text-center">
               <TrendIndicator 
                 trend={trend.trend30Day} 
                 value={trend.trend30Day} 
@@ -308,12 +307,12 @@ const LiquidityPulseCard = React.memo(() => {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Footer with description */}
-      <div className={`mt-4 p-3 rounded-lg ${colors.bg.tertiary}`}>
-        <div className={`text-xs ${colors.text.primary}`}>
-          {data?.pulse?.description || 'Liquidity conditions analysis'}
+        {/* Compact Description */}
+        <div className={`mt-auto p-2 rounded-lg ${colors.bg.tertiary}`}>
+          <div className={`text-xs ${colors.text.primary}`}>
+            {data?.pulse?.description || 'Liquidity conditions analysis'}
+          </div>
         </div>
       </div>
 

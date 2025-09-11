@@ -68,12 +68,12 @@ const SimpleBarChart = React.memo(({ flows, colors }) => {
   if (!flows || flows.length === 0) return null;
   
   const maxAbs = Math.max(...flows.map(f => Math.abs(f.inflow)));
-  const barWidth = Math.max(2, 80 / flows.length);
+  const barWidth = Math.max(2, 72 / flows.length);
   
   return (
-    <div className="w-full h-16 flex items-end justify-center space-x-0.5 px-2">
-      {flows.slice(-10).map((flow, index) => {
-        const height = Math.max(2, Math.abs(flow.inflow) / maxAbs * 50);
+    <div className="w-full h-12 flex items-end justify-center space-x-0.5 px-2">
+      {flows.slice(-8).map((flow, index) => {
+        const height = Math.max(1, Math.abs(flow.inflow) / maxAbs * 40);
         const isPositive = flow.inflow >= 0;
         
         return (
@@ -86,7 +86,7 @@ const SimpleBarChart = React.memo(({ flows, colors }) => {
             style={{
               width: `${barWidth}px`,
               height: `${height}px`,
-              minHeight: '2px'
+              minHeight: '1px'
             }}
             title={`${flow.date}: $${flow.inflow}M`}
           />
@@ -112,26 +112,26 @@ const ETFFlowsCard = React.memo(() => {
   }, [data.status, colors]);
 
   return (
-    <div className="h-full flex flex-col p-4" style={{ minHeight: '280px', maxHeight: '320px' }}>
-      {/* Terminal-style header with period selector - compact */}
-      <div className="flex justify-between items-center mb-4">
+    <div className="h-full flex flex-col">
+      {/* Compact Header with period selector */}
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h3 className={`text-sm md:text-base font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [ETF_FLOWS]
           </h3>
           <p className={`text-xs ${colors.text.secondary} mt-1`}>
-            Bitcoin ETF Daily Flows
+            Bitcoin ETF Flows
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          {/* Period Selector */}
-          <div className="flex border border-gray-600 rounded-none overflow-hidden">
+        <div className="flex items-center space-x-1">
+          {/* Compact Period Selector */}
+          <div className="flex border border-gray-600 rounded overflow-hidden">
             {['2W', '1M'].map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`
-                  px-2 py-1 text-xs font-mono
+                  px-1.5 py-0.5 text-xs font-mono
                   ${period === p 
                     ? `${colors.text.primary} ${colors.bg.secondary}` 
                     : `${colors.text.muted} hover:${colors.text.secondary}`
@@ -144,7 +144,7 @@ const ETFFlowsCard = React.memo(() => {
             ))}
           </div>
           <div className={`
-            flex items-center space-x-2 px-2 py-1 text-xs font-mono uppercase tracking-wider
+            px-2 py-1 text-xs font-mono uppercase tracking-wider
             ${colors.bg.tertiary} ${colors.border.primary} border-0
             ${statusConfig.color}
           `} style={{borderRadius: '0px'}}>
@@ -153,31 +153,34 @@ const ETFFlowsCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Chart Area */}
-      <div className="flex-1 flex flex-col justify-center">
-        <SimpleBarChart flows={data.flows} colors={colors} />
-      </div>
-
-      {/* Stats Section */}
-      <div className="mt-4">
-        {/* 5D Inflow Display */}
-        <div className="text-center mb-3">
-          <div className={`text-xl font-bold ${data.inflow5D >= 0 ? colors.text.positive : colors.text.negative}`}>
-            {data.inflow5D > 0 ? '+' : ''}${data.inflow5D.toLocaleString()}M
-          </div>
-          <div className={`text-xs ${colors.text.secondary}`}>
-            5-Day Net Flows
-          </div>
+      {/* Compact Main Content */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Compact Chart Area */}
+        <div className="flex-1 flex items-center justify-center mb-2">
+          <SimpleBarChart flows={data.flows} colors={colors} />
         </div>
 
-        {/* Status Badge */}
-        <div className={`
-          px-3 py-2 text-center border
-          ${statusConfig.bg} ${statusConfig.border} ${statusConfig.color}
-        `} style={{ borderRadius: '0px' }}>
-          <div className="flex items-center justify-center space-x-2">
-            <span>{statusConfig.icon}</span>
-            <span className="text-sm font-semibold">{statusConfig.label}</span>
+        {/* Compact Stats Section */}
+        <div className="mt-auto">
+          {/* 5D Inflow Display - Compact */}
+          <div className="text-center mb-2">
+            <div className={`text-lg font-bold ${data.inflow5D >= 0 ? colors.text.positive : colors.text.negative}`}>
+              {data.inflow5D > 0 ? '+' : ''}${data.inflow5D.toLocaleString()}M
+            </div>
+            <div className={`text-xs ${colors.text.secondary}`}>
+              5-Day Net Flows
+            </div>
+          </div>
+
+          {/* Compact Status Badge */}
+          <div className={`
+            px-2 py-1 text-center border
+            ${statusConfig.bg} ${statusConfig.border} ${statusConfig.color}
+          `} style={{ borderRadius: '0px' }}>
+            <div className="flex items-center justify-center space-x-1">
+              <span>{statusConfig.icon}</span>
+              <div className="text-xs font-semibold">{statusConfig.label}</div>
+            </div>
           </div>
         </div>
       </div>

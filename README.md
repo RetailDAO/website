@@ -1,656 +1,475 @@
-# RetailDAO Terminal - Community-Driven Cryptocurrency Analytics Platform ⚡
+# RetailDAO Terminal - Real-Time Crypto Analytics Platform ⚡
 
-**A community-governed, open-source cryptocurrency analytics terminal** built by and for the **RetailDAO community**, providing **real-time market data**, **technical indicators**, and **intelligent caching** through collaborative development and transparent governance.
+![Concurrent Users Projections](frontend/public/concurernt_users_projections.png)
 
-## 🏛️ **Current Community Development Status: 🧪 COMMUNITY TESTING PHASE**
+> **A high-performance cryptocurrency analytics terminal built with real-time WebSocket streaming, intelligent caching, and modern React architecture.**
 
-**Community Feedback Integration**:
-- **Testing Phase**: **Key DAO members** providing real-world usage feedback
-- **Governance Ready**: Community voting integration for feature prioritization
-- **Open Development**: **87% API optimization** achieved through collaborative contributions
-- **Transparent Operations**: **Real-time data transparency** with community-validated quality scoring
+## 🌟 **Current Status: Production Ready**
 
-**Community-Built Architecture Overview**:
-- **Dual WebSocket Servers**: `/ws/prices` + `/ws/indicators` with community-monitored uptime
-- **Golden Dataset Service**: Community-maintained persistent caching with transparent 4-tier expiration
-- **Collaborative Rate Limiting**: Community-optimized Bottleneck.js with shared API provider management
-- **Community Cache Strategy**: Realtime (1min) → Frequent (1hr) → Stable (6hr) → Historical (48hr)
+### **Live Features:**
+- ✅ **Market Overview v2** - 6 real-time analytics cards with optimized layouts
+- ✅ **WebSocket Streaming** - Live price updates and technical indicators 
+- ✅ **Smart Caching System** - 87% API call reduction with 4-tier cache strategy
+- ✅ **Connection Monitoring** - Real-time system health and data quality tracking
+- ✅ **Terminal UI** - Dark/cyberpunk aesthetic with responsive design
+
+### **Deployment URLs:**
+- **Frontend**: https://retaildao-terminal.vercel.app
+- **Backend**: https://website-production-8f8a.up.railway.app  
+- **WebSocket**: wss://website-production-8f8a.up.railway.app/ws/prices
 
 ---
 
-## 🏗️ **Core Architecture for Community Contributors**
+## 🏗️ **Architecture Overview**
 
-### **Backend Architecture** (`/backend`)
-```
-src/
-├── controllers/
-│   ├── indicatorStreamController.js    # WebSocket streaming management with health monitoring
-│   └── cryptoController.js             # REST API endpoints with cache-aside pattern
-├── services/
-│   ├── cache/
-│   │   ├── cacheService.js             # 4-tier hybrid Redis/Memory caching
-│   │   └── goldenDatasetService.js     # Persistent "last known good" data storage
-│   ├── websocket/
-│   │   └── websocketService.js         # Dual WebSocket servers + indicator streaming
-│   ├── dataProviders/
-│   │   ├── apiClients.js               # Multi-API integration layer
-│   │   └── cryptoDataservice.js        # Primary data orchestration service
-│   ├── analysis/
-│   │   ├── btcAnalysisService.js       # BTC-specific technical analysis
-│   │   ├── fundingRatesService.js      # Perpetual futures funding rates
-│   │   └── etfFlows.js                 # ETF flow analysis
-│   └── rateLimitedApi.js               # Bottleneck.js rate limiting with adaptive backoff
-├── middleware/
-│   ├── rateLimit.js                    # Express rate limiting (100 req/15min per IP)
-│   ├── errorHandler.js                 # Global error handling + graceful degradation
-│   └── auth.js                         # JWT authentication middleware
-├── config/
-│   ├── database.js                     # Redis connection with fallback
-│   └── environment.js                  # Environment configuration
-└── utils/
-    └── technical_indicators.js         # RSI, Moving Averages, MACD calculations
-```
+### **Tech Stack:**
+- **Backend**: Node.js + Express + WebSocket + Redis + Binance API
+- **Frontend**: React 18 + Vite + Tailwind CSS + ApexCharts + Recharts
+- **Real-time**: Dual WebSocket servers (prices + indicators)
+- **Caching**: Multi-tier Redis with Golden Dataset fallback
+- **Deployment**: Railway (backend) + Vercel (frontend)
 
-### **Frontend Architecture** (`/frontend`)
+### **Core Components:**
+
 ```
-src/
-├── components/
-│   ├── Dashboard.jsx                   # Main dashboard with real-time updates
-│   ├── RSIGauge.jsx                    # Real-time RSI display with quality indicators
-│   ├── BitcoinCard.jsx                 # Live price card with WebSocket integration
-│   ├── ConnectionStatus.jsx            # 3-tier connection health monitoring
-│   ├── FundingRatesCard.jsx            # Perpetual futures funding rates
-│   └── ThemeToggle.jsx                 # Dark/light theme with persistence
-├── hooks/
-│   ├── useWebSocket.js                 # WebSocket connection management with reconnection
-│   ├── useIndicatorData.js             # Indicator streaming with quality scoring
-│   └── useApi.js                       # API client with caching integration
-├── context/
-│   └── ThemeContext.jsx                # Theme management with localStorage persistence
-└── services/
-    └── api.js                          # Axios client with error handling + retries
+📊 Market Overview Cards:
+├── MovingAveragesCard     # BTC price + MA analysis
+├── LiquidityPulseCard     # Market liquidity metrics  
+├── StateOfLeverageCard    # Leverage analysis
+├── FuturesBasisCard       # Futures basis analysis
+├── RotationBreadthCard    # Alt vs BTC performance
+└── ETFFlowsCard          # Bitcoin ETF flows
+
+🔌 Real-time Services:
+├── Price WebSocket        # Live BTC/ETH/SOL prices
+├── Indicator Streaming    # RSI + MA calculations
+├── Connection Status      # System health monitoring
+└── Cache Management       # Smart data persistence
 ```
 
 ---
 
-## 🛠️ **Technology Stack & Dependencies**
+## 🚀 **Quick Start**
 
-### **Backend Core Dependencies**
-- **Runtime**: Node.js 16+ + Express.js 4.18.2
-- **WebSocket**: `ws` 8.18.3 (dual servers with upgrade handling)
-- **Rate Limiting**: `bottleneck` 2.19.5 (intelligent per-provider limiting)
-- **Caching**: `ioredis` 5.3.2 + memory fallback
-- **Technical Analysis**: `trading-signals` 6.9.1
-- **Security**: `helmet` 7.0.0 + `express-rate-limit` 6.8.1
-- **Monitoring**: `winston` 3.10.0 + `morgan` 1.10.0
-
-### **Frontend Core Dependencies**
-- **Framework**: React 18.3.1 + Vite 7.1.3
-- **State Management**: `@tanstack/react-query` 5.85.9 (with devtools)
-- **Charts**: `apexcharts` 5.3.4 + `react-apexcharts` 1.7.0 + `recharts` 2.15.4
-- **WebSocket**: Native WebSocket API with custom hooks
-- **Styling**: Tailwind CSS 3.4.17
-- **Icons**: `lucide-react` 0.542.0
-
----
-
-## 🚀 **Community Deployment Guide**
-
-### **Backend Setup for DAO Members**
+### **Backend Setup:**
 ```bash
 cd backend
-
-# Install dependencies
 npm install
 
-# Environment setup (Community API keys recommended)
+# Configure environment
 cp .env.example .env
-# Configure community-shared API keys:
-# - COINGECKO_API_KEY (community rate limit pool)
-# - ALPHA_VANTAGE_API_KEY (for community ETF analysis)
-# - REDIS_URL (community cache server or local fallback)
+# Add your API keys:
+# COINGECKO_API_KEY, BINANCE_API_KEY, REDIS_URL
 
-# Community deployment options:
-npm start                    # Local community node
-npm run deploy              # Community PM2 deployment
-npm run docker:build        # Containerized community instance
-npm run docker:run          # Docker community execution
+# Development
+npm run dev                # Start with nodemon
+npm test                   # Run test suite
+npm start                  # Production mode
 
-# Community monitoring:
-npm run logs               # Monitor community instance
-npm restart               # Restart community services
-npm stop                  # Stop community services
+# Health check
+curl http://localhost:8000/health
 ```
 
-### **Frontend Setup for Community Testing**
+### **Frontend Setup:**
 ```bash
-cd frontend
-
-# Install dependencies
+cd frontend  
 npm install
 
-# Community testing build
-npm run build              # Community-ready production build
-npm run preview            # Preview community build
+# Development
+npm run dev                # Vite dev server (port 3000)
+npm run build              # Production build
+npm run preview            # Preview production build
 
-# Community development mode
-npm run dev               # Local dev server for DAO member testing
+# Test build
+npm run lint               # ESLint check
 ```
 
-### **Community Health Verification**
-```bash
-# Community instance health checks
-curl http://localhost:8000/health
-curl http://localhost:8000/api/v1/websocket/status
-curl http://localhost:8000/api/v1/indicators/stream/status
+### **Environment Configuration:**
 
-# Community WebSocket testing
-wscat -c ws://localhost:8000/ws/prices
-wscat -c ws://localhost:8000/ws/indicators
+**Backend (.env):**
+```env
+NODE_ENV=production
+PORT=8000
+FRONTEND_URL=https://retaildao-terminal.vercel.app
+COINGECKO_API_KEY=your_key_here
+BINANCE_API_KEY=your_key_here
+REDIS_URL=redis://localhost:6379
+```
 
-# Community load testing (DAO member simulation)
-for i in {1..8}; do curl http://localhost:8000/api/v1/btc/price & done
+**Frontend (.env.production):**
+```env
+VITE_API_BASE_URL=https://website-production-8f8a.up.railway.app
+VITE_WS_BASE_URL=wss://website-production-8f8a.up.railway.app
+VITE_ENVIRONMENT=production
+VITE_ENABLE_WEBSOCKETS=true
 ```
 
 ---
 
-## 📊 **Intelligent Caching Architecture**
+## 📊 **Market Overview v2 Features**
 
-### **4-Tier Cache Strategy** (CacheService.js:18-24)
+### **1. Moving Averages Card**
+- **Real-time BTC Price** with 24h change
+- **Technical Analysis**: 20, 50, 100, 200-day moving averages
+- **Volume & Market Cap** with formatting
+- **Trend Analysis**: Bull/bear/consolidation detection
+
+### **2. Liquidity Pulse Card**
+- **Market Liquidity Score** (0-100)
+- **Order Book Depth** analysis
+- **Volatility Metrics** with historical comparison
+- **Pulse Visualization** with animated indicators
+
+### **3. State of Leverage Card**  
+- **Leverage Traffic Light** (Green/Yellow/Red)
+- **Funding Rates** across exchanges
+- **Long/Short Ratios** with percentages
+- **Risk Assessment** with recommendations
+
+### **4. Futures Basis Card**
+- **Spot vs Futures** price differential
+- **Basis Analysis** with historical context
+- **Contango/Backwardation** detection
+- **Market Regime** classification
+
+### **5. Rotation Breadth Card**
+- **Alt Season Indicator** percentage
+- **Market Breadth** gauge (BTC vs alts)
+- **Top Performers** list
+- **Rotation Analysis** with trend direction
+
+### **6. ETF Flows Card**
+- **Bitcoin ETF Flows** with 5-day totals
+- **Inflow/Outflow** visualization
+- **Flow Trends** with period selection
+- **Market Impact** analysis
+
+---
+
+## 🔌 **WebSocket Architecture**
+
+### **Dual WebSocket System:**
+
+**Price Streaming (`/ws/prices`):**
+```javascript
+// Real-time price updates
+{
+  type: "price_update",
+  symbol: "BTCUSDT", 
+  price: 43250.50,
+  change24h: 2.34,
+  volume24h: 125000000,
+  timestamp: "2025-01-15T10:30:00Z"
+}
+```
+
+**Indicator Streaming (`/ws/indicators`):**
+```javascript
+// Technical indicator updates
+{
+  type: "indicators_update",
+  symbol: "BTCUSDT",
+  rsi: { "14": 65.2, "21": 62.8 },
+  ma: { "20": 42800, "50": 41500, "200": 38900 },
+  timestamp: "2025-01-15T10:30:00Z"
+}
+```
+
+### **Connection Management:**
+- **Auto-reconnection** with exponential backoff
+- **Connection health monitoring** in sidebar
+- **Fallback to polling** when WebSocket fails
+- **Data quality scoring** with real-time status
+
+---
+
+## 🧠 **Intelligent Caching System**
+
+### **4-Tier Cache Strategy:**
 ```javascript
 cacheTiers: {
-  tier1_realtime: 60,       // 1 min - WebSocket price updates
-  tier2_frequent: 3600,     // 1 hour - API indicators (extended for rate limits)  
-  tier3_stable: 21600,      // 6 hours - historical data (doubled from 4h)
-  tier4_historical: 172800  // 48 hours - static data (doubled from 24h)
+  tier1_realtime: 60,       // 1 min - Live prices
+  tier2_frequent: 3600,     // 1 hour - Indicators  
+  tier3_stable: 21600,      // 6 hours - Historical data
+  tier4_historical: 172800  // 48 hours - Static data
 }
 ```
 
-### **Golden Dataset Service** (goldenDatasetService.js)
-**Purpose**: Persistent "last known good" data storage for zero-downtime fallbacks
+### **Golden Dataset Service:**
+- **Persistent storage** of last-known-good data
+- **Automatic tier demotion** (fresh → stale → archived → fallback)
+- **Zero-downtime fallbacks** during API outages
+- **Data quality tracking** with timestamps and sources
 
-**Storage Architecture**:
-- **File System**: `/data/golden_dataset.json` + backup
-- **Tier Management**: fresh (5min) → stale (1hr) → archived (24hr) → fallback (7 days)
-- **Automatic Demotion**: Data ages through tiers with TTL-based expiration
-- **Metadata Tracking**: Data points, timestamps, source tracking, quality scoring
-
-**Key Methods**:
-```javascript
-// Store successful API responses
-await goldenDatasetService.store(dataType, data, 'fresh');
-
-// Retrieve with tier preferences
-const result = await goldenDatasetService.retrieve(dataType, ['fresh', 'stale']);
-
-// Enhanced cache-aside with golden fallback
-const { data, source, fresh } = await cacheService.getOrFetchWithGolden(key, fetchFn, {
-  dataType: 'btc_analysis',
-  enableGolden: true
-});
-```
-
-### **Cache-Aside Pattern Implementation** (cacheService.js:298-408)
-1. **Regular Cache** → 2. **Golden Dataset** → 3. **API Request** → 4. **Emergency Golden Fallback**
-
-**Success Rate**: >95% cache hit rate with intelligent warming
+### **Performance Metrics:**
+- **87% API call reduction** achieved
+- **<2 second response times** for all requests
+- **>95% cache hit rate** in production
+- **~15 API calls/hour** vs traditional 120/hour
 
 ---
 
-## ⚡ **Intelligent API Rate Limiting Strategy**
+## 📡 **API Endpoints**
 
-### **Bottleneck.js Configuration** (rateLimitedApi.js:17-46)
-```javascript
-limiters: {
-  coingecko: {
-    reservoir: 45,              // Conservative: 45/min (below 50 limit)
-    reservoirRefreshInterval: 60 * 1000,
-    maxConcurrent: 1,           // Avoid conflicts
-    minTime: 1400              // 1.4s between requests
-  },
-  'alpha-vantage': {
-    reservoir: 5,              // 5 calls/minute
-    minTime: 12000            // 12s between requests
-  },
-  binance: {
-    reservoir: 1200,          // 1200 weight/minute
-    maxConcurrent: 5,         // Higher throughput
-    minTime: 100             // 0.1s between requests
-  }
-}
-```
-
-### **Adaptive Rate Limiting** (rateLimitedApi.js:49-70)
-- **Error Tracking**: Increases delays on repeated 429s
-- **Success Recovery**: Reduces delays on successful streaks
-- **Request Deduplication**: Prevents duplicate API calls
-- **Smart Caching**: 5-minute request cache with cleanup
-
-### **Batch Processing Intelligence** (rateLimitedApi.js:216-265)
-```javascript
-// Adaptive batch sizing based on error history
-const batchSize = errorCount > 3 ? 1 : 2;        // Single requests if many errors
-const staggerDelay = errorCount > 3 ? 4000 : 2500; // Longer delays if errors
-const batchGap = errorCount > 3 ? 12000 : 8000;    // Longer gaps if errors
-```
-
-**Result**: **87% reduction in API calls** while maintaining data freshness
-
----
-
-## 🔌 **WebSocket Architecture & Real-time Features**
-
-### **Dual WebSocket Server Implementation** (server.js:15-68)
-```javascript
-// Price streaming WebSocket
-const wss = new WebSocket.Server({ noServer: true });
-
-// Indicator streaming WebSocket  
-const indicatorWss = new WebSocket.Server({ noServer: true });
-
-// Manual upgrade handling
-server.on('upgrade', (request, socket, head) => {
-  if (request.url === '/ws/prices') {
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
-    });
-  } else if (request.url === '/ws/indicators') {
-    indicatorWss.handleUpgrade(request, socket, head, (ws) => {
-      indicatorWss.emit('connection', ws, request);
-    });
-  }
-});
-```
-
-### **Indicator Streaming Service** (websocketService.js:209-495)
-**Features**:
-- **Price History Management**: 250-point rolling window per symbol
-- **Technical Indicator Calculations**: RSI (14, 21, 30 periods) + MAs (20, 50, 100, 200)
-- **Differential Broadcasting**: Only significant changes (>2 RSI points, >1% MA change)
-- **Auto-reconnection**: Exponential backoff with jitter
-- **Client Management**: Connection tracking + cleanup
-
-**Update Frequency**: 5-minute intervals with immediate cache serving
-
-### **Real-time Data Flow** (websocketService.js:112-161)
-1. **Binance WebSocket** → 2. **Price History Update** → 3. **Cache Storage** → 4. **Client Broadcast**
-
-**Symbols Streamed**: BTCUSDT, ETHUSDT, SOLUSDT with ticker + kline data
-
----
-
-## 📋 **API Endpoints Reference**
-
-### **Core Data Endpoints**
+### **Market Data:**
 ```bash
-# Price data
-GET /api/v1/btc/price                           # Current Bitcoin price
-GET /api/v1/crypto/multi-analysis               # Multi-asset comprehensive analysis
+# Core endpoints
+GET /api/v1/market-overview/moving-averages     # BTC moving averages
+GET /api/v1/market-overview/liquidity-pulse     # Market liquidity
+GET /api/v1/market-overview/leverage-state      # Leverage analysis
+GET /api/v1/market-overview/futures-basis       # Futures basis
+GET /api/v1/market-overview/rotation-breadth    # Market breadth
+GET /api/v1/market-overview/etf-flows          # ETF flows
 
-# Technical indicators
-GET /api/v1/rsi?symbol=BTCUSDT                  # RSI calculations
-GET /api/v1/funding-rates                       # Perpetual futures funding rates
-GET /api/v1/etf-flows                          # Bitcoin ETF flows
-
-# WebSocket streaming
-WS  /ws/prices                                  # Real-time price updates
-WS  /ws/indicators                              # Technical indicator streaming
+# Legacy endpoints (still supported)
+GET /api/v1/crypto/multi-analysis              # Multi-asset analysis
+GET /api/v1/btc/price                          # Current BTC price
+GET /api/v1/funding-rates                      # Funding rates
 ```
 
-### **Indicator Streaming Endpoints** (NEW)
+### **WebSocket Endpoints:**
 ```bash
-# Streaming control
-GET /api/v1/indicators/stream/status            # Health + connection status
-POST /api/v1/indicators/stream/control          # Start/stop streaming
-
-# Cached data access
-GET /api/v1/indicators/cached                   # All cached indicators
-GET /api/v1/indicators/cached/:symbol           # Symbol-specific cached data
+WS  /ws/prices                                 # Live price streaming
+WS  /ws/indicators                             # Indicator streaming
 ```
 
-### **System Monitoring**
+### **System Monitoring:**
 ```bash
-# Health checks
-GET /health                                     # Basic API health
-GET /health/ready                              # Production readiness
-GET /api/v1/websocket/status                   # WebSocket connection status
-
-# Cache monitoring  
-GET /api/v1/cache/health                       # Cache system health
-GET /api/v1/cache/stats                        # Cache hit rates + golden dataset stats
+GET /health                                    # API health
+GET /api/v1/market-overview/health             # System health check
 ```
 
 ---
 
-## 🔒 **Production Security & Reliability**
+## 🎨 **UI/UX Features**
 
-### **Global Error Handling** (server.js:236-283)
-```javascript
-// Unhandled Promise Rejection Recovery
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Promise Rejection:', reason);
-  // Log but don't crash in production
-});
+### **Terminal Aesthetic:**
+- **Dark cyberpunk theme** with neon accents
+- **Monospace fonts** for technical data
+- **Terminal-style headers** with brackets `[SYSTEM_STATUS]`
+- **Animated indicators** for live data
+- **Color-coded status** (green/yellow/red)
 
-// Graceful Shutdown with Timeout
-process.on('uncaughtException', (error) => {
-  console.log('🚨 Performing graceful shutdown...');
-  
-  // Cleanup: indicator streaming, WebSocket connections
-  indicatorStreamController.shutdown();
-  websocketService.closeAllConnections();
-  
-  server.close(() => process.exit(1));
-  
-  // Force exit timeout (10 seconds)
-  setTimeout(() => process.exit(1), 10000);
-});
-```
+### **Responsive Design:**
+- **Grid layout system** with automatic card sizing
+- **Mobile-responsive** breakpoints
+- **Optimized card heights** with overflow handling
+- **Smooth animations** and transitions
 
-### **Rate Limiting Protection** (middleware/rateLimit.js)
-```javascript
-// Production-ready limits
-general: 100 requests/15 minutes per IP
-intensive: 20 requests/5 minutes  
-auth: 5 attempts/15 minutes
-
-// Trusted proxy configuration for accurate IP detection
-app.set('trust proxy', true);
-```
-
-### **Intelligent Fallback Chain**
-1. **WebSocket Real-time** (preferred)
-2. **Redis Cache** (tier-based TTL)
-3. **Golden Dataset** (persistent filesystem)
-4. **Enhanced Mock Data** (realistic market patterns)
-
-**Zero Downtime Promise**: System continues operating even with complete API failures
+### **Connection Status:**
+- **Real-time sidebar** with system metrics
+- **API connection monitoring** with color indicators
+- **WebSocket health** tracking
+- **Data freshness** timestamps
+- **Performance metrics** display
 
 ---
 
-## 🧪 **Community Testing & Development**
+## 🔧 **Development Commands**
 
-### **Backend Community Testing**
+### **Backend Development:**
 ```bash
-cd backend
-
-# Community test execution
-npm test                    # Community Jest test suite
-npm run test:ci            # Community CI with coverage reports
-npm run test:coverage      # Community coverage analysis
-
-# Community code quality
-npm run lint               # Community ESLint standards
-npm run lint:fix           # Auto-fix for DAO contributors
-npm run format             # Community Prettier formatting
-
-# Community development
-npm run dev                # Community development server
+npm run dev          # Development server with nodemon
+npm test             # Jest test suite  
+npm run test:ci      # CI tests with coverage
+npm run lint         # ESLint code check
+npm run lint:fix     # Auto-fix linting issues
+npm run format       # Prettier formatting
+npm start            # Production server
 ```
 
-### **Frontend Community Testing**
+### **Frontend Development:**
 ```bash
-cd frontend
-
-# Community test execution
-npm test                   # Community Vitest component testing
-npm run test:ui            # Community Vitest UI mode
-
-# Community code quality  
-npm run lint               # Community ESLint with React rules
-npm run build              # Community build verification
-
-# Community development
-npm run dev                # Community development server
+npm run dev          # Vite dev server
+npm run build        # Production build
+npm run preview      # Preview production build  
+npm test             # Vitest component tests
+npm run lint         # ESLint with auto-fix
 ```
 
-### **Community Load Testing**
+### **Production Deployment:**
 ```bash
-# DAO member concurrent simulation (8 active members)
-for i in {1..8}; do curl -w "%{http_code} %{time_total}s\n" \
-  http://localhost:8000/api/v1/crypto/multi-analysis & done
+# Backend (Railway)
+git push origin main  # Auto-deploy to Railway
 
-# Community WebSocket stress testing
-for i in {1..5}; do wscat -c ws://localhost:8000/ws/indicators & done
+# Frontend (Vercel)  
+git push origin main  # Auto-deploy to Vercel
 
-# Community rate limiting verification
-curl -w "%{http_code}\n" -H "X-Forwarded-For: 192.168.1.100" \
-  http://localhost:8000/api/v1/btc/price
+# Health verification
+curl https://website-production-8f8a.up.railway.app/health
+curl https://retaildao-terminal.vercel.app
 ```
 
 ---
 
-## 📈 **Community Performance Achievements**
+## 🛡️ **Security & Reliability**
 
-### **Collaborative API Optimization: 87% Community Success**
-```
-Traditional Approach:     120 API calls/hour per user
-Community Optimized:      15 API calls/hour per user  
-DAO Achievement:         105 calls/hour (87% community savings)
-```
+### **Error Handling:**
+- **Global error boundaries** with graceful degradation
+- **Unhandled promise** rejection recovery  
+- **Graceful shutdown** with connection cleanup
+- **Circuit breakers** for API rate limiting
 
-**Community-Driven Optimization**:
-- **Collaborative Batching**: Community-optimized 2-request batches
-- **Shared Request Pool**: Community request deduplication across members
-- **Community Cache**: Shared 5-minute API response cache
-- **Member WebSocket Streaming**: Real-time updates for all DAO members
+### **Rate Limiting:**
+- **Bottleneck.js** intelligent per-provider limiting
+- **Adaptive backoff** on API errors
+- **Request deduplication** to prevent duplicates
+- **Conservative limits** (45/min CoinGecko, 5/min Alpha Vantage)
 
-### **Community WebSocket Benefits**
-- **Real-time Member Updates**: RSI + MA updates every 5 minutes for all DAO members
-- **Efficient Member Broadcasting**: Only changed values transmitted to community
-- **Community Connection Resilience**: Auto-reconnection with exponential backoff
-- **Shared Calculation Efficiency**: Single calculation, broadcast to all community members
-
-### **Community Performance Metrics** (Transparent Monitoring)
-```javascript
-{
-  "communityCache": {
-    "hitRate": "94.7%",           // Community >90% target achieved
-    "totalRequests": 1247,        // All DAO member requests
-    "redisAvailable": true,       // Community Redis instance
-    "memoryFallback": false       // Community backup system
-  },
-  "communityGoldenDataset": {
-    "totalEntries": 12,           // Community data points
-    "tierBreakdown": {
-      "fresh": 8,                 // Recent community data
-      "stale": 3,                 // Aging community data
-      "archived": 1,              // Historical community data
-      "fallback": 0               // Emergency community fallback
-    }
-  }
-}
-```
+### **Production Features:**
+- **CORS protection** with whitelist
+- **Helmet.js security** headers
+- **Express rate limiting** (100 req/15min per IP)
+- **Trust proxy** configuration for accurate IPs
 
 ---
 
-## 🎨 **Community Experience Features**
+## 📈 **Performance Achievements**
 
-### **Transparent Data Quality for DAO Members**
-- **Real-time Connection Indicators**: Animated (live) vs solid (cached) for community transparency
-- **Community Source Badges**: Color-coded with age timestamps for all members
-- **Quality Scoring**: 0-100% community-validated scoring with explanations
-- **Educational Community Tooltips**: Help DAO members understand data freshness and quality
+### **Optimization Results:**
+- ✅ **87% API call reduction** (120/hr → 15/hr)
+- ✅ **Sub-2 second response times** for all endpoints
+- ✅ **>95% uptime** with multi-tier fallbacks
+- ✅ **Free-tier API compliance** maintained
+- ✅ **Bundle size optimization** (28.60 kB CSS, 141.77 kB vendor)
 
-### **Community Performance Indicators**
-```javascript
-// Community metrics displayed to DAO members
-communityApiOptimization: "87% (15/hr vs 120/hr)"
-communityConnectionHealth: "🟢 Live Community WebSocket"  
-communityDataQuality: "94% (Fresh: 2min ago)"
-communityCacheHitRate: "94.7%"
-activeDaoMembers: "8 active community testers"
-```
+### **Scalability:**
+- ✅ **8-10 concurrent users** with excellent performance
+- ✅ **<100ms WebSocket latency** for real-time updates
+- ✅ **>90% cache hit rate** with intelligent warming
+- ✅ **Zero downtime** during API provider outages
 
-### **Community Theme Preferences**
-- **Dark/Light Mode**: Community-driven theme system with preference detection
-- **Smooth Transitions**: Community-optimized CSS-in-JS transitions
-- **Community Storage**: Persistent theme preferences for DAO members
+### **User Experience:**
+- ✅ **Real-time data updates** every 5 minutes
+- ✅ **Smooth UI animations** with optimized rendering
+- ✅ **Mobile responsive** design
+- ✅ **Accessibility features** with semantic HTML
 
 ---
 
-## 🚨 **Community Troubleshooting Guide**
+## 🐛 **Troubleshooting**
 
-### **Common Issues & Solutions**
+### **Common Issues:**
 
-**WebSocket Connection Drops**:
+**WebSocket Connection Fails:**
 ```bash
-# Check connection status
-curl http://localhost:8000/api/v1/websocket/status
+# Check WebSocket status
+curl https://website-production-8f8a.up.railway.app/health
 
 # Expected response:
-{
-  "isConnected": true,
-  "activeConnections": ["binance"],
-  "clientCount": 3
-}
+{"status": "healthy", "websocket": "connected"}
 ```
 
-**Rate Limiting Debug**:
+**API Rate Limiting:**
 ```bash
-# Monitor rate limiter status
-curl http://localhost:8000/api/v1/rate-limit/status
-
-# Console logs to watch:
-[coingecko] Rate limiting: waiting 5000ms
-[coingecko] Successfully fetched after backoff
-✅ [CoinGecko] Fresh data (vs 🎭 [Mock] fallback)
+# Console logs to monitor:
+✅ [CoinGecko] Successfully fetched BTC data
+🔄 [Rate Limiting] Waiting 5000ms for next request
+🎭 [Mock] Serving fallback data
 ```
 
-**Cache Performance Issues**:
+**Cache Performance:**
 ```bash
-# Check cache health
-curl http://localhost:8000/api/v1/cache/health
+# Check cache metrics
+curl https://website-production-8f8a.up.railway.app/api/v1/market-overview/health
 
-# Golden dataset stats  
-curl http://localhost:8000/api/v1/cache/golden-stats
-
-# Expected >90% hit rate, <5% error rate
+# Expected: >90% hit rate, <5% error rate
 ```
 
-### **Error Pattern Recognition**
+### **Log Patterns:**
 ```
 🟢 Normal Operations:
-✅ [CoinGecko] Successfully fetched BTC data
-📊 Calculated and streamed indicators for BTCUSDT  
-📡 Broadcasted BTCUSDT indicators to 3 clients
+✅ [API] Data fetched successfully
+📊 Streaming indicators to 3 clients
+💾 Cache hit rate: 94.2%
 
-🟡 Rate Limiting (Expected):
-🗓️ [coingecko] Rate limit detected, intelligent backoff: 5000ms
-⏳ [coingecko] Waiting 8000ms between batches
+🟡 Rate Limiting (Expected):  
+🔄 [Rate Limit] Intelligent backoff active
+⏳ Waiting between API batches
 
-🔴 Errors Requiring Attention:
-❌ Max reconnection attempts reached for binance
-❌ Both primary and backup golden datasets failed
-🚨 Performing graceful shutdown due to uncaught exception
+🔴 Errors (Investigate):
+❌ Max reconnection attempts reached  
+🚨 Graceful shutdown initiated
 ```
 
 ---
 
-## 🎯 **Community Achievement Metrics**
+## 🎯 **Project Roadmap**
 
-### **Community Performance Targets ✅**
-- **87% API optimization** achieved through community collaboration (105 calls/hour saved per member)
-- **Sub-2 second response times** for all DAO member requests  
-- **>95% community uptime** with 4-tier community fallback system
-- **Free-tier API compliance** maintained for sustainable community operations
+### **Current Version: v2.0 (Market Overview)**
+- ✅ 6 analytics cards with real-time data
+- ✅ WebSocket streaming architecture  
+- ✅ Intelligent caching system
+- ✅ Production deployment
 
-### **Community Scalability Targets ✅**
-- **8-10 concurrent DAO members** supported with excellent performance during testing phase
-- **<100ms WebSocket latency** for real-time community indicator updates
-- **>90% community cache hit rate** with intelligent warming
-- **Zero data interruptions** for community members during API provider outages
+### **Next Release: v2.1 (Enhanced Features)**
+- 🔄 Additional technical indicators (MACD, Bollinger Bands)
+- 🔄 Historical data charting
+- 🔄 User customization options
+- 🔄 Mobile app responsive improvements
 
-### **Community Developer Experience ✅**
-- **Comprehensive community error handling** with graceful degradation
-- **Transparent real-time monitoring** for community oversight
-- **Clear community logging** with emoji-coded status indicators
-- **Community-ready deployment** with Docker + PM2 support for contributors
-
----
-
-## 📞 **Community Support & Transparent Monitoring**
-
-### **Community Health Monitoring**
-```bash
-# Community health checks
-curl http://localhost:8000/health                    # Community API server health  
-curl http://localhost:8000/health/ready              # Community deployment readiness
-
-# Community service monitoring
-curl http://localhost:8000/api/v1/websocket/status   # Community WebSocket connections
-curl http://localhost:8000/api/v1/indicators/stream/status  # Community indicator streaming
-curl http://localhost:8000/api/v1/cache/health       # Community cache system health
-```
-
-### **Community Log Monitoring Patterns**
-```bash
-# Community successful operations (Green flags)
-✅ [CoinGecko] Community API successful
-📊 Community indicators calculated and streamed  
-🥇 Serving from community golden dataset
-💾 Using community smart cache
-
-# Expected community rate limiting (Yellow flags)  
-🗓️ [Community] Rate limit detected, managing for DAO members
-⏳ Community waiting between batches
-⬇️ Demoted data to stale tier for community
-
-# Critical community issues (Red flags)
-❌ Community API request failed after retries
-🚨 Emergency fallback to community golden dataset
-❌ Both primary and community backup datasets failed
-```
-
-### **Community Performance Monitoring**
-```bash
-# Community metrics to monitor:
-Community Success Rate: >80% for all DAO member operations
-Community Cache Hit Rate: >90% for optimal member performance  
-Community WebSocket Clients: Monitor active DAO member connections
-Community Golden Dataset: Fresh/stale tier distribution for members
-```
-
-### **Community Deployment Commands**
-```bash
-# Community PM2 Management
-npm run deploy              # Deploy community instance with PM2
-npm run logs               # Monitor community logs
-npm run restart            # Restart community services
-npm run stop              # Stop community services
-
-# Community Docker Management  
-npm run docker:build       # Build community container
-npm run docker:run         # Run community container
-docker logs crypto-api     # Monitor community container logs
-```
+### **Future Versions:**
+- 📅 **v3.0**: Multi-asset support (ETH, SOL, etc.)
+- 📅 **v3.1**: Advanced portfolio tracking  
+- 📅 **v3.2**: Social sentiment analysis
+- 📅 **v4.0**: AI-powered trading signals
 
 ---
 
-## 🚀 **Community Testing Readiness Summary**
+## 💡 **Contributing**
 
-**🧪 COMMUNITY TESTING READY** - Ready for key DAO member feedback and iteration
+### **Development Setup:**
+1. **Fork the repository** and clone locally
+2. **Install dependencies** for both frontend and backend
+3. **Configure environment** variables with your API keys
+4. **Run tests** to ensure everything works
+5. **Make changes** and test thoroughly
+6. **Submit pull request** with clear description
 
-- **Community Backend**: Stable dual WebSocket servers with collaborative rate limiting
-- **Community Frontend**: React 18 with real-time WebSocket integration for DAO members  
-- **Community Caching**: 4-tier system with Community Golden Dataset achieving >90% hit rates
-- **DAO API Strategy**: 87% call reduction through community-optimized batching + shared deduplication
-- **Community Error Handling**: Transparent exception management with graceful degradation
-- **Open Monitoring**: Community health endpoints + transparent real-time logging
-- **Member Scalability**: 8-10 concurrent DAO members with sub-2s response times
+### **Code Standards:**
+- **ESLint + Prettier** for consistent formatting
+- **Jest/Vitest** for comprehensive testing
+- **Semantic commits** for clear git history
+- **TypeScript** migration in progress
 
-**Community-Driven Features**:
-- Community-governed zero-downtime fallback systems
-- Persistent Community Golden Dataset for member resilience  
-- Collaborative adaptive rate limiting with transparent error recovery
-- Real-time data quality transparency for all DAO members
-- Community-grade security with member-focused protection
-
-**Next Phase**: 
-- **Key Member Testing**: Gathering real-world feedback from core DAO contributors
-- **Governance Integration**: Preparing for community voting on feature priorities
-- **Iteration Readiness**: Built for rapid community-driven improvements based on member input
+### **Areas for Contribution:**
+- 🎨 **UI/UX improvements** and animations
+- 📊 **Additional technical indicators** and charts
+- 🔧 **Performance optimizations** and caching
+- 🧪 **Test coverage** expansion
+- 📱 **Mobile responsiveness** enhancements
 
 ---
 
-*Built with 🏛️ by the RetailDAO Community - **Decentralized cryptocurrency analytics with transparent governance and collaborative development***
+## 📞 **Support & Community**
+
+### **Getting Help:**
+- 📖 **Documentation**: Check this README and inline comments
+- 🐛 **Issues**: GitHub Issues for bugs and feature requests  
+- 💬 **Discord**: RetailDAO community server
+- 📧 **Email**: Technical support available
+
+### **Community Resources:**
+- **GitHub Repository**: Source code and issue tracking
+- **Discord Server**: Real-time community support
+- **Documentation**: Comprehensive guides and API docs
+- **Blog Posts**: Development updates and tutorials
+
+---
+
+## 📄 **License & Credits**
+
+### **License:**
+MIT License - see LICENSE file for details
+
+### **Credits:**
+- **Built by**: RetailDAO Community
+- **APIs**: CoinGecko, Binance, Alpha Vantage
+- **Hosting**: Railway (backend), Vercel (frontend)
+- **Special Thanks**: All contributors and testers
+
+---
+
+*🚀 **RetailDAO Terminal** - Real-time crypto analytics with professional-grade performance and reliability*
+
+**Live Demo**: https://retaildao-terminal.vercel.app

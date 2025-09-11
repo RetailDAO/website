@@ -1,20 +1,10 @@
-const winston = require('winston');
-
-// Configure logger
-const logger = winston.createLogger({
-  level: 'error',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log' }),
-    new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
-});
+// Simple console logger to match rest of codebase
+const logger = {
+  error: (data) => {
+    const timestamp = new Date().toISOString();
+    console.error(`❌ [${timestamp}] Error:`, JSON.stringify(data, null, 2));
+  }
+};
 
 class AppError extends Error {
   constructor(message, statusCode = 500, isOperational = true) {

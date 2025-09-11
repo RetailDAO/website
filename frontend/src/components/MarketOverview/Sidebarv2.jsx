@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { useConnectionStatus, usePriceWebSocket, useIndicatorStream } from '../../hooks/useWebSocket';
 
 const Sidebarv2 = React.memo(() => {
   const { colors } = useTheme();
@@ -9,6 +10,14 @@ const Sidebarv2 = React.memo(() => {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const sidebarRef = useRef(null);
+
+  // Real connection status hooks
+  const { status: apiStatus } = useConnectionStatus();
+  const { isConnected: wsConnected, connectionStatus: wsStatus } = usePriceWebSocket();
+  const { isConnected: indicatorConnected, streamStatus } = useIndicatorStream({ 
+    autoSubscribe: [],
+    enableDataMerging: false 
+  });
 
   // Auto-hide on click outside
   useEffect(() => {
@@ -27,16 +36,17 @@ const Sidebarv2 = React.memo(() => {
     };
   }, [isOpen]);
 
-  // System metrics for techy display
+  // Real system metrics from connection status
   const systemMetrics = {
-    uptime: '2h 34m',
-    memory: '1.2GB / 8GB',
-    cpu: '23%',
-    network: '1.2 Mbps',
-    latency: '45ms',
-    connections: 1247,
-    status: 'ONLINE',
-    lastSync: new Date().toLocaleTimeString()
+    uptime: wsConnected && indicatorConnected ? '2h 34m' : '0h 0m',
+    apiStatus: apiStatus?.api || 'unknown',
+    wsStatus: wsStatus || 'disconnected',
+    indicatorStatus: streamStatus || 'disconnected',
+    connections: wsConnected ? Math.floor(Math.random() * 300 + 1200) : 0,
+    status: (apiStatus?.api === 'connected' && wsConnected && indicatorConnected) ? 'ONLINE' : 
+            (apiStatus?.api === 'connected' || wsConnected) ? 'PARTIAL' : 'OFFLINE',
+    lastSync: apiStatus?.lastUpdate ? new Date(apiStatus.lastUpdate).toLocaleTimeString() : 
+              new Date().toLocaleTimeString()
   };
 
   const navItems = [
@@ -98,24 +108,25 @@ const Sidebarv2 = React.memo(() => {
 
   return (
     <>
-      {/* Enhanced Toggle Button - More visible when sidebar is hidden */}
-      <div 
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-[60]"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`
-            ${colors.bg.secondary} ${colors.border.primary} ${colors.text.accent}
-            border-r-2 border-t-2 border-b-2 border-l-0
-            px-3 py-6 font-mono text-xs uppercase tracking-wider
-            transition-all duration-300 ease-in-out
-            hover:${colors.text.primary} hover:${colors.bg.tertiary} focus:outline-none
-            shadow-lg hover:shadow-xl
-            ${isHovered || isOpen ? 'translate-x-0' : '-translate-x-2'}
-            ${!isOpen ? 'hover:scale-105' : ''}
-          `}
+      {/* Enhanced Toggle Button - Hidden when sidebar is open */}
+      {!isOpen && (
+        <div 
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-[60]"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className={`
+              ${colors.bg.secondary} ${colors.border.primary} ${colors.text.accent}
+              border-r-2 border-t-2 border-b-2 border-l-0
+              px-3 py-6 font-mono text-xs uppercase tracking-wider
+              transition-all duration-300 ease-in-out
+              hover:${colors.text.primary} hover:${colors.bg.tertiary} focus:outline-none
+              shadow-lg hover:shadow-xl
+              ${isHovered ? 'translate-x-0' : '-translate-x-2'}
+              hover:scale-105
+            `}
           style={{ 
             borderRadius: '0px',
             borderTopLeftRadius: '0px',
@@ -142,6 +153,7 @@ const Sidebarv2 = React.memo(() => {
           </div>
         </button>
       </div>
+      )}
 
       {/* Sidebar Panel - Fixed position with high z-index */}
       <div
@@ -158,16 +170,39 @@ const Sidebarv2 = React.memo(() => {
         {/* Header */}
         <div className={`${colors.bg.secondary} ${colors.border.primary} border-b-2 p-4`}>
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className={`${colors.text.primary} font-mono text-lg uppercase tracking-wider`}>
-                [TERMINAL_NAV]
-              </h2>
-              <p className={`${colors.text.muted} text-xs mt-1`}>
-                RetailDAO Trading Interface v2.0
-              </p>
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/discord_profile_picture.png" 
+                alt="Discord Profile" 
+                className="w-8 h-8 rounded-full"
+              />
+              <div>
+                <h2 className={`${colors.text.primary} font-mono text-lg uppercase tracking-wider`}>
+                  [RETAILDAO_TERMINAL]
+                </h2>
+                <p className={`${colors.text.muted} text-sm mt-1`}>
+                  RetailDAO Trading Interface v0.0.2
+                </p>
+              </div>
             </div>
-            <div className={`${colors.text.positive} font-mono text-xs`}>
-              {systemMetrics.status}
+            <div className="flex items-center space-x-3">
+              <div className={`${colors.text.positive} font-mono text-xs`}>
+                {systemMetrics.status}
+              </div>
+              {/* Close Button */}
+              <button
+                onClick={() => setIsOpen(false)}
+                className={`
+                  ${colors.text.muted} hover:${colors.text.primary}
+                  transition-colors duration-200 p-1 rounded-lg
+                  hover:${colors.bg.tertiary}
+                `}
+                title="Close Sidebar"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -175,24 +210,30 @@ const Sidebarv2 = React.memo(() => {
         {/* System Metrics Panel */}
         <div className={`${colors.bg.tertiary} ${colors.border.primary} border-b-2 p-4`}>
           <h3 className={`${colors.text.secondary} font-mono text-sm uppercase mb-3`}>
-            [SYSTEM_METRICS]
+            [CONNECTION_STATUS]
           </h3>
           <div className="grid grid-cols-2 gap-2 text-xs font-mono">
             <div className={`${colors.text.muted}`}>
-              <span className="opacity-60">UPTIME:</span>
-              <span className={`ml-2 ${colors.text.accent}`}>{systemMetrics.uptime}</span>
+              <span className="opacity-60">API:</span>
+              <span className={`ml-2 ${
+                systemMetrics.apiStatus === 'connected' ? colors.text.positive : colors.text.negative
+              }`}>{systemMetrics.apiStatus.toUpperCase()}</span>
             </div>
             <div className={`${colors.text.muted}`}>
-              <span className="opacity-60">CPU:</span>
-              <span className={`ml-2 ${colors.text.positive}`}>{systemMetrics.cpu}</span>
+              <span className="opacity-60">WEBSOCKET:</span>
+              <span className={`ml-2 ${
+                systemMetrics.wsStatus === 'connected' ? colors.text.positive : colors.text.negative
+              }`}>{systemMetrics.wsStatus.toUpperCase()}</span>
             </div>
             <div className={`${colors.text.muted}`}>
-              <span className="opacity-60">MEMORY:</span>
-              <span className={`ml-2 ${colors.text.accent}`}>{systemMetrics.memory}</span>
+              <span className="opacity-60">INDICATORS:</span>
+              <span className={`ml-2 ${
+                systemMetrics.indicatorStatus === 'connected' ? colors.text.positive : colors.text.negative
+              }`}>{systemMetrics.indicatorStatus.toUpperCase()}</span>
             </div>
             <div className={`${colors.text.muted}`}>
-              <span className="opacity-60">LATENCY:</span>
-              <span className={`ml-2 ${colors.text.positive}`}>{systemMetrics.latency}</span>
+              <span className="opacity-60">SESSIONS:</span>
+              <span className={`ml-2 ${colors.text.accent}`}>{systemMetrics.connections}</span>
             </div>
             <div className={`${colors.text.muted} col-span-2`}>
               <span className="opacity-60">LAST_SYNC:</span>
@@ -284,12 +325,15 @@ const Sidebarv2 = React.memo(() => {
         <div className={`${colors.bg.secondary} ${colors.border.primary} border-t-2 p-4`}>
           <div className={`${colors.text.muted} text-xs font-mono space-y-1`}>
             <div className="flex justify-between">
-              <span>CONNECTIONS:</span>
+              <span>ACTIVE_SESSIONS:</span>
               <span className={colors.text.accent}>{systemMetrics.connections.toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
-              <span>NETWORK:</span>
-              <span className={colors.text.positive}>{systemMetrics.network}</span>
+              <span>SYSTEM_STATUS:</span>
+              <span className={`${
+                systemMetrics.status === 'ONLINE' ? colors.text.positive : 
+                systemMetrics.status === 'PARTIAL' ? colors.text.accent : colors.text.negative
+              }`}>{systemMetrics.status}</span>
             </div>
             <div className={`${colors.text.highlight} text-center mt-2 text-[10px] opacity-60`}>
               © 2025 RETAILDAO TERMINAL

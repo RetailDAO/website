@@ -11,17 +11,19 @@ const CardContainer = React.memo(({
 }) => {
   const { colors } = useTheme();
   
-  // Fixed dimensions to prevent Cumulative Layout Shift
+  // Flexible dimensions that prevent CLS while allowing content to fit
   const sizeClasses = {
     medium: {
       gridColumn: 'span 1',
-      minHeight: '400px',
-      height: '400px'
+      minHeight: '320px',
+      height: 'auto',
+      maxHeight: '500px'
     },
     large: {
       gridColumn: 'span 2',
-      minHeight: '500px', 
-      height: '500px'
+      minHeight: '400px', 
+      height: 'auto',
+      maxHeight: '600px'
     }
   };
   
@@ -39,10 +41,12 @@ const CardContainer = React.memo(({
         ${className}
       `}
       style={{
-        // Fixed dimensions prevent layout shifts
+        // Flexible dimensions prevent layout shifts while allowing content fit
         gridColumn: sizeConfig.gridColumn,
         minHeight: sizeConfig.minHeight,
         height: sizeConfig.height,
+        maxHeight: sizeConfig.maxHeight,
+        overflow: 'hidden',
         // CSS containment for performance
         contain: 'layout style paint',
         // GPU acceleration for smoother animations
@@ -51,7 +55,7 @@ const CardContainer = React.memo(({
       }}
       {...props}
     >
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col overflow-y-auto">
         {children}
       </div>
     </div>

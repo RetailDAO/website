@@ -200,6 +200,7 @@ console.log('📊 Indicator streaming WebSocket server initialized on /ws/indica
 
 // Initialize cache maintenance
 const cacheService = require('./src/services/cache/cacheService');
+const backgroundJobScheduler = require('./src/services/scheduler/backgroundJobs');
 
 // Perform initial cache health check and setup
 (async () => {
@@ -217,6 +218,13 @@ const cacheService = require('./src/services/cache/cacheService');
     }, 30 * 60 * 1000); // 30 minutes
     
     console.log('✅ Cache maintenance system initialized');
+    
+    // Initialize background job scheduler for cache-first strategy
+    console.log('🚀 Starting Market Overview v2 background job scheduler...');
+    backgroundJobScheduler.start();
+    backgroundJobScheduler.startAll();
+    
+    console.log('✅ Background job scheduler initialized - cache-first strategy active');
   } catch (error) {
     console.error('❌ Failed to initialize cache maintenance:', error.message);
   }
@@ -253,6 +261,7 @@ process.on('uncaughtException', (error) => {
   try {
     indicatorStreamController.shutdown();
     websocketService.closeAllConnections();
+    backgroundJobScheduler.stop();
   } catch (shutdownError) {
     console.error('❌ Error during shutdown:', shutdownError);
   }
@@ -276,6 +285,7 @@ process.on('SIGTERM', () => {
   // Shutdown indicator streaming
   indicatorStreamController.shutdown();
   websocketService.closeAllConnections();
+  backgroundJobScheduler.stop();
   
   server.close(() => {
     console.log('Process terminated');
@@ -288,6 +298,7 @@ process.on('SIGINT', () => {
   // Shutdown indicator streaming
   indicatorStreamController.shutdown();
   websocketService.closeAllConnections();
+  backgroundJobScheduler.stop();
   
   process.exit(0);
 });

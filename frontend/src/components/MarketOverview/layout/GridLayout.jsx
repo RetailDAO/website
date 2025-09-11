@@ -1,9 +1,7 @@
 // Performance-optimized grid layout for Market Overview cards
 import React from 'react';
-import { useTheme } from '../../../context/ThemeContext';
 
 const GridLayout = React.memo(({ children, className = '' }) => {
-  const { colors } = useTheme();
   
   return (
     <div 
@@ -17,10 +15,10 @@ const GridLayout = React.memo(({ children, className = '' }) => {
       style={{
         // Optimized height for 6-card hero section fit (2 rows x 3 cols)
         minHeight: '60vh', // Accommodate 2 rows
-        maxHeight: '80vh', // Don't exceed viewport
+        maxHeight: '85vh', // Allow more height for content
         // CSS Grid optimization for 6-card layout
-        gridAutoRows: 'minmax(280px, 320px)', // Fixed row heights
-        gridTemplateRows: 'repeat(2, minmax(280px, 320px))', // 2 rows for 6 cards
+        gridAutoRows: 'minmax(320px, auto)', // Allow cards to grow as needed
+        gridTemplateRows: 'repeat(2, minmax(320px, auto))', // 2 flexible rows
         // Performance optimizations
         contain: 'layout',
         willChange: 'auto'

@@ -57,7 +57,7 @@ const UnderConstruction = ({ featureName, description, estimatedCompletion }) =>
               [SYSTEM_STATUS]
             </h1>
             <div className={`text-sm ${colors.text.secondary}`}>
-              RetailDAO Terminal v2.0.0 • Development Environment
+              RetailDAO Terminal v0.0.2 • Development Environment
             </div>
           </div>
           <button
@@ -140,7 +140,7 @@ const UnderConstruction = ({ featureName, description, estimatedCompletion }) =>
               {/* Terminal Header */}
               <div className={`flex items-center justify-between pb-2 mb-4 border-b ${colors.border.primary}`}>
                 <div className={`${colors.text.accent}`}>
-                  retauldao@terminal:~$
+                  retaildao@terminal:~$
                 </div>
                 <div className="flex space-x-2">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -186,12 +186,12 @@ const UnderConstruction = ({ featureName, description, estimatedCompletion }) =>
             Stay tuned for updates on this exciting new feature!
           </div>
           <div className={`text-xs ${colors.text.muted} font-mono`}>
-            🚀 Building the future of DeFi analytics • RetailDAO Terminal v2.0.0
+            🚀 Building the future of Retail analytics • RetailDAO Terminal v0.0.2
           </div>
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .animate-fade-in {
           animation: fadeIn 0.3s ease-in;
         }
@@ -238,8 +238,8 @@ const UnderConstruction = ({ featureName, description, estimatedCompletion }) =>
 export const OpportunityRadarConstruction = () => (
   <UnderConstruction
     featureName="Opportunity Radar"
-    description="Advanced DeFi opportunity scanning system with real-time yield farming, arbitrage detection, and risk-adjusted return calculations. Will feature automated opportunity ranking and alert system."
-    estimatedCompletion="Q1 2025"
+    description="More details coming soon on this feature."
+    estimatedCompletion="Q4 2025"
   />
 );
 
@@ -255,7 +255,7 @@ export const KOLCallTrackerConstruction = () => (
   <UnderConstruction
     featureName="KOL Call Tracker"
     description="Advanced tracking system for Key Opinion Leader calls and predictions with performance analytics, accuracy scoring, and automated alert system for high-conviction calls."
-    estimatedCompletion="Q2 2025"
+    estimatedCompletion="Q4 2025"
   />
 );
 
@@ -263,7 +263,7 @@ export const TokenomicsDashboardConstruction = () => (
   <UnderConstruction
     featureName="Tokenomics Dashboard"
     description="Deep tokenomics analysis platform featuring supply dynamics, emission schedules, holder distribution, and advanced metrics for token fundamental analysis."
-    estimatedCompletion="Q1 2025"
+    estimatedCompletion="Q4 2025"
   />
 );
 

@@ -2,12 +2,13 @@ const Redis = require('ioredis');
 const config = require('./environment');
 
 const redisConfig = {
-  url: config.REDIS_URL,
+  host: 'localhost',
+  port: 6379,
   retryDelayOnFailover: 100,
   maxRetriesPerRequest: 3,
-  lazyConnect: true,
+  lazyConnect: false, // Connect immediately to detect issues
   keepAlive: 30000,
-  connectTimeout: 10000,
+  connectTimeout: 5000,
   commandTimeout: 5000,
   reconnectOnError: (err) => {
     const targetError = "READONLY";
@@ -17,8 +18,7 @@ const redisConfig = {
     return false;
   },
   retryDelayOnClusterDown: 300,
-  enableReadyCheck: false,
-  maxRetriesPerRequest: null,
+  enableReadyCheck: true, // Enable ready check for proper connection detection
   tls: config.REDIS_URL && config.REDIS_URL.includes('rediss://') ? {} : null
 };
 
@@ -27,8 +27,14 @@ let redisClient = null;
 const createRedisConnection = () => {
   if (!redisClient) {
     // Check if Redis URL is properly configured
-    if (!config.REDIS_URL || config.REDIS_URL === 'redis://localhost:6379') {
-      console.log('🔶 Redis URL not configured for production - using fallback mock cache');
+    if (!config.REDIS_URL) {
+      console.log('🔶 Redis URL not configured - using fallback mock cache');
+      return null;
+    }
+    
+    // In production, don't allow localhost Redis (security)
+    if (config.NODE_ENV === 'production' && config.REDIS_URL === 'redis://localhost:6379') {
+      console.log('🔶 Redis localhost not allowed in production - using fallback mock cache');
       return null;
     }
 

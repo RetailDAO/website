@@ -28,20 +28,20 @@ const ErrorState = ({ colors, error, onRetry }) => (
 );
 
 const LoadingState = ({ colors }) => (
-  <div className="h-full flex flex-col p-4 animate-pulse" style={{ minHeight: '280px', maxHeight: '320px' }}>
-    <div className="flex justify-between items-center mb-4">
+  <div className="h-full flex flex-col animate-pulse">
+    <div className="flex justify-between items-center mb-2">
       <div>
-        <div className={`h-4 w-32 rounded mb-2 ${colors.bg.tertiary}`}></div>
-        <div className={`h-3 w-24 rounded ${colors.bg.tertiary}`}></div>
+        <div className={`h-4 w-28 rounded mb-1 ${colors.bg.tertiary}`}></div>
+        <div className={`h-3 w-20 rounded ${colors.bg.tertiary}`}></div>
       </div>
-      <div className={`h-6 w-20 rounded ${colors.bg.tertiary}`}></div>
+      <div className={`h-5 w-16 rounded ${colors.bg.tertiary}`}></div>
     </div>
     <div className="flex-1 flex flex-col items-center justify-center">
-      <div className={`h-12 w-32 rounded mb-4 ${colors.bg.tertiary}`}></div>
-      <div className={`h-16 w-full rounded mb-4 ${colors.bg.tertiary}`}></div>
-      <div className="grid grid-cols-2 gap-4 w-full px-2">
-        <div className={`h-8 w-full rounded ${colors.bg.tertiary}`}></div>
-        <div className={`h-8 w-full rounded ${colors.bg.tertiary}`}></div>
+      <div className={`h-10 w-28 rounded mb-3 ${colors.bg.tertiary}`}></div>
+      <div className={`h-12 w-full rounded mb-3 ${colors.bg.tertiary}`}></div>
+      <div className="grid grid-cols-2 gap-3 w-full px-2">
+        <div className={`h-6 w-full rounded ${colors.bg.tertiary}`}></div>
+        <div className={`h-6 w-full rounded ${colors.bg.tertiary}`}></div>
       </div>
     </div>
   </div>
@@ -145,19 +145,19 @@ const FuturesBasisCard = React.memo(() => {
   }
 
   return (
-    <div className="h-full flex flex-col p-4" style={{ minHeight: '280px', maxHeight: '320px' }}>
-      {/* Terminal-style header - compact */}
-      <div className="flex justify-between items-center mb-4">
+    <div className="h-full flex flex-col">
+      {/* Compact Header */}
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h3 className={`text-sm md:text-base font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [FUTURES_BASIS]
           </h3>
           <p className={`text-xs ${colors.text.secondary} mt-1`}>
-            3-Month Futures Premium
+            3-Month Premium
           </p>
         </div>
         <div className={`
-          flex items-center space-x-2 px-3 py-1 text-xs font-mono uppercase tracking-wider
+          px-2 py-1 text-xs font-mono uppercase tracking-wider
           ${colors.bg.tertiary} ${colors.border.primary} border-0
           ${regimeConfig.color}
         `} style={{borderRadius: '0px'}}>
@@ -165,11 +165,11 @@ const FuturesBasisCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        {/* Basis Display */}
-        <div className="text-center mb-4">
-          <div className={`text-3xl font-bold mb-2 ${colors.text.primary}`}>
+      {/* Compact Main Content */}
+      <div className="flex-1 flex flex-col items-center min-h-0">
+        {/* Compact Basis Display */}
+        <div className="text-center mb-2">
+          <div className={`text-2xl font-bold mb-1 ${colors.text.primary}`}>
             {annualizedBasis > 0 ? '+' : ''}{annualizedBasis.toFixed(2)}%
           </div>
           <div className={`text-xs ${colors.text.secondary}`}>
@@ -177,22 +177,21 @@ const FuturesBasisCard = React.memo(() => {
           </div>
         </div>
         
-        {/* Regime Indicator */}
+        {/* Compact Regime Indicator */}
         <div className={`
-          px-4 py-2 text-center mb-4 border-2
+          px-2 py-1 text-center mb-3 border
           ${regimeConfig.bg} ${regimeConfig.border} ${regimeConfig.color}
         `} style={{ borderRadius: '0px' }}>
-          <div className="flex items-center justify-center space-x-2">
-            <span className="text-lg">{regimeConfig.icon}</span>
+          <div className="flex items-center justify-center space-x-1">
+            <span className="text-sm">{regimeConfig.icon}</span>
             <div>
-              <div className="font-semibold text-sm">{regimeConfig.label}</div>
-              <div className="text-xs opacity-80">{regimeConfig.description}</div>
+              <div className="font-semibold text-xs">{regimeConfig.label}</div>
             </div>
           </div>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-4 w-full px-2">
+        {/* Compact Metrics Grid */}
+        <div className="grid grid-cols-2 gap-3 w-full px-2 mb-2">
           <div className="text-center">
             <div className={`text-sm font-mono ${colors.text.primary}`}>
               ${spotPrice.toLocaleString()}
@@ -211,9 +210,14 @@ const FuturesBasisCard = React.memo(() => {
           </div>
         </div>
 
-        {/* Expiry Info */}
-        <div className={`mt-4 text-xs ${colors.text.muted} text-center`}>
-          Expires in {daysToExpiry} days
+        {/* Compact Description & Expiry */}
+        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} rounded-lg`}>
+          <div className={`text-xs ${colors.text.primary} text-center mb-1`}>
+            {regimeConfig.description}
+          </div>
+          <div className={`text-xs ${colors.text.muted} text-center`}>
+            Expires in {daysToExpiry} days
+          </div>
         </div>
       </div>
 

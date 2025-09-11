@@ -59,29 +59,29 @@ const SimpleGauge = React.memo(({ percentage, config, colors }) => {
   const gaugeAngle = (percentage / 100) * 180; // 0-180 degrees
   
   return (
-    <div className="relative w-24 h-12 mx-auto mb-2">
-      <svg width="96" height="48" className="transform">
+    <div className="relative w-20 h-10 mx-auto">
+      <svg width="80" height="40" className="transform">
         {/* Background arc */}
         <path
-          d="M 8 40 A 32 32 0 0 1 88 40"
+          d="M 6 32 A 26 26 0 0 1 74 32"
           fill="none"
           stroke={colors.border.secondary.replace('border-', '#')}
-          strokeWidth="4"
+          strokeWidth="3"
         />
         {/* Progress arc */}
         <path
-          d="M 8 40 A 32 32 0 0 1 88 40"
+          d="M 6 32 A 26 26 0 0 1 74 32"
           fill="none"
           stroke={config.color.replace('text-', '#')}
-          strokeWidth="4"
-          strokeDasharray={`${(percentage / 100) * 100} 100`}
+          strokeWidth="3"
+          strokeDasharray={`${(percentage / 100) * 82} 82`}
           className="transition-all duration-500"
         />
         {/* Pointer */}
         <circle
-          cx={48 + 32 * Math.cos((180 - gaugeAngle) * Math.PI / 180)}
-          cy={40 - 32 * Math.sin((180 - gaugeAngle) * Math.PI / 180)}
-          r="3"
+          cx={40 + 26 * Math.cos((180 - gaugeAngle) * Math.PI / 180)}
+          cy={32 - 26 * Math.sin((180 - gaugeAngle) * Math.PI / 180)}
+          r="2"
           fill={config.color.replace('text-', '#')}
           className="transition-all duration-500"
         />
@@ -105,19 +105,19 @@ const RotationBreadthCard = React.memo(() => {
   }, [data.category, colors]);
 
   return (
-    <div className="h-full flex flex-col p-4" style={{ minHeight: '280px', maxHeight: '320px' }}>
-      {/* Terminal-style header - compact */}
-      <div className="flex justify-between items-center mb-4">
+    <div className="h-full flex flex-col">
+      {/* Compact Header */}
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h3 className={`text-sm md:text-base font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [ROTATION_BREADTH]
           </h3>
           <p className={`text-xs ${colors.text.secondary} mt-1`}>
-            {data.totalAnalyzed} Coins vs BTC (30D)
+            {data.totalAnalyzed} Coins vs BTC
           </p>
         </div>
         <div className={`
-          flex items-center space-x-2 px-3 py-1 text-xs font-mono uppercase tracking-wider
+          px-2 py-1 text-xs font-mono uppercase tracking-wider
           ${colors.bg.tertiary} ${colors.border.primary} border-0
           ${categoryConfig.color}
         `} style={{borderRadius: '0px'}}>
@@ -125,14 +125,16 @@ const RotationBreadthCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        {/* Gauge Display */}
-        <SimpleGauge percentage={data.percentage} config={categoryConfig} colors={colors} />
+      {/* Compact Main Content */}
+      <div className="flex-1 flex flex-col items-center min-h-0">
+        {/* Smaller Gauge Display */}
+        <div className="mb-1">
+          <SimpleGauge percentage={data.percentage} config={categoryConfig} colors={colors} />
+        </div>
         
-        {/* Percentage Display */}
-        <div className="text-center mb-3">
-          <div className={`text-2xl font-bold ${colors.text.primary}`}>
+        {/* Compact Percentage Display */}
+        <div className="text-center mb-2">
+          <div className={`text-xl font-bold ${colors.text.primary}`}>
             {data.percentage}%
           </div>
           <div className={`text-xs ${colors.text.secondary}`}>
@@ -140,23 +142,22 @@ const RotationBreadthCard = React.memo(() => {
           </div>
         </div>
 
-        {/* Category Badge */}
+        {/* Compact Category Badge */}
         <div className={`
-          px-3 py-1 text-center mb-4 border
+          px-2 py-1 text-center mb-2 border
           ${categoryConfig.bg} ${categoryConfig.border} ${categoryConfig.color}
         `} style={{ borderRadius: '0px' }}>
-          <div className="text-sm font-semibold">{categoryConfig.label}</div>
-          <div className="text-xs opacity-80">{categoryConfig.description}</div>
+          <div className="text-xs font-semibold">{categoryConfig.label}</div>
         </div>
 
-        {/* Top Performers */}
-        <div className="w-full">
-          <div className={`text-xs ${colors.text.muted} uppercase tracking-wide mb-2 text-center`}>
+        {/* Compact Top Performers */}
+        <div className="w-full mt-auto">
+          <div className={`text-xs ${colors.text.muted} uppercase tracking-wide mb-1 text-center`}>
             Top Performers
           </div>
           <div className="grid grid-cols-2 gap-1 text-xs">
-            {data.topPerformers.map((coin, index) => (
-              <div key={coin.symbol} className="flex justify-between items-center p-1">
+            {data.topPerformers.slice(0, 4).map((coin) => (
+              <div key={coin.symbol} className="flex justify-between items-center px-1 py-0.5">
                 <span className={`font-mono ${colors.text.secondary}`}>{coin.symbol}</span>
                 <span className={`font-mono ${colors.text.positive}`}>{coin.performance}%</span>
               </div>

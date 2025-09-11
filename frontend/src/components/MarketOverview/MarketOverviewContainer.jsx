@@ -84,28 +84,27 @@ const MarketOverviewContainer = React.memo(() => {
     }
   ], []);
 
-  // Progressive loading with intersection observer
+  // Cache-first loading: Load all cards immediately since data is pre-cached
+  React.useEffect(() => {
+    // Load all cards immediately for cache-first performance
+    const allCardIds = cardConfigs.map(config => config.id);
+    console.log('🚀 Cache-first: Loading all cards immediately', allCardIds);
+    setVisibleCards(new Set(allCardIds));
+    
+    // Track loading performance for all cards
+    const loadStart = performance.now();
+    const metrics = {};
+    allCardIds.forEach(cardId => {
+      metrics[cardId] = { loadStart };
+    });
+    setPerformanceMetrics(metrics);
+  }, [cardConfigs]);
+
+  // Progressive loading with intersection observer (DISABLED FOR CACHE-FIRST)
   const { ref: containerRef } = useIntersectionObserver({
     threshold: 0.1,
-    rootMargin: '100px', // Start loading before fully visible
-    onIntersect: (entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const cardId = entry.target.dataset.cardId;
-          if (cardId && !visibleCards.has(cardId)) {
-            console.log(`🚀 Loading card: ${cardId}`);
-            setVisibleCards(prev => new Set([...prev, cardId]));
-            
-            // Track loading performance
-            const loadStart = performance.now();
-            setPerformanceMetrics(prev => ({
-              ...prev,
-              [cardId]: { loadStart }
-            }));
-          }
-        }
-      });
-    }
+    rootMargin: '100px',
+    onIntersect: () => {} // Disabled since we load everything immediately
   });
 
   return (
@@ -179,7 +178,7 @@ const MarketOverviewContainer = React.memo(() => {
         <GridLayout>
           {cardConfigs
             .sort((a, b) => a.priority - b.priority) // Load by priority order
-            .map(({ id, component: Component, skeleton: Skeleton, size, priority }) => (
+            .map(({ id, component: Component, skeleton: Skeleton, size }) => (
               <CardContainer 
                 key={id}
                 size={size}
@@ -189,7 +188,7 @@ const MarketOverviewContainer = React.memo(() => {
                   // Optimized height for hero section fit
                   minHeight: '280px',
                   maxHeight: '320px',
-                  borderRadius: '0px' // Sharp corners for terminal aesthetic
+                  borderRadius: '12px' // Modern rounded corners
                 }}
               >
                 {visibleCards.has(id) ? (
@@ -207,7 +206,7 @@ const MarketOverviewContainer = React.memo(() => {
 
       {/* Terminal-style development performance panel */}
       {process.env.NODE_ENV === 'development' && (
-        <div className={`mt-8 mx-6 p-6 ${colors.bg.secondary} ${colors.border.primary} border-0`} style={{borderRadius: '0px'}}>
+        <div className={`mt-8 mx-6 p-6 ${colors.bg.secondary} ${colors.border.primary} border-0 rounded-xl`}>
           <h3 className={`text-lg font-mono uppercase tracking-wider ${colors.text.primary} mb-4`}>
             [SYSTEM_PERFORMANCE_METRICS]
           </h3>

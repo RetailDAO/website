@@ -56,14 +56,14 @@ const getStateConfig = (state, colors) => {
 // Traffic Light Component with terminal styling
 const TrafficLight = React.memo(({ state, colors, size = 'md' }) => {
   const stateConfig = getStateConfig(state, colors);
-  const sizeClass = size === 'lg' ? 'text-5xl p-3' : 'text-4xl p-2';
+  const sizeClass = size === 'lg' ? 'text-4xl p-2' : 'text-2xl p-1';
   
   return (
     <div className={`
-      flex items-center justify-center rounded-none
-      ${stateConfig.bgClass} ${sizeClass} mb-4
-      border-2 ${stateConfig.border}
-    `} style={{ borderRadius: '0px' }}>
+      flex items-center justify-center rounded-lg
+      ${stateConfig.bgClass} ${sizeClass}
+      border ${stateConfig.border}
+    `} style={{ borderRadius: '8px' }}>
       <div className="text-center">
         {stateConfig.icon}
       </div>
@@ -148,43 +148,43 @@ const StateOfLeverageCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Terminal-style header - compact */}
-      <div className="flex justify-between items-center mb-4">
+      {/* Compact Header */}
+      <div className="flex justify-between items-center mb-2">
         <div>
-          <h3 className={`text-sm md:text-base font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [STATE_OF_LEVERAGE]
           </h3>
-          <div className="flex items-center space-x-2 mt-2">
-            <StatusIndicator 
-              state={data.state} 
-              stateLabel={data.stateLabel} 
-              colors={colors} 
-            />
-            {isStale && (
-              <span className={`text-xs font-mono ${colors.text.accent}`} title="Data refresh in progress">
-                [REFRESHING...]
-              </span>
-            )}
-          </div>
+        </div>
+        <div className="flex items-center space-x-1">
+          <StatusIndicator 
+            state={data.state} 
+            stateLabel={data.stateLabel} 
+            colors={colors} 
+          />
+          {isStale && (
+            <span className={`text-xs font-mono ${colors.text.accent}`} title="Data refresh in progress">
+              [REF...]
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Traffic Light Display */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <TrafficLight state={data.state} colors={colors} />
+      {/* Compact Content */}
+      <div className="flex-1 flex flex-col items-center min-h-0">
+        {/* Smaller Traffic Light */}
+        <div className="mb-2">
+          <TrafficLight state={data.state} colors={colors} size="md" />
+        </div>
         
-        {/* State Label and Description - compact */}
-        <div className="text-center mb-4">
-          <div className={`text-base font-semibold ${stateConfig.color} mb-1`}>
+        {/* Compact State Label */}
+        <div className="text-center mb-2">
+          <div className={`text-sm font-semibold ${stateConfig.color}`}>
             {data.stateLabel.toUpperCase()}
-          </div>
-          <div className={`text-xs text-center px-2 leading-snug ${colors.text.secondary}`}>
-            {data.description}
           </div>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-4 w-full px-4">
+        {/* Compact Metrics Grid */}
+        <div className="grid grid-cols-2 gap-3 w-full px-2 mb-2">
           <MetricDisplay 
             label="OI Percentile" 
             value={`${data.score.oi}%`}
@@ -197,17 +197,17 @@ const StateOfLeverageCard = React.memo(() => {
           />
         </div>
 
-        {/* Analysis Box */}
-        <div className={`mt-6 p-4 w-full mx-4 ${colors.bg.tertiary} border ${colors.border.primary}`} 
+        {/* Compact Analysis Box */}
+        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} border ${colors.border.primary}`} 
              style={{ borderRadius: '0px' }}>
-          <div className={`text-xs font-medium ${colors.text.secondary} mb-2 uppercase tracking-wide`}>
+          <div className={`text-xs font-medium ${colors.text.secondary} mb-1 uppercase tracking-wide`}>
             Analysis
           </div>
-          <div className={`text-sm ${colors.text.primary} mb-1`}>
+          <div className={`text-sm ${colors.text.primary}`}>
             {data.analysis.sentiment}
           </div>
-          <div className={`text-xs ${colors.text.muted}`}>
-            {data.analysis.recommendation}
+          <div className={`text-xs ${colors.text.muted} leading-tight`}>
+            {data.description}
           </div>
         </div>
       </div>

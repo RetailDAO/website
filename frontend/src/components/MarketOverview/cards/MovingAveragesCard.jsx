@@ -1,8 +1,150 @@
 // Performance-optimized Moving Averages card for Market Overview v2
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
+import { usePriceWebSocket } from '../../../hooks/useWebSocket';
+
+// Crypto configuration for toggle functionality
+const CRYPTO_CONFIG = {
+  BTC: { 
+    name: 'Bitcoin', 
+    symbol: 'BTC',
+    color: '#F7931A',
+    bgColor: 'bg-orange-500/20',
+    textColor: 'text-orange-400',
+    borderColor: 'border-orange-500/30'
+  },
+  ETH: { 
+    name: 'Ethereum', 
+    symbol: 'ETH',
+    color: '#627EEA',
+    bgColor: 'bg-blue-500/20',
+    textColor: 'text-blue-400',
+    borderColor: 'border-blue-500/30'
+  },
+  SOL: { 
+    name: 'Solana', 
+    symbol: 'SOL',
+    color: '#9945FF',
+    bgColor: 'bg-purple-500/20',
+    textColor: 'text-purple-400',
+    borderColor: 'border-purple-500/30'
+  }
+};
+
+// Crypto Selector Component
+const CryptoSelector = React.memo(({ selected, onChange, liveData, colors }) => {
+  return (
+    <div className="flex space-x-1 mb-2">
+      {Object.entries(CRYPTO_CONFIG).map(([crypto, config]) => {
+        const isSelected = selected === crypto;
+        const hasLiveData = liveData[crypto]?.price !== null;
+        
+        return (
+          <button
+            key={crypto}
+            onClick={() => onChange(crypto)}
+            className={`
+              relative px-2 py-1 text-xs font-mono uppercase tracking-wider
+              border rounded transition-all duration-200
+              ${isSelected 
+                ? `${config.bgColor} ${config.textColor} ${config.borderColor} border-2` 
+                : `${colors.bg.tertiary} ${colors.text.secondary} ${colors.border.primary} border hover:${colors.border.secondary}`
+              }
+            `}
+            title={`Switch to ${config.name} price data`}
+          >
+            <div className="flex items-center space-x-1">
+              <span>{crypto}</span>
+              {hasLiveData && (
+                <div className={`w-1 h-1 rounded-full ${isSelected ? 'bg-current' : 'bg-green-400'} animate-pulse`}></div>
+              )}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+});
+
+// Price Display Component for live crypto prices
+const PriceDisplay = React.memo(({ priceData, config, isConnected, colors }) => {
+  if (!priceData) {
+    return (
+      <div className={`text-center ${colors.text.secondary} py-4`}>
+        <div className="text-base">No price data available</div>
+        <div className="text-sm">Connecting to live feed...</div>
+      </div>
+    );
+  }
+
+  const formatVolume = (volume) => {
+    if (!volume) return 'N/A';
+    if (volume >= 1e9) return `$${(volume / 1e9).toFixed(1)}B`;
+    if (volume >= 1e6) return `$${(volume / 1e6).toFixed(1)}M`;
+    return `$${(volume / 1e3).toFixed(1)}K`;
+  };
+
+  /*
+  const getTimeSince = (lastUpdate) => {
+    if (!lastUpdate) return null;
+    const seconds = Math.floor((new Date() - new Date(lastUpdate)) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    return `${Math.floor(seconds / 3600)}h ago`;
+  };
+  */
+
+  return (
+    <div className="space-y-1">
+      {/* Main Price - Compact */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className={`text-lg font-bold ${colors.text.primary}`}>
+            ${priceData.price.toLocaleString()}
+          </div>
+          <div className={`text-xs ${colors.text.secondary} flex items-center space-x-1`}>
+            <span>{config.name}</span>
+            {priceData.isLive && isConnected && (
+              <>
+                <div className={`w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse`}></div>
+                <span className="text-green-400">LIVE</span>
+              </>
+            )}
+          </div>
+        </div>
+        
+        {/* Compact source indicator */}
+        <div className="text-right">
+          <div className={`text-xs ${colors.text.muted}`}>
+            {priceData.source === 'api' ? '📊' : '🔌'}
+          </div>
+        </div>
+      </div>
+
+      {/* 24h Change and Volume - Single line */}
+      {(priceData.change24h !== null || priceData.volume24h) && (
+        <div className="flex items-center justify-between text-xs">
+          {priceData.change24h !== null && (
+            <div className={`flex items-center space-x-1 ${
+              priceData.change24h >= 0 ? colors.text.positive : colors.text.negative
+            }`}>
+              <span>{priceData.change24h >= 0 ? '↗' : '↘'}</span>
+              <span>{priceData.change24h >= 0 ? '+' : ''}{priceData.change24h.toFixed(2)}%</span>
+            </div>
+          )}
+          
+          {priceData.volume24h && (
+            <div className={`text-xs ${colors.text.secondary}`}>
+              Vol: {formatVolume(priceData.volume24h)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
 
 // Optimized API service
 const fetchMovingAverages = async () => {
@@ -70,12 +212,11 @@ const RegimeIndicator = React.memo(({ regime, colors }) => {
   
   return (
     <div className={`
-      flex items-center space-x-2 px-3 py-1 text-sm font-mono uppercase tracking-wider
+      flex items-center space-x-1 px-2 py-0.5 text-xs font-mono uppercase tracking-wider
       ${colors.bg.tertiary} ${colors.border.primary} border-0
       ${isBull ? colors.text.positive : colors.text.negative}
     `} style={{borderRadius: '0px'}}>
       <span>{isBull ? '[BULL]' : '[BEAR]'}</span>
-      <span className={colors.text.muted}>REGIME</span>
     </div>
   );
 });
@@ -85,14 +226,12 @@ const MARow = React.memo(({ label, value, deviation, status, colors }) => {
   const statusConfig = getStatusConfig(status, colors);
   
   return (
-    <div className="flex justify-between items-center py-2">
-      <div className="flex items-center space-x-2">
-        <span className={`text-sm font-medium ${colors.text.secondary}`}>
-          {label}
-        </span>
-      </div>
+    <div className="flex justify-between items-center py-1">
+      <span className={`text-sm font-medium ${colors.text.secondary}`}>
+        {label}
+      </span>
       
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2">
         <span className={`text-sm font-mono ${colors.text.primary}`}>
           ${value.toLocaleString()}
         </span>
@@ -104,12 +243,12 @@ const MARow = React.memo(({ label, value, deviation, status, colors }) => {
           {status && (
             <span 
               className={`
-                px-2 py-1 rounded-full text-xs font-medium
+                px-1.5 py-0.5 rounded text-xs font-medium
                 ${statusConfig.color} ${statusConfig.bg} ${statusConfig.border} border
               `}
               title={`Price is ${Math.abs(deviation)}% ${deviation > 0 ? 'above' : 'below'} ${label}`}
             >
-              {statusConfig.icon} {status}
+              {statusConfig.icon}
             </span>
           )}
         </div>
@@ -124,6 +263,12 @@ const MovingAveragesCard = React.memo(() => {
   // Performance tracking
   usePerformanceTracking('MovingAveragesCard');
   
+  // Crypto selection state
+  const [selectedCrypto, setSelectedCrypto] = useState('BTC');
+  
+  // WebSocket price data
+  const { prices: liveData, isConnected } = usePriceWebSocket();
+  
   // Optimized data fetching with intelligent caching
   const { data, isLoading, error, isStale } = useQuery({
     queryKey: ['moving-averages'],
@@ -134,9 +279,38 @@ const MovingAveragesCard = React.memo(() => {
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
+  
+  // Get current price data based on selected crypto
+  const currentPriceData = useMemo(() => {
+    const livePrice = liveData[selectedCrypto];
+    const btcPrice = data?.currentPrice; // BTC price from MA API
+    
+    if (selectedCrypto === 'BTC' && btcPrice) {
+      // For BTC, use API price as primary, WebSocket as supplementary
+      return {
+        price: btcPrice,
+        change24h: livePrice?.change24h || null,
+        volume24h: livePrice?.volume24h || null,
+        source: 'api',
+        lastUpdate: livePrice?.lastUpdate || null,
+        isLive: !!livePrice?.lastUpdate
+      };
+    } else if (livePrice?.price) {
+      // For ETH/SOL, use WebSocket data
+      return {
+        price: livePrice.price,
+        change24h: livePrice.change24h,
+        volume24h: livePrice.volume24h,
+        source: 'websocket',
+        lastUpdate: livePrice.lastUpdate,
+        isLive: true
+      };
+    }
+    
+    return null;
+  }, [selectedCrypto, liveData, data?.currentPrice]);
 
-  // Memoize price change calculation for performance
-  const priceChange = useMemo(() => {
+  /*const priceChange = useMemo(() => {
     if (!data) return null;
     
     const change = data.ma50.deviation;
@@ -145,7 +319,7 @@ const MovingAveragesCard = React.memo(() => {
       isPositive: change > 0,
       magnitude: Math.abs(change)
     };
-  }, [data?.ma50.deviation]);
+  }, [data?.ma50.deviation]);*/
 
   // Loading state
   if (isLoading) {
@@ -173,35 +347,56 @@ const MovingAveragesCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Terminal-style header with regime indicator - compact */}
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h3 className={`text-sm md:text-base font-mono uppercase tracking-wider ${colors.text.primary}`}>
-            [MOVING_AVERAGES]
-          </h3>
-          <div className="flex items-center space-x-2 mt-2">
-            <RegimeIndicator regime={data.ma200.regime} colors={colors} />
-            {isStale && (
-              <span className={`text-xs font-mono ${colors.text.accent}`} title="Data refresh in progress">
-                [REFRESHING...]
-              </span>
-            )}
-          </div>
+      {/* Compact Header */}
+      <div className="flex justify-between items-center mb-2">
+        <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          [MOVING_AVERAGES]
+        </h3>
+        <div className="flex items-center space-x-1">
+          <RegimeIndicator regime={data.ma200.regime} colors={colors} />
+          {isStale && (
+            <span className={`text-xs font-mono ${colors.text.accent}`} title="Data refresh in progress">
+              [REF...]
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Current Price Display - compact */}
-      <div className="mb-4">
-        <div className={`text-xl md:text-2xl font-bold ${colors.text.primary}`}>
-          ${data.currentPrice.toLocaleString()}
+      {/* SECTION 1: Live Prices (Compact) */}
+      <div className={`mb-2 p-2 rounded-lg border ${colors.bg.tertiary} ${colors.border.primary}`}>
+        <div className="flex justify-between items-center mb-1">
+          <span className={`text-xs font-mono uppercase tracking-wider ${colors.text.secondary}`}>
+            📊 LIVE PRICES
+          </span>
+          {isConnected && (
+            <div className="flex items-center space-x-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div>
+              <span className={`text-xs ${colors.text.positive}`}>CONN</span>
+            </div>
+          )}
         </div>
-        <div className={`text-xs ${colors.text.secondary}`}>
-          Current BTC Price
-        </div>
+        
+        <CryptoSelector 
+          selected={selectedCrypto} 
+          onChange={setSelectedCrypto} 
+          liveData={liveData}
+          colors={colors}
+        />
+        
+        <PriceDisplay 
+          priceData={currentPriceData}
+          config={CRYPTO_CONFIG[selectedCrypto]}
+          isConnected={isConnected}
+          colors={colors}
+        />
       </div>
 
-      {/* Moving Averages Data */}
-      <div className="flex-1">
+      {/* SECTION 2: BTC Moving Averages (Compact) */}
+      <div className="flex-1 min-h-0">
+        <div className={`text-xs font-mono uppercase tracking-wider ${colors.text.secondary} mb-1`}>
+          🔍 BTC MOVING AVERAGES
+        </div>
+        
         <div className="space-y-1">
           <MARow
             label="50D MA"
@@ -211,39 +406,41 @@ const MovingAveragesCard = React.memo(() => {
             colors={colors}
           />
           
-          <div className={`border-t ${colors.border.primary} my-2`}></div>
+          <div className={`border-t ${colors.border.primary} my-1`}></div>
           
           <MARow
             label="200D MA"  
             value={data.ma200.value}
             deviation={data.ma200.deviation}
-            status={null} // 200D shows regime instead
+            status={null}
             colors={colors}
           />
         </div>
 
-        {/* Analysis Summary */}
-        <div className={`mt-4 p-3 rounded-lg ${colors.bg.tertiary}`}>
+        {/* Compact Analysis Summary */}
+        <div className={`mt-2 p-2 rounded-lg ${colors.bg.tertiary}`}>
           <div className={`text-xs font-medium ${colors.text.secondary} mb-1`}>
-            Analysis
+            BTC Analysis
           </div>
           <div className={`text-sm ${colors.text.primary}`}>
             {data.analysis.pricePosition}
           </div>
           
-          {/* Signals */}
-          <div className="flex flex-wrap gap-1 mt-2">
-            {data.analysis.signals.goldenCross && (
-              <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                ✨ Golden Cross
-              </span>
-            )}
-            {data.analysis.signals.deathCross && (
-              <span className="text-xs bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-2 py-1 rounded">
-                ☠️ Death Cross
-              </span>
-            )}
-          </div>
+          {/* Compact Signals */}
+          {(data.analysis.signals.goldenCross || data.analysis.signals.deathCross) && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {data.analysis.signals.goldenCross && (
+                <span className="text-xs bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
+                  ✨ Golden
+                </span>
+              )}
+              {data.analysis.signals.deathCross && (
+                <span className="text-xs bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded">
+                  ☠️ Death
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -262,6 +459,8 @@ const MovingAveragesCard = React.memo(() => {
 // Display names for better debugging
 RegimeIndicator.displayName = 'RegimeIndicator';
 MARow.displayName = 'MARow';
+CryptoSelector.displayName = 'CryptoSelector';
+PriceDisplay.displayName = 'PriceDisplay';
 MovingAveragesCard.displayName = 'MovingAveragesCard';
 
 export default MovingAveragesCard;
