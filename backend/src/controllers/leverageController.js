@@ -8,8 +8,7 @@ class LeverageController {
     this.baseURL = 'https://open-api.coinglass.com/public/v2';
     
     // Cache service  
-    const CacheService = require('../services/cache/cacheService');
-    this.cacheService = new CacheService();
+    this.cacheService = require('../services/cache/cacheService');
     
     // Fallback data for when APIs fail
     this.fallbackData = {
