@@ -444,7 +444,7 @@ class LeverageController {
       status: 'Balanced',
       label: 'Balanced',
       color: 'yellow',
-      description: 'Anything else.',
+      description: 'Not Squeeze Risk / Flush Risk Currently',
       sentiment: 'Neutral leverage conditions',
       recommendation: 'Monitor for changes in funding and OI dynamics'
     };

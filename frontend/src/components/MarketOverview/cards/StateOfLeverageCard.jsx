@@ -232,17 +232,29 @@ const StateOfLeverageCard = React.memo(() => {
           </div>
         </div>
 
-        {/* Description Box */}
-        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} border ${colors.border.primary}`} 
-             style={{ borderRadius: '0px' }}>
+        {/* Description Box with Hover Tooltip */}
+        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} border ${colors.border.primary} relative group cursor-help`} 
+             style={{ borderRadius: '0px' }}
+             title={`Sentiment: ${data.analysis?.sentiment || 'N/A'}\nRecommendation: ${data.analysis?.recommendation || 'N/A'}`}>
           <div className={`text-xs ${colors.text.muted} leading-tight`}>
             {data.description || data.analysis?.sentiment}
+          </div>
+          
+          {/* Advanced Tooltip - appears on hover */}
+          <div className={`absolute bottom-full left-0 right-0 mb-2 p-2 ${colors.bg.primary} border ${colors.border.primary} 
+                          opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 
+                          text-xs leading-tight`}
+               style={{ borderRadius: '4px' }}>
+            <div className={`${colors.text.accent} font-medium mb-1`}>Sentiment:</div>
+            <div className={`${colors.text.muted} mb-2`}>{data.analysis?.sentiment || 'N/A'}</div>
+            <div className={`${colors.text.accent} font-medium mb-1`}>Recommendation:</div>
+            <div className={`${colors.text.muted}`}>{data.analysis?.recommendation || 'N/A'}</div>
           </div>
         </div>
       </div>
 
-      {/* Footer with metadata - only in development */}
-      {process.env.NODE_ENV === 'development' && data.metadata && (
+      {/* Footer with metadata */}
+      {data.metadata && (
         <div className={`mt-4 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
           {data.metadata.fresh ? '🔥 Fresh' : '💾 Cached'} • 
           {data.metadata.dataSource} • 
