@@ -1,57 +1,97 @@
-// Rotation Breadth Card (Priority 5) - Placeholder for Market Overview v2
+// Rotation Breadth Card (Priority 5) - Real data integration for Market Overview v2
 import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
+import apiService from '../../../services/api';
 
-// Mock data for now - will be replaced with real CoinGecko API integration
+// Mock data simulating Top 100 coins analysis vs BTC (30D)
 const generateMockRotationData = () => {
-  const percentage = 35 + Math.random() * 40; // 35-75% range
-  const topPerformers = [
-    { symbol: 'SOL', performance: '+18.2' },
-    { symbol: 'AVAX', performance: '+15.7' },
-    { symbol: 'MATIC', performance: '+12.3' },
-    { symbol: 'LINK', performance: '+8.9' }
+  const percentage = 20 + Math.random() * 60; // 20-80% range for realistic scenarios
+  
+  // Generate 5 top performing coins with realistic data
+  const coinPool = [
+    { symbol: 'SOL', name: 'Solana' },
+    { symbol: 'AVAX', name: 'Avalanche' },
+    { symbol: 'MATIC', name: 'Polygon' },
+    { symbol: 'LINK', name: 'Chainlink' },
+    { symbol: 'UNI', name: 'Uniswap' },
+    { symbol: 'ATOM', name: 'Cosmos' },
+    { symbol: 'DOT', name: 'Polkadot' },
+    { symbol: 'NEAR', name: 'Near Protocol' },
+    { symbol: 'FTM', name: 'Fantom' },
+    { symbol: 'LTC', name: 'Litecoin' }
   ];
+  
+  const shuffled = [...coinPool].sort(() => 0.5 - Math.random());
+  const topPerformers = shuffled.slice(0, 5).map((coin, index) => {
+    const performance = (25 - index * 3) + (Math.random() * 10 - 5); // Decreasing performance
+    return {
+      symbol: coin.symbol,
+      name: coin.name,
+      performance: Math.round(performance * 10) / 10
+    };
+  }).sort((a, b) => b.performance - a.performance);
   
   return {
     percentage: Math.round(percentage * 10) / 10,
-    category: percentage < 40 ? 'btc-season' : percentage < 60 ? 'neutral' : 'alt-season',
     topPerformers,
-    totalAnalyzed: 97,
+    totalAnalyzed: 100,
+    coinsOutperforming: Math.round(percentage),
     timestamp: Date.now()
   };
 };
 
-// Terminal-style category configuration
-const getCategoryConfig = (category, colors) => {
+// Market season categorization based on new thresholds
+const getMarketSeason = (percentage) => {
+  if (percentage < 35) return 'btc-season';
+  if (percentage > 65) return 'frothy';
+  if (percentage > 55) return 'altseason';
+  return 'neutral';
+};
+
+// Market season configuration with updated categories and thresholds
+const getSeasonConfig = (season, colors) => {
   const configs = {
     'btc-season': {
-      color: colors.text.accent,
+      color: colors.text.accent || 'text-orange-500',
       bg: 'bg-orange-100 dark:bg-orange-900/20',
       border: 'border-orange-200 dark:border-orange-800',
       terminalLabel: '[BTC_SEASON]',
       label: 'BTC Season',
-      description: 'Bitcoin dominance strong'
+      threshold: '<35%',
+      description: 'Bitcoin dominance'
     },
     'neutral': {
-      color: colors.text.secondary,
+      color: colors.text.secondary || 'text-gray-500',
       bg: 'bg-gray-100 dark:bg-gray-900/20',
       border: 'border-gray-200 dark:border-gray-800',
-      terminalLabel: '[BALANCED]',
-      label: 'Balanced',
-      description: 'Mixed market conditions'
+      terminalLabel: '[NEUTRAL]',
+      label: 'Neutral',
+      threshold: '35-55%',
+      description: 'Balanced conditions'
     },
-    'alt-season': {
-      color: colors.text.positive,
+    'altseason': {
+      color: colors.text.positive || 'text-green-500',
       bg: 'bg-green-100 dark:bg-green-900/20',
       border: 'border-green-200 dark:border-green-800',
-      terminalLabel: '[ALT_SEASON]',
-      label: 'Alt Season',
-      description: 'Altcoins outperforming'
+      terminalLabel: '[ALTSEASON]',
+      label: 'Altseason',
+      threshold: '>55%',
+      description: 'Alt dominance'
+    },
+    'frothy': {
+      color: colors.text.negative || 'text-red-500',
+      bg: 'bg-red-100 dark:bg-red-900/20',
+      border: 'border-red-200 dark:border-red-800',
+      terminalLabel: '[FROTHY]',
+      label: 'Frothy',
+      threshold: '>65%',
+      description: 'Extreme alt activity'
     }
   };
   
-  return configs[category] || configs['neutral'];
+  return configs[season] || configs['neutral'];
 };
 
 // Simple gauge component
@@ -90,93 +130,224 @@ const SimpleGauge = React.memo(({ percentage, config, colors }) => {
   );
 });
 
+// Helper function to format cache age
+const formatCacheAge = (ageMs) => {
+  const seconds = Math.floor(ageMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return seconds > 0 ? `${seconds}s ago` : 'Just now';
+};
+
 const RotationBreadthCard = React.memo(() => {
   const { colors } = useTheme();
   
   // Performance tracking
   usePerformanceTracking('RotationBreadthCard');
   
-  // Generate mock data
-  const data = useMemo(() => generateMockRotationData(), []);
+  // Cache-first data loading - display cached data immediately without API calls
+  const { data: apiResponse, isLoading, error, isFetching } = useQuery({
+    queryKey: ['rotation-breadth'],
+    queryFn: () => apiService.getRotationBreadth(),
+    staleTime: Infinity, // Never consider cached data stale - true cache-first
+    gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: false, // Don't retry on mount, only background refresh
+    networkMode: 'offlineFirst',
+    initialDataUpdatedAt: 0
+  });
+
+  // Extract data from API response with cache age calculation
+  const data = useMemo(() => {
+    if (apiResponse?.success && apiResponse?.data) {
+      const dataTimestamp = apiResponse.data.metadata?.timestamp || Date.now();
+      const cacheAge = Date.now() - dataTimestamp;
+      
+      return {
+        percentage: apiResponse.data.breadthPercentage || 50,
+        topPerformers: (apiResponse.data.topPerformers || []).map(coin => ({
+          symbol: coin.symbol,
+          name: coin.name,
+          performance: parseFloat(coin.performance)
+        })),
+        totalAnalyzed: apiResponse.data.coinsAnalyzed || 100,
+        coinsOutperforming: apiResponse.data.coinsBeatingBTC || 50,
+        category: apiResponse.data.category || 'Neutral',
+        terminalLabel: apiResponse.data.terminalLabel || '[NEUTRAL]',
+        description: apiResponse.data.description || 'Market rotation analysis',
+        _fromCache: apiResponse._fromCache,
+        _isStale: apiResponse._isStale,
+        timestamp: dataTimestamp,
+        cacheAge: cacheAge,
+        cacheAgeFormatted: formatCacheAge(cacheAge)
+      };
+    }
+    // Fallback to mock data if no cached data available
+    return {
+      ...generateMockRotationData(),
+      _fromCache: false,
+      cacheAge: 0,
+      cacheAgeFormatted: 'Just now'
+    };
+  }, [apiResponse]);
   
-  // Memoized category configuration
-  const categoryConfig = useMemo(() => {
-    return getCategoryConfig(data.category, colors);
-  }, [data.category, colors]);
+  // Calculate market season
+  const marketSeason = useMemo(() => {
+    return getMarketSeason(data.percentage);
+  }, [data.percentage]);
+  
+  // Memoized season configuration
+  const seasonConfig = useMemo(() => {
+    return getSeasonConfig(marketSeason, colors);
+  }, [marketSeason, colors]);
+
+  // Loading state - only show for initial load with no cached data
+  if (isLoading && !data) {
+    return (
+      <div className="h-full flex flex-col p-4">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${colors.border.primary} mx-auto mb-2`}></div>
+            <div className={`text-sm ${colors.text.secondary}`}>Loading rotation data...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Compact Header */}
-      <div className="flex justify-between items-center mb-2">
+      {/* Highest Hierarchy: Percentage and Season (Key Indicators) */}
+      <div className="mb-3">
+        {/* Main percentage display */}
+        <div className="text-center mb-2">
+          <div className={`text-3xl font-bold ${colors.text.primary}`}>
+            {data.percentage}%
+          </div>
+          <div className={`text-sm ${colors.text.secondary}`}>
+            of Top {data.totalAnalyzed} coins outperforming BTC (30D)
+          </div>
+        </div>
+        
+        {/* Season indicator */}
+        <div className="text-center">
+          <div className={`
+            inline-flex items-center px-3 py-2 border rounded-lg
+            ${seasonConfig.bg} ${seasonConfig.border} ${seasonConfig.color}
+          `}>
+            <div className="text-center">
+              <div className="text-sm font-bold">{seasonConfig.label}</div>
+              <div className="text-xs opacity-75">{seasonConfig.threshold}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="flex justify-between items-center mb-3">
         <div>
           <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [ROTATION_BREADTH]
           </h3>
-          <p className={`text-xs ${colors.text.secondary} mt-1`}>
-            {data.totalAnalyzed} Coins vs BTC
+          <p className={`text-xs ${colors.text.secondary}`}>
+            {data.coinsOutperforming} of {data.totalAnalyzed} beating BTC
           </p>
         </div>
         <div className={`
           px-2 py-1 text-xs font-mono uppercase tracking-wider
           ${colors.bg.tertiary} ${colors.border.primary} border-0
-          ${categoryConfig.color}
+          ${seasonConfig.color}
         `} style={{borderRadius: '0px'}}>
-          <span>{categoryConfig.terminalLabel}</span>
+          <span>{seasonConfig.terminalLabel}</span>
         </div>
       </div>
 
-      {/* Compact Main Content */}
-      <div className="flex-1 flex flex-col items-center min-h-0">
-        {/* Smaller Gauge Display */}
-        <div className="mb-1">
-          <SimpleGauge percentage={data.percentage} config={categoryConfig} colors={colors} />
+      {/* Top 5 Outperforming Coins */}
+      <div className="flex-1">
+        <div className={`text-sm ${colors.text.primary} font-semibold mb-2 text-center`}>
+          Top 5 Outperforming BTC
         </div>
-        
-        {/* Compact Percentage Display */}
-        <div className="text-center mb-2">
-          <div className={`text-xl font-bold ${colors.text.primary}`}>
-            {data.percentage}%
-          </div>
-          <div className={`text-xs ${colors.text.secondary}`}>
-            Beating BTC (30D)
-          </div>
-        </div>
-
-        {/* Compact Category Badge */}
-        <div className={`
-          px-2 py-1 text-center mb-2 border
-          ${categoryConfig.bg} ${categoryConfig.border} ${categoryConfig.color}
-        `} style={{ borderRadius: '0px' }}>
-          <div className="text-xs font-semibold">{categoryConfig.label}</div>
-        </div>
-
-        {/* Compact Top Performers */}
-        <div className="w-full mt-auto">
-          <div className={`text-xs ${colors.text.muted} uppercase tracking-wide mb-1 text-center`}>
-            Top Performers
-          </div>
-          <div className="grid grid-cols-2 gap-1 text-xs">
-            {data.topPerformers.slice(0, 4).map((coin) => (
-              <div key={coin.symbol} className="flex justify-between items-center px-1 py-0.5">
-                <span className={`font-mono ${colors.text.secondary}`}>{coin.symbol}</span>
-                <span className={`font-mono ${colors.text.positive}`}>{coin.performance}%</span>
+        <div className="space-y-1">
+          {data.topPerformers.map((coin, index) => (
+            <div key={coin.symbol} className={`
+              flex justify-between items-center p-2 rounded
+              ${colors.bg.tertiary} border ${colors.border.primary}
+            `}>
+              <div className="flex items-center space-x-2">
+                <div className={`
+                  w-6 h-6 rounded-full ${colors.bg.secondary} 
+                  flex items-center justify-center text-xs font-bold
+                  ${colors.text.primary}
+                `}>
+                  {index + 1}
+                </div>
+                <div>
+                  <div className={`font-mono text-sm ${colors.text.primary}`}>
+                    {coin.symbol}
+                  </div>
+                  <div className={`text-xs ${colors.text.secondary}`}>
+                    {coin.name}
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+              <div className={`text-sm font-bold ${
+                coin.performance > 0 ? colors.text.positive : colors.text.negative
+              }`}>
+                +{coin.performance}%
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Footer with metadata - only in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className={`mt-2 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
-          🎭 Mock data • {new Date(data.timestamp).toLocaleTimeString()}
+      {/* Data Source and Status */}
+      <div className="space-y-1">
+        {/* Cache/Fetching Status Indicators */}
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            {data._fromCache && (
+              <span 
+                className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
+                title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
+              >
+                [{data._isStale ? 'CACHE*' : 'CACHE'}]
+              </span>
+            )}
+            
+            {isFetching && (
+              <span className={`font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
+                [UPD...]
+              </span>
+            )}
+            
+            {!data._fromCache && !isFetching && apiResponse?.success && (
+              <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
+                [LIVE]
+              </span>
+            )}
+            
+            {error && (
+              <span className={`font-mono ${colors.text.negative}`} title="Using fallback data">
+                [FALLBACK]
+              </span>
+            )}
+          </div>
+          
+          <div className={`${colors.text.muted}`}>
+            {apiResponse?.success ? 'CoinGecko' : 'Mock'} • {data.cacheAgeFormatted}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 });
 
-SimpleGauge.displayName = 'SimpleGauge';
 RotationBreadthCard.displayName = 'RotationBreadthCard';
 
 export default RotationBreadthCard;

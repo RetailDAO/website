@@ -95,6 +95,30 @@ class APIService {
     console.log('🧹 API cache cleared');
   }
 
+  // Manual background refresh for specific endpoints
+  async refreshInBackground(endpoint, options = {}) {
+    const cacheKey = `${endpoint}_${JSON.stringify(options)}`;
+    try {
+      console.log(`🔄 [Manual Background Refresh] ${endpoint}`);
+      await this.backgroundRefresh(endpoint, options, cacheKey);
+    } catch (error) {
+      console.warn(`⚠️ Manual background refresh failed for ${endpoint}:`, error.message);
+    }
+  }
+
+  // Refresh all Market Overview data in background
+  async refreshAllMarketData() {
+    const refreshPromises = [
+      this.refreshInBackground('/api/v1/market-overview/etf-flows', { period: '2W' }),
+      this.refreshInBackground('/api/v1/market-overview/etf-flows', { period: '1M' }),
+      this.refreshInBackground('/api/v1/market-overview/liquidity-pulse', { timeframe: '30D' }),
+      this.refreshInBackground('/api/v1/market-overview/rotation-breadth')
+    ];
+
+    await Promise.allSettled(refreshPromises);
+    console.log('🔄 [Bulk Background Refresh] All market data refresh completed');
+  }
+
   // ========== MARKET OVERVIEW V2 ENDPOINTS ==========
 
   // Moving Averages (Priority 1)
@@ -128,6 +152,17 @@ class APIService {
     return this.request('/api/v1/market-overview/futures-basis/cache', {
       method: 'DELETE',
     });
+  }
+
+  // Rotation Breadth (Priority 5)
+  async getRotationBreadth() {
+    return this.request('/api/v1/market-overview/rotation-breadth');
+  }
+
+  // ETF Flows (Priority 6)
+  async getETFFlows(period = '2W') {
+    const params = period ? `?period=${period}` : '';
+    return this.request(`/api/v1/market-overview/etf-flows${params}`);
   }
 
   // ========== UTILITY ENDPOINTS ==========

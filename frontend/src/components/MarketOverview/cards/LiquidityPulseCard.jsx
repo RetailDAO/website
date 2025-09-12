@@ -4,120 +4,152 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 
-// Simple sparkline component (lightweight alternative to full charts)
-const Sparkline = React.memo(({ data, color = '#10b981', height = 40 }) => {
-  const points = useMemo(() => {
-    if (!data || data.length < 2) return '';
+// Enhanced US 2Y Treasury yield chart component
+const US2YChart = React.memo(({ data, colors, height = 60 }) => {
+  const { points, currentValue, minValue, maxValue } = useMemo(() => {
+    if (!data || data.length < 2) return { points: '', currentValue: 0, minValue: 0, maxValue: 0 };
     
-    const width = 120; // Fixed width for consistency
-    const padding = 4;
+    const width = 200;
+    const padding = 8;
     const actualWidth = width - padding * 2;
     const actualHeight = height - padding * 2;
     
     const minValue = Math.min(...data);
     const maxValue = Math.max(...data);
     const range = maxValue - minValue;
+    const currentValue = data[data.length - 1];
     
     if (range === 0) {
-      // Flat line if no variation
       const y = actualHeight / 2 + padding;
-      return `M${padding},${y} L${width - padding},${y}`;
+      return { 
+        points: `M${padding},${y} L${width - padding},${y}`, 
+        currentValue, 
+        minValue, 
+        maxValue 
+      };
     }
     
-    return data
+    const points = data
       .map((value, index) => {
         const x = (index / (data.length - 1)) * actualWidth + padding;
         const y = actualHeight - ((value - minValue) / range) * actualHeight + padding;
         return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
       })
       .join(' ');
+      
+    return { points, currentValue, minValue, maxValue };
   }, [data, height]);
 
   if (!data || data.length < 2) {
     return (
-      <div className="flex items-center justify-center" style={{ width: 120, height }}>
-        <span className="text-sm text-gray-400">No trend data</span>
+      <div className="flex items-center justify-center" style={{ width: 200, height }}>
+        <span className={`text-sm ${colors.text.secondary}`}>No chart data</span>
       </div>
     );
   }
 
   return (
-    <svg width={120} height={height} className="overflow-visible">
-      <path
-        d={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' }}
-      />
-    </svg>
+    <div className="relative">
+      <svg width={200} height={height} className="overflow-visible">
+        {/* Grid lines */}
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.1"/>
+          </pattern>
+        </defs>
+        <rect width="200" height={height} fill="url(#grid)" className={colors.text.secondary} />
+        
+        {/* Chart line */}
+        <path
+          d={points}
+          fill="none"
+          stroke="#3b82f6"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ filter: 'drop-shadow(0 1px 3px rgba(59, 130, 246, 0.3))' }}
+        />
+        
+        {/* Current value indicator */}
+        <circle
+          cx={200 - 8}
+          cy={height - ((currentValue - minValue) / (maxValue - minValue)) * (height - 16) - 8}
+          r="3"
+          fill="#3b82f6"
+          stroke="white"
+          strokeWidth="2"
+        />
+      </svg>
+      
+      {/* Y-axis labels */}
+      <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs" style={{ marginLeft: '-2rem' }}>
+        <span className={colors.text.muted}>{maxValue.toFixed(2)}%</span>
+        <span className={colors.text.muted}>{minValue.toFixed(2)}%</span>
+      </div>
+    </div>
   );
 });
 
 // Import API service
 import apiService from '../../../services/api';
 
-// Optimized API service
-const fetchLiquidityPulse = async (timeframe = '30D') => {
-  const startTime = performance.now();
-  
-  const result = await apiService.getLiquidityPulse(timeframe);
-  const duration = performance.now() - startTime;
-  
-  console.log(`📈 Liquidity Pulse API: ${Math.round(duration)}ms`);
-  
-  return result.data;
+// Traffic light state mapping based on 30-day change
+const getTrafficLightState = (change30Day) => {
+  if (change30Day <= -25) return 'easing'; // Green: ≤ -25 bps
+  if (change30Day >= 25) return 'tightening'; // Red: ≥ +25 bps
+  return 'neutral'; // Yellow: in between
 };
 
-// Pulse level configuration with theme support
-const getPulseLevelConfig = (level, colors) => {
-  const configs = {
-    'abundant': {
-      color: 'text-green-600 dark:text-green-400',
-      bg: 'bg-green-100 dark:bg-green-900/20',
-      border: 'border-green-200 dark:border-green-800',
-      icon: '💰',
-      label: 'Abundant',
-      description: 'Very supportive for risk assets'
-    },
-    'adequate': {
-      color: 'text-blue-600 dark:text-blue-400',
-      bg: 'bg-blue-100 dark:bg-blue-900/20',
-      border: 'border-blue-200 dark:border-blue-800',
-      icon: '💧',
-      label: 'Adequate',
-      description: 'Generally supportive environment'
-    },
-    'neutral': {
-      color: 'text-gray-600 dark:text-gray-400',
-      bg: 'bg-gray-100 dark:bg-gray-900/20',
-      border: 'border-gray-200 dark:border-gray-700',
-      icon: '⚖️',
-      label: 'Neutral',
-      description: 'Balanced conditions'
-    },
-    'tightening': {
-      color: 'text-orange-600 dark:text-orange-400',
-      bg: 'bg-orange-100 dark:bg-orange-900/20',
-      border: 'border-orange-200 dark:border-orange-800',
-      icon: '⚠️',
-      label: 'Tightening',
-      description: 'Caution advised'
-    },
-    'constrained': {
-      color: 'text-red-600 dark:text-red-400',
-      bg: 'bg-red-100 dark:bg-red-900/20',
-      border: 'border-red-200 dark:border-red-800',
-      icon: '🚨',
-      label: 'Constrained',
-      description: 'Risk-off environment'
-    }
+// Stylish traffic lights component with glow effects
+const TrafficLights = React.memo(({ state, colors }) => {
+  const lights = {
+    easing: { position: 'top', color: '#10b981', label: 'Easing', description: '≤ -25 bps' },
+    neutral: { position: 'middle', color: '#f59e0b', label: 'Neutral', description: 'in between' },
+    tightening: { position: 'bottom', color: '#ef4444', label: 'Tightening', description: '≥ +25 bps' }
   };
-  
-  return configs[level] || configs['neutral'];
-};
+
+  const activeLight = lights[state];
+
+  return (
+    <div className="flex flex-col items-center space-y-1">
+      {/* Traffic light container */}
+      <div className={`relative bg-gray-800 dark:bg-gray-900 rounded-full p-2 border-2 ${colors.border.primary}`} style={{ width: '48px', height: '120px' }}>
+        {/* Individual lights */}
+        {Object.entries(lights).map(([lightState, config]) => {
+          const isActive = state === lightState;
+          return (
+            <div
+              key={lightState}
+              className={`
+                w-8 h-8 rounded-full mx-auto mb-1 last:mb-0 transition-all duration-500
+                ${isActive 
+                  ? `shadow-lg` 
+                  : 'bg-gray-600 dark:bg-gray-700 opacity-30'
+                }
+              `}
+              style={{
+                backgroundColor: isActive ? config.color : undefined,
+                boxShadow: isActive 
+                  ? `0 0 20px ${config.color}40, 0 0 40px ${config.color}20, inset 0 0 10px ${config.color}30` 
+                  : undefined
+              }}
+            />
+          );
+        })}
+      </div>
+      
+      {/* Active state label */}
+      <div className="text-center">
+        <div className={`text-sm font-semibold ${colors.text.primary}`} style={{ color: activeLight.color }}>
+          {activeLight.label}
+        </div>
+        <div className={`text-xs ${colors.text.secondary}`}>
+          {activeLight.description}
+        </div>
+      </div>
+    </div>
+  );
+});
 
 // Trend direction indicator
 const TrendIndicator = React.memo(({ trend, value, colors }) => {
@@ -143,40 +175,74 @@ const TrendIndicator = React.memo(({ trend, value, colors }) => {
   );
 });
 
+// Helper function to format cache age
+const formatCacheAge = (ageMs) => {
+  const seconds = Math.floor(ageMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return seconds > 0 ? `${seconds}s ago` : 'Just now';
+};
+
 const LiquidityPulseCard = React.memo(() => {
   const { colors } = useTheme();
   
   // Performance tracking
   usePerformanceTracking('LiquidityPulseCard');
   
-  // Instant cache-first data fetching
-  const { data, isLoading, error, isFetching } = useQuery({
-    queryKey: ['liquidity-pulse'],
-    queryFn: () => fetchLiquidityPulse('30D'),
-    staleTime: 0, // Always show cached data instantly
-    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+  // Cache-first data loading - display cached data immediately without API calls
+  const { data: apiResponse, isLoading, error, isFetching } = useQuery({
+    queryKey: ['liquidity-pulse', '30D'],
+    queryFn: () => apiService.getLiquidityPulse('30D'),
+    staleTime: Infinity, // Never consider cached data stale - true cache-first
+    gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    networkMode: 'offlineFirst'
+    refetchOnReconnect: false,
+    retry: false, // Don't retry on mount, only background refresh
+    networkMode: 'offlineFirst',
+    initialDataUpdatedAt: 0
   });
 
-  // Memoize sparkline data for performance
-  const sparklineData = useMemo(() => {
+  // Extract data from API response with cache age calculation
+  const data = useMemo(() => {
+    if (apiResponse?.success && apiResponse?.data) {
+      const dataTimestamp = apiResponse.data.metadata?.timestamp || Date.now();
+      const cacheAge = Date.now() - dataTimestamp;
+      
+      return {
+        ...apiResponse.data,
+        _fromCache: apiResponse._fromCache,
+        _isStale: apiResponse._isStale,
+        cacheAge: cacheAge,
+        cacheAgeFormatted: formatCacheAge(cacheAge)
+      };
+    }
+    return null;
+  }, [apiResponse]);
+
+  // Memoize chart data for performance
+  const chartData = useMemo(() => {
     if (!data?.treasury2Y?.data) return null;
     
-    // Extract yields for sparkline (last 20 points for better performance)
+    // Extract yields for chart (last 30 points for better visualization)
     return data.treasury2Y.data
-      .slice(-20)
+      .slice(-30)
       .map(item => item.yield);
   }, [data?.treasury2Y?.data]);
 
-  // Memoize pulse level config
-  const pulseConfig = useMemo(() => {
-    if (!data?.pulse?.level) return null;
-    return getPulseLevelConfig(data.pulse.level, colors);
-  }, [data?.pulse?.level, colors]);
+  // Calculate 30-day change and traffic light state
+  const trafficLightState = useMemo(() => {
+    if (!data?.pulse?.analysis?.trend30Day) return 'neutral';
+    return getTrafficLightState(data.pulse.analysis.trend30Day);
+  }, [data?.pulse?.analysis?.trend30Day]);
+
+  // Get current 30-day change for display
+  const change30Day = data?.pulse?.analysis?.trend30Day || 0;
 
   // Only show loading for initial load (no cached data)
   if (isLoading && !data) {
@@ -224,96 +290,100 @@ const LiquidityPulseCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Compact Header with Cache Status */}
+      {/* Top Hierarchy: Chart and Traffic Lights Side by Side */}
+      <div className="flex items-center justify-between mb-3 flex-1">
+        {/* US 2Y Treasury Chart */}
+        <div className="flex-1 mr-3">
+          <div className="mb-2">
+            <h4 className={`text-sm font-semibold ${colors.text.primary}`}>
+              US 2Y Treasury Yield
+            </h4>
+            <div className={`text-lg font-bold ${colors.text.primary}`}>
+              {currentYield}%
+              <span className={`text-sm font-normal ${colors.text.secondary} ml-2`}>
+                30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
+              </span>
+            </div>
+          </div>
+          {chartData && (
+            <US2YChart 
+              data={chartData} 
+              colors={colors} 
+              height={60}
+            />
+          )}
+        </div>
+        
+        {/* Traffic Lights Indicator */}
+        <div className="flex-shrink-0">
+          <TrafficLights state={trafficLightState} colors={colors} />
+        </div>
+      </div>
+
+      {/* Second Hierarchy: Header */}
       <div className="flex justify-between items-center mb-2">
         <div>
           <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [LIQUIDITY_PULSE]
           </h3>
-          <p className={`text-xs ${colors.text.secondary} mt-1`}>
-            2Y Treasury Analysis
+          <p className={`text-xs ${colors.text.secondary}`}>
+            States (30-day change)
           </p>
         </div>
         
         <div className="flex items-center space-x-1">
-          {/* Cache/Fetching Status Indicators */}
-          {data?._fromCache && (
-            <span 
-              className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
-              title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
-            >
-              [{data._isStale ? 'CACHE*' : 'CACHE'}]
-            </span>
-          )}
+          <div className="flex items-center space-x-2">
+            {data?._fromCache && (
+              <span 
+                className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
+                title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
+              >
+                [{data._isStale ? 'CACHE*' : 'CACHE'}]
+              </span>
+            )}
+            
+            {isFetching && (
+              <span className={`text-xs font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
+                [UPD...]
+              </span>
+            )}
+            
+            {!data?._fromCache && !isFetching && (
+              <span className={`text-xs font-mono ${colors.text.positive}`} title="Live data from server">
+                [LIVE]
+              </span>
+            )}
+            
+            {error && (
+              <span className={`text-xs font-mono ${colors.text.negative}`} title="Using fallback data">
+                [FALLBACK]
+              </span>
+            )}
+          </div>
           
-          {isFetching && (
-            <span className={`text-xs font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
-              [UPD...]
-            </span>
-          )}
-          
-          {!data?._fromCache && !isFetching && (
-            <span className={`text-xs font-mono ${colors.text.positive}`} title="Live data from server">
-              [LIVE]
-            </span>
+          {data && (
+            <div className={`text-xs ${colors.text.muted}`}>
+              {data.cacheAgeFormatted || 'Just now'}
+            </div>
           )}
         </div>
       </div>
 
-      {/* Main Display - Compact */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* Pulse Score Display - Compact */}
-        <div className="text-center mb-3">
-          <div className={`text-2xl font-bold mb-1 ${colors.text.primary}`}>
+      {/* Third Hierarchy: Additional Info */}
+      <div className="space-y-2">
+        {/* Pulse Score */}
+        <div className="text-center">
+          <div className={`text-xl font-bold ${colors.text.primary}`}>
             {pulseScore}
             <span className={`text-sm font-normal ${colors.text.secondary} ml-1`}>
-              /100
+              /100 Liquidity Score
             </span>
           </div>
-          
-          {/* Compact Pulse Level Badge */}
-          {pulseConfig && (
-            <div className={`
-              inline-flex items-center px-2 py-1 rounded text-xs font-medium
-              ${pulseConfig.bg} ${pulseConfig.color} ${pulseConfig.border} border
-            `}>
-              <span className="mr-1">{pulseConfig.icon}</span>
-              {pulseConfig.label}
-            </div>
-          )}
         </div>
 
-        {/* Treasury Yield Info - Compact Grid */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="text-center">
-            <div className={`text-lg font-bold ${colors.text.primary}`}>
-              {currentYield}%
-            </div>
-            <div className={`text-xs ${colors.text.secondary}`}>
-              2Y Treasury
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <div className="flex justify-center mb-1">
-              {sparklineData && (
-                <Sparkline 
-                  data={sparklineData} 
-                  color={pulseConfig?.color.includes('green') ? '#10b981' : 
-                         pulseConfig?.color.includes('red') ? '#ef4444' : '#6b7280'}
-                  height={32}
-                />
-              )}
-            </div>
-            <div className={`text-xs ${colors.text.secondary}`}>
-              30-Day Trend
-            </div>
-          </div>
-        </div>
-
-        {/* Compact Trend Analysis */}
+        {/* Quick Stats */}
         {trend && (
-          <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="grid grid-cols-2 gap-2">
             <div className="text-center">
               <div className={`text-sm font-medium ${colors.text.primary}`}>
                 {trend.trend7Day > 0 ? '+' : ''}{trend.trend7Day}bp
@@ -332,13 +402,6 @@ const LiquidityPulseCard = React.memo(() => {
             </div>
           </div>
         )}
-
-        {/* Compact Description */}
-        <div className={`mt-auto p-2 rounded-lg ${colors.bg.tertiary}`}>
-          <div className={`text-xs ${colors.text.primary}`}>
-            {data?.pulse?.description || 'Liquidity conditions analysis'}
-          </div>
-        </div>
       </div>
 
       {/* Development metadata */}
@@ -354,7 +417,8 @@ const LiquidityPulseCard = React.memo(() => {
 });
 
 // Display names for better debugging
-Sparkline.displayName = 'Sparkline';
+US2YChart.displayName = 'US2YChart';
+TrafficLights.displayName = 'TrafficLights';
 TrendIndicator.displayName = 'TrendIndicator';
 LiquidityPulseCard.displayName = 'LiquidityPulseCard';
 
