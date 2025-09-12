@@ -54,36 +54,36 @@ const getMarketSeason = (percentage) => {
 const getSeasonConfig = (season, colors) => {
   const configs = {
     'btc-season': {
-      color: colors.text.accent || 'text-orange-500',
-      bg: 'bg-orange-100 dark:bg-orange-900/20',
-      border: 'border-orange-200 dark:border-orange-800',
+      color: colors.text.accent || 'text-orange-400',
+      bg: colors.bg.secondary || 'bg-slate-100 dark:bg-slate-800',
+      border: colors.border.secondary || 'border-slate-200 dark:border-slate-700',
       terminalLabel: '[BTC_SEASON]',
       label: 'BTC Season',
       threshold: '<35%',
       description: 'Bitcoin dominance'
     },
     'neutral': {
-      color: colors.text.secondary || 'text-gray-500',
-      bg: 'bg-gray-100 dark:bg-gray-900/20',
-      border: 'border-gray-200 dark:border-gray-800',
+      color: colors.text.secondary || 'text-slate-500',
+      bg: colors.bg.secondary || 'bg-slate-100 dark:bg-slate-800',
+      border: colors.border.secondary || 'border-slate-200 dark:border-slate-700',
       terminalLabel: '[NEUTRAL]',
       label: 'Neutral',
       threshold: '35-55%',
       description: 'Balanced conditions'
     },
     'altseason': {
-      color: colors.text.positive || 'text-green-500',
-      bg: 'bg-green-100 dark:bg-green-900/20',
-      border: 'border-green-200 dark:border-green-800',
+      color: colors.text.positive || 'text-emerald-400',
+      bg: colors.bg.secondary || 'bg-slate-100 dark:bg-slate-800',
+      border: colors.border.secondary || 'border-slate-200 dark:border-slate-700',
       terminalLabel: '[ALTSEASON]',
       label: 'Altseason',
       threshold: '>55%',
       description: 'Alt dominance'
     },
     'frothy': {
-      color: colors.text.negative || 'text-red-500',
-      bg: 'bg-red-100 dark:bg-red-900/20',
-      border: 'border-red-200 dark:border-red-800',
+      color: colors.text.negative || 'text-rose-400',
+      bg: colors.bg.secondary || 'bg-slate-100 dark:bg-slate-800',
+      border: colors.border.secondary || 'border-slate-200 dark:border-slate-700',
       terminalLabel: '[FROTHY]',
       label: 'Frothy',
       threshold: '>65%',
@@ -223,6 +223,25 @@ const RotationBreadthCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Header - Moved to top */}
+      <div className="flex justify-between items-center mb-3">
+        <div>
+          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+            [ROTATION_BREADTH]
+          </h3>
+          <p className={`text-xs ${colors.text.secondary}`}>
+            {data.coinsOutperforming} of {data.totalAnalyzed} beating BTC
+          </p>
+        </div>
+        <div className={`
+          px-2 py-1 text-xs font-mono uppercase tracking-wider rounded
+          ${seasonConfig.bg} ${seasonConfig.border} border
+          ${seasonConfig.color}
+        `}>
+          <span>{seasonConfig.terminalLabel}</span>
+        </div>
+      </div>
+
       {/* Highest Hierarchy: Percentage and Season (Key Indicators) */}
       <div className="mb-3">
         {/* Main percentage display */}
@@ -246,25 +265,6 @@ const RotationBreadthCard = React.memo(() => {
               <div className="text-xs opacity-75">{seasonConfig.threshold}</div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="flex justify-between items-center mb-3">
-        <div>
-          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
-            [ROTATION_BREADTH]
-          </h3>
-          <p className={`text-xs ${colors.text.secondary}`}>
-            {data.coinsOutperforming} of {data.totalAnalyzed} beating BTC
-          </p>
-        </div>
-        <div className={`
-          px-2 py-1 text-xs font-mono uppercase tracking-wider
-          ${colors.bg.tertiary} ${colors.border.primary} border-0
-          ${seasonConfig.color}
-        `} style={{borderRadius: '0px'}}>
-          <span>{seasonConfig.terminalLabel}</span>
         </div>
       </div>
 

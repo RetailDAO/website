@@ -38,8 +38,8 @@ const getStatusConfig = (status, colors) => {
   const configs = {
     'sustained-inflows': {
       color: colors.text.positive,
-      bg: 'bg-green-100 dark:bg-green-900/20',
-      border: 'border-green-200 dark:border-green-800',
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
       terminalLabel: '[SUSTAINED+]',
       label: 'Sustained Inflows',
       description: '>1.5B',
@@ -47,17 +47,17 @@ const getStatusConfig = (status, colors) => {
     },
     'sustained-outflows': {
       color: colors.text.negative,
-      bg: 'bg-red-100 dark:bg-red-900/20',
-      border: 'border-red-200 dark:border-red-800',
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
       terminalLabel: '[SUSTAINED-]',
       label: 'Sustained Outflows',
       description: '<-750M',
       icon: '📉'
     },
     'mixed': {
-      color: colors.text.warning,
-      bg: 'bg-yellow-100 dark:bg-yellow-900/20',
-      border: 'border-yellow-200 dark:border-yellow-800',
+      color: colors.text.warning || 'text-amber-400',
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
       terminalLabel: '[MIXED]',
       label: 'Mixed',
       description: 'Between -750M & 1.5B',
@@ -77,7 +77,7 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
   const barWidth = Math.max(1.5, Math.min(8, 280 / displayFlows.length));
   
   return (
-    <div className="w-full h-24 flex flex-col">
+    <div className="w-full h-40 flex flex-col">
       {/* Chart container */}
       <div className="flex-1 flex items-center justify-center relative">
         {/* Zero line */}
@@ -86,7 +86,7 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
         {/* Bars */}
         <div className="flex items-center justify-center space-x-0.5 h-full">
           {displayFlows.map((flow, index) => {
-            const height = Math.max(2, Math.abs(flow.inflow) / maxAbs * 35);
+            const height = Math.max(3, Math.abs(flow.inflow) / maxAbs * 60);
             const isPositive = flow.inflow >= 0;
             
             return (
@@ -217,13 +217,8 @@ const ETFFlowsCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Chart First - Highest Hierarchy */}
-      <div className="flex-1 mb-3">
-        <ETFFlowChart flows={data.flows} colors={colors} period={period} />
-      </div>
-
-      {/* Header - Second Hierarchy */}
-      <div className="flex justify-between items-center mb-2">
+      {/* Header - First Hierarchy - Moved to top */}
+      <div className="flex justify-between items-center mb-3">
         <div>
           <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [ETF_FLOWS]
@@ -253,42 +248,39 @@ const ETFFlowsCard = React.memo(() => {
             ))}
           </div>
           <div className={`
-            px-2 py-1 text-xs font-mono uppercase tracking-wider
-            ${colors.bg.tertiary} ${colors.border.primary} border-0
+            px-2 py-1 text-xs font-mono uppercase tracking-wider rounded
+            ${colors.bg.secondary} ${colors.border.secondary} border
             ${statusConfig.color}
-          `} style={{borderRadius: '0px'}}>
+          `}>
             <span>{statusConfig.terminalLabel}</span>
           </div>
         </div>
       </div>
 
+      {/* Chart - Second Hierarchy - Increased size */}
+      <div className="mb-3">
+        <ETFFlowChart flows={data.flows} colors={colors} period={period} />
+      </div>
+
       {/* Stats and Status - Third Hierarchy */}
       <div className="space-y-2">
-        {/* 5D Net Display */}
+        {/* 5D Net Display with integrated status */}
         <div className="text-center">
-          <div className="flex items-baseline justify-center space-x-1">
+          <div className="flex items-baseline justify-center space-x-2 mb-1">
             <span className={`text-xs ${colors.text.secondary}`}>5D Net:</span>
-            <div className={`text-lg font-bold ${
+            <div className={`text-xl font-bold ${
               data.inflow5D > 1500 ? colors.text.positive :
               data.inflow5D < -750 ? colors.text.negative :
               colors.text.warning
             }`}>
               {data.inflow5D > 0 ? '+' : ''}${data.inflow5D.toLocaleString()}M
             </div>
-            <span className={`text-xs ${colors.text.secondary}`}>
-              {statusConfig.label} ({statusConfig.description})
+            <span className={`text-xs ${statusConfig.color} font-medium`}>
+              {statusConfig.icon} {statusConfig.label}
             </span>
           </div>
-        </div>
-
-        {/* Status Badge */}
-        <div className={`
-          px-2 py-1 text-center border
-          ${statusConfig.bg} ${statusConfig.border} ${statusConfig.color}
-        `} style={{ borderRadius: '0px' }}>
-          <div className="flex items-center justify-center space-x-1">
-            <span>{statusConfig.icon}</span>
-            <div className="text-xs font-semibold">{statusConfig.label}</div>
+          <div className={`text-xs ${colors.text.secondary}`}>
+            {statusConfig.description}
           </div>
         </div>
 
@@ -325,21 +317,11 @@ const ETFFlowsCard = React.memo(() => {
               )}
             </div>
             
-            <div className={`${colors.text.muted}`}>
+            <div 
+              className={`${colors.text.muted} cursor-help hover:${colors.text.secondary} transition-colors`}
+              title={`Data Source: ${apiResponse?.success ? 'Yahoo Finance ETF Data' : 'Mock ETF data simulating major Bitcoin ETFs'} | ETFs Included: ${data.etfBreakdown?.map(etf => etf.symbol).join(', ') || 'GBTC, BITB, ARKB, BTCO, HODL, BRRR, IBIT, FBTC'} | Last Updated: ${new Date(data.timestamp).toLocaleString()}`}
+            >
               {data.etfsAnalyzed} ETFs • {data.cacheAgeFormatted}
-            </div>
-          </div>
-          
-          {/* Data Source Disclaimer */}
-          <div className={`text-xs ${colors.text.muted} text-center px-2 py-1 ${colors.bg.tertiary} border-t ${colors.border.primary}`}>
-            <div className="mb-1">
-              <strong>Data Source:</strong> {apiResponse?.success ? 'Yahoo Finance ETF Data' : 'Mock ETF data simulating major Bitcoin ETFs'}
-            </div>
-            <div className="mb-1">
-              <strong>ETFs Included:</strong> {data.etfBreakdown?.map(etf => etf.symbol).join(', ') || 'GBTC, BITB, ARKB, BTCO, HODL, BRRR, IBIT, FBTC'}
-            </div>
-            <div>
-              <strong>Last Updated:</strong> {new Date(data.timestamp).toLocaleString()}
             </div>
           </div>
         </div>
