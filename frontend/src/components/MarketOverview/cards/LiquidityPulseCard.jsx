@@ -290,38 +290,8 @@ const LiquidityPulseCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Top Hierarchy: Chart and Traffic Lights Side by Side */}
-      <div className="flex items-center justify-between mb-3 flex-1">
-        {/* US 2Y Treasury Chart */}
-        <div className="flex-1 mr-3">
-          <div className="mb-2">
-            <h4 className={`text-sm font-semibold ${colors.text.primary}`}>
-              US 2Y Treasury Yield
-            </h4>
-            <div className={`text-lg font-bold ${colors.text.primary}`}>
-              {currentYield}%
-              <span className={`text-sm font-normal ${colors.text.secondary} ml-2`}>
-                30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
-              </span>
-            </div>
-          </div>
-          {chartData && (
-            <US2YChart 
-              data={chartData} 
-              colors={colors} 
-              height={60}
-            />
-          )}
-        </div>
-        
-        {/* Traffic Lights Indicator */}
-        <div className="flex-shrink-0">
-          <TrafficLights state={trafficLightState} colors={colors} />
-        </div>
-      </div>
-
-      {/* Second Hierarchy: Header */}
-      <div className="flex justify-between items-center mb-2">
+      {/* Header - Now at the top */}
+      <div className="flex justify-between items-center mb-3">
         <div>
           <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [LIQUIDITY_PULSE]
@@ -369,6 +339,36 @@ const LiquidityPulseCard = React.memo(() => {
         </div>
       </div>
 
+      {/* Chart and Traffic Lights Section */}
+      <div className="flex items-center justify-between mb-3 flex-1">
+        {/* US 2Y Treasury Chart */}
+        <div className="flex-1 mr-2">
+          <div className="mb-2">
+            <h4 className={`text-sm font-semibold ${colors.text.primary}`}>
+              US 2Y Treasury Yield
+            </h4>
+            <div className={`text-lg font-bold ${colors.text.primary}`}>
+              {currentYield}%
+              <span className={`text-sm font-normal ${colors.text.secondary} ml-2`}>
+                30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
+              </span>
+            </div>
+          </div>
+          {chartData && (
+            <US2YChart 
+              data={chartData} 
+              colors={colors} 
+              height={60}
+            />
+          )}
+        </div>
+        
+        {/* Traffic Lights Indicator - Positioned more to the left */}
+        <div className="flex-shrink-0 ml-2" style={{ marginRight: '8px' }}>
+          <TrafficLights state={trafficLightState} colors={colors} />
+        </div>
+      </div>
+
       {/* Third Hierarchy: Additional Info */}
       <div className="space-y-2">
         {/* Pulse Score */}
@@ -385,11 +385,10 @@ const LiquidityPulseCard = React.memo(() => {
         {trend && (
           <div className="grid grid-cols-2 gap-2">
             <div className="text-center">
-              <div className={`text-sm font-medium ${colors.text.primary}`}>
-                {trend.trend7Day > 0 ? '+' : ''}{trend.trend7Day}bp
-              </div>
-              <div className={`text-xs ${colors.text.secondary}`}>
-                7-Day Change
+              <div className={`text-sm ${colors.text.secondary}`}>
+                7-Day Change: <span className={`font-medium ${colors.text.primary}`}>
+                  {trend.trend7Day > 0 ? '+' : ''}{trend.trend7Day}bp
+                </span>
               </div>
             </div>
             
