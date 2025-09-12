@@ -1706,8 +1706,8 @@
       ]
     },
     "timestamp": "2025-09-11T16:00:00.863Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-11T18:00:00.229Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-12T18:38:31.510Z",
     "source": "api_success",
     "dataPoints": 221
   },

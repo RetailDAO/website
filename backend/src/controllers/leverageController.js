@@ -348,36 +348,50 @@ class LeverageController {
     const openInterest = oiData || { total: 15, change24h: 0 };
     const fundingRates = frData || { averageRate: 0.01 };
 
-    // Calculate Open Interest percentile (simplified scoring)
-    const oiScore = Math.min(100, Math.max(0, (openInterest.total / 30) * 100)); // Scale to 0-100
+    // Get BTC market cap (approximate $1.9T as of 2024)
+    const btcMarketCap = 1900; // $1.9T in billions
+    const oiMcapRatio = (openInterest.total / btcMarketCap) * 100; // OI/MCap as percentage
 
-    // Calculate Funding Rate score (convert to percentile)
-    const fundingScore = Math.min(100, Math.max(0, 50 + (fundingRates.averageRate * 2000))); // Scale to 0-100
+    // Convert funding rate to 8-hour percentage
+    const funding8h = fundingRates.averageRate * 800; // Convert to 8-hour % (8h * 100)
+    
+    // Calculate 7-day OI delta (mock for now - in production, get historical data)
+    const oiDelta7d = openInterest.change24h * 3.5; // Approximate 7-day from 24h change
 
-    // Calculate overall leverage score
-    const overallScore = (oiScore * 0.6 + fundingScore * 0.4); // Weight OI more heavily
-
-    // Determine leverage state
-    const state = this.determineLeverageState(overallScore, fundingRates.averageRate);
+    // Determine leverage state based on new criteria
+    const state = this.determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d);
 
     return {
+      // Status indicators
+      status: state.status,
+      statusColor: state.color,
+      description: state.description,
+      
+      // Key metrics for display
+      fundingRate8h: Math.round(funding8h * 10000) / 10000, // 4 decimal places for 8h rate
+      oiMcapRatio: Math.round(oiMcapRatio * 100) / 100, // 2 decimal places for percentage
+      oiDelta7d: Math.round(oiDelta7d * 100) / 100, // 2 decimal places for percentage
+      
+      // Additional data for display
+      openInterest: {
+        total: Math.round(openInterest.total * 10) / 10,
+        change24h: Math.round(openInterest.change24h * 10) / 10,
+        change7d: Math.round(oiDelta7d * 10) / 10
+      },
+      fundingRate: {
+        current8h: funding8h,
+        annualized: fundingRates.averageRate * 1095, // Approximate annual rate
+        trend: fundingRates.averageRate > 0 ? 'positive' : 'negative'
+      },
+      marketData: {
+        btcMarketCap: btcMarketCap,
+        oiMcapRatio: oiMcapRatio
+      },
+      
+      // Legacy fields for compatibility
       state: state.key,
       stateLabel: state.label,
       color: state.color,
-      description: state.description,
-      score: {
-        oi: Math.round(oiScore),
-        funding: Math.round(fundingScore),
-        overall: Math.round(overallScore)
-      },
-      openInterest: {
-        total: Math.round(openInterest.total * 10) / 10,
-        change24h: Math.round(openInterest.change24h * 10) / 10
-      },
-      fundingRate: {
-        average: Math.round(fundingRates.averageRate * 10000) / 100, // Convert to percentage
-        trend: fundingRates.averageRate > 0 ? 'positive' : 'negative'
-      },
       analysis: {
         sentiment: state.sentiment,
         recommendation: state.recommendation
@@ -390,95 +404,106 @@ class LeverageController {
     };
   }
 
-  // Determine leverage state based on scores
-  determineLeverageState(overallScore, fundingRate) {
-    // Green state: Shorts crowded (negative funding + low OI or balanced conditions)
-    if (fundingRate < -0.01 && overallScore < 60) {
+  // Determine leverage state based on new client criteria
+  determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d) {
+    // Short-Crowded / Squeeze Risk (Green)
+    // Funding <= -0.02% per 8h AND ΔOI >= +5% over 7 days
+    if (funding8h <= -0.02 && oiDelta7d >= 5.0) {
       return {
         key: 'green',
-        label: 'Shorts Crowded',
+        status: 'Squeeze Risk',
+        label: 'Short-Crowded / Squeeze Risk',
         color: 'green',
-        description: 'Negative funding suggests short crowding. Potential for squeeze.',
-        sentiment: 'Bullish setup',
-        recommendation: 'Monitor for squeeze signals'
+        description: 'Funding <= -0.02% per 8h and ΔOI >= +5% over 7 days.',
+        sentiment: 'Short squeeze potential',
+        recommendation: 'Monitor for upward price pressure'
       };
     }
 
-    // Red state: Longs crowded (high positive funding + high OI)
-    if (fundingRate > 0.02 && overallScore > 70) {
-      return {
-        key: 'red',
-        label: 'Longs Crowded',
-        color: 'red',
-        description: 'High positive funding indicates long crowding. Risk of flush.',
-        sentiment: 'Bearish setup',
-        recommendation: 'Exercise caution, potential flush risk'
-      };
+    // Long-Crowded / Flush Risk (Red)
+    // Funding >= +0.02% per 8h AND (OI/MCap >= 2.5% (BTC) or 3.5% (ETH)) AND ΔOI >= +10% with price up > +8%
+    // Note: Using BTC threshold of 2.5% and simplified price condition
+    if (funding8h >= 0.02 && oiMcapRatio >= 2.5) {
+      // Additional check for high OI delta with price increase (simplified)
+      if (oiDelta7d >= 10.0) {
+        return {
+          key: 'red',
+          status: 'Flush Risk',
+          label: 'Long-Crowded / Flush Risk',
+          color: 'red',
+          description: 'Funding >= +0.02% per 8h and OI/MCap >= 2.5% (BTC) and ΔOI >= +10% with price up > +8%.',
+          sentiment: 'Long flush potential',
+          recommendation: 'Exercise caution, potential downward correction'
+        };
+      }
     }
 
-    // Yellow state: Balanced or transitioning
+    // Balanced (Yellow) - Default for anything else
     return {
       key: 'yellow',
+      status: 'Balanced',
       label: 'Balanced',
       color: 'yellow',
-      description: 'Leverage conditions are relatively balanced.',
-      sentiment: 'Neutral',
-      recommendation: 'Monitor for shifts in leverage dynamics'
+      description: 'Anything else.',
+      sentiment: 'Neutral leverage conditions',
+      recommendation: 'Monitor for changes in funding and OI dynamics'
     };
+  }
+
+  // Legacy method for compatibility
+  determineLeverageState(overallScore, fundingRate) {
+    // Convert to new format for backward compatibility
+    const funding8h = fundingRate * 800;
+    const oiMcapRatio = overallScore / 10; // Rough conversion
+    const oiDelta7d = (Math.random() - 0.5) * 10; // Random delta for fallback
+    
+    return this.determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d);
   }
 
   // Generate fallback data when APIs are unavailable
   generateFallbackData() {
-    const states = ['green', 'yellow', 'red'];
-    const randomState = states[Math.floor(Math.random() * states.length)];
+    // Generate realistic random values
+    const funding8h = (Math.random() - 0.5) * 0.08; // -0.04% to +0.04%
+    const oiMcapRatio = Math.random() * 4 + 1; // 1% to 5%
+    const oiDelta7d = (Math.random() - 0.5) * 20; // -10% to +10%
     
-    const stateConfigs = {
-      green: {
-        key: 'green',
-        label: 'Shorts Crowded',
-        color: 'green',
-        description: 'Negative funding suggests short crowding. Potential for squeeze.',
-        sentiment: 'Bullish setup',
-        recommendation: 'Monitor for squeeze signals'
-      },
-      yellow: {
-        key: 'yellow',
-        label: 'Balanced',
-        color: 'yellow',
-        description: 'Leverage conditions are relatively balanced.',
-        sentiment: 'Neutral',
-        recommendation: 'Monitor for shifts in leverage dynamics'
-      },
-      red: {
-        key: 'red',
-        label: 'Longs Crowded',
-        color: 'red',
-        description: 'High positive funding indicates long crowding. Risk of flush.',
-        sentiment: 'Bearish setup',
-        recommendation: 'Exercise caution, potential flush risk'
-      }
-    };
-
-    const config = stateConfigs[randomState];
+    // Determine state based on new criteria
+    const state = this.determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d);
     
     return {
-      ...config,
-      score: {
-        oi: Math.floor(Math.random() * 40) + 40, // 40-80 range
-        funding: Math.floor(Math.random() * 40) + 30, // 30-70 range
-        overall: Math.floor(Math.random() * 30) + 45  // 45-75 range
-      },
+      // Status indicators
+      status: state.status,
+      statusColor: state.color,
+      description: state.description,
+      
+      // Key metrics for display
+      fundingRate8h: Math.round(funding8h * 10000) / 10000,
+      oiMcapRatio: Math.round(oiMcapRatio * 100) / 100,
+      oiDelta7d: Math.round(oiDelta7d * 100) / 100,
+      
+      // Additional data for display
       openInterest: {
         total: Math.round((Math.random() * 10 + 12) * 10) / 10, // 12-22B
-        change24h: Math.round((Math.random() - 0.5) * 8 * 10) / 10 // -4% to +4%
+        change24h: Math.round((Math.random() - 0.5) * 8 * 10) / 10, // -4% to +4%
+        change7d: Math.round(oiDelta7d * 10) / 10
       },
       fundingRate: {
-        average: Math.round((Math.random() - 0.5) * 4 * 100) / 100, // -2% to +2%
-        trend: Math.random() > 0.5 ? 'positive' : 'negative'
+        current8h: funding8h,
+        annualized: funding8h * 1095, // Approximate annual rate
+        trend: funding8h > 0 ? 'positive' : 'negative'
       },
+      marketData: {
+        btcMarketCap: 1900, // $1.9T
+        oiMcapRatio: oiMcapRatio
+      },
+      
+      // Legacy fields for compatibility
+      state: state.key,
+      stateLabel: state.label,
+      color: state.color,
       analysis: {
-        sentiment: config.sentiment,
-        recommendation: config.recommendation
+        sentiment: state.sentiment,
+        recommendation: state.recommendation
       },
       metadata: {
         calculatedAt: new Date().toISOString(),

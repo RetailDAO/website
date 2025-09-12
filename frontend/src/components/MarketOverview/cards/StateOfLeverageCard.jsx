@@ -20,40 +20,43 @@ const fetchLeverageState = async () => {
 };
 
 // Terminal-style state configuration optimized for all themes
-const getStateConfig = (state, colors) => {
+const getStateConfig = (status, colors) => {
   const configs = {
-    'green': {
+    'Squeeze Risk': {
       color: colors.text.positive,
       bg: colors.bg.tertiary,
       border: colors.border.positive,
       icon: '🟢',
-      terminalLabel: '[SQUEEZE]',
-      bgClass: 'bg-green-100 dark:bg-green-900/20'
+      terminalLabel: '[SQUEEZE RISK]',
+      bgClass: 'bg-green-100 dark:bg-green-900/20',
+      statusText: 'Short-Crowded / Squeeze Risk'
     },
-    'yellow': {
+    'Balanced': {
       color: colors.text.accent,
       bg: colors.bg.tertiary,
       border: colors.border.secondary,
       icon: '🟡',
       terminalLabel: '[BALANCED]',
-      bgClass: 'bg-yellow-100 dark:bg-yellow-900/20'
+      bgClass: 'bg-yellow-100 dark:bg-yellow-900/20',
+      statusText: 'Balanced'
     },
-    'red': {
+    'Flush Risk': {
       color: colors.text.negative,
       bg: colors.bg.tertiary,
       border: colors.border.negative,
       icon: '🔴',
-      terminalLabel: '[FLUSH]',
-      bgClass: 'bg-red-100 dark:bg-red-900/20'
+      terminalLabel: '[FLUSH RISK]',
+      bgClass: 'bg-red-100 dark:bg-red-900/20',
+      statusText: 'Long-Crowded / Flush Risk'
     }
   };
   
-  return configs[state] || configs['yellow'];
+  return configs[status] || configs['Balanced'];
 };
 
 // Traffic Light Component with terminal styling
-const TrafficLight = React.memo(({ state, colors, size = 'md' }) => {
-  const stateConfig = getStateConfig(state, colors);
+const TrafficLight = React.memo(({ status, colors, size = 'md' }) => {
+  const stateConfig = getStateConfig(status, colors);
   const sizeClass = size === 'lg' ? 'text-4xl p-2' : 'text-2xl p-1';
   
   return (
@@ -70,8 +73,8 @@ const TrafficLight = React.memo(({ state, colors, size = 'md' }) => {
 });
 
 // Terminal status indicator
-const StatusIndicator = React.memo(({ state, stateLabel, colors }) => {
-  const stateConfig = getStateConfig(state, colors);
+const StatusIndicator = React.memo(({ status, colors }) => {
+  const stateConfig = getStateConfig(status, colors);
   
   return (
     <div className={`
@@ -86,16 +89,21 @@ const StatusIndicator = React.memo(({ state, stateLabel, colors }) => {
 });
 
 // Metric display component
-const MetricDisplay = React.memo(({ label, value, colors }) => (
-  <div className="text-center">
-    <div className={`text-lg font-mono ${colors.text.primary}`}>
-      {value}
+const MetricDisplay = React.memo(({ label, value, colors, size = 'normal' }) => {
+  const valueSize = size === 'small' ? 'text-sm' : 'text-lg';
+  const labelSize = size === 'small' ? 'text-xs' : 'text-xs';
+  
+  return (
+    <div className="text-center">
+      <div className={`${valueSize} font-mono ${colors.text.primary}`}>
+        {value}
+      </div>
+      <div className={`${labelSize} ${colors.text.muted} uppercase tracking-wide`}>
+        {label}
+      </div>
     </div>
-    <div className={`text-xs ${colors.text.muted} uppercase tracking-wide`}>
-      {label}
-    </div>
-  </div>
-));
+  );
+});
 
 const StateOfLeverageCard = React.memo(() => {
   const { colors } = useTheme();
@@ -117,8 +125,8 @@ const StateOfLeverageCard = React.memo(() => {
   // Memoized state configuration
   const stateConfig = useMemo(() => {
     if (!data) return null;
-    return getStateConfig(data.state, colors);
-  }, [data?.state, colors]);
+    return getStateConfig(data.status || data.state, colors);
+  }, [data, colors]);
 
   // Loading state
   if (isLoading) {
@@ -155,8 +163,7 @@ const StateOfLeverageCard = React.memo(() => {
         </div>
         <div className="flex items-center space-x-1">
           <StatusIndicator 
-            state={data.state} 
-            stateLabel={data.stateLabel} 
+            status={data.status || data.state}
             colors={colors} 
           />
           {isStale && (
@@ -169,43 +176,67 @@ const StateOfLeverageCard = React.memo(() => {
 
       {/* Compact Content */}
       <div className="flex-1 flex flex-col items-center min-h-0">
-        {/* Smaller Traffic Light */}
-        <div className="mb-2">
-          <TrafficLight state={data.state} colors={colors} size="md" />
-        </div>
-        
-        {/* Compact State Label */}
-        <div className="text-center mb-2">
-          <div className={`text-sm font-semibold ${stateConfig.color}`}>
-            {data.stateLabel.toUpperCase()}
+        {/* Status with Traffic Light */}
+        <div className="flex items-center justify-center mb-3">
+          <TrafficLight status={data.status || data.state} colors={colors} size="md" />
+          <div className="ml-3 text-center">
+            <div className={`text-sm font-semibold ${stateConfig.color}`}>
+              {stateConfig.statusText || data.status || data.stateLabel}
+            </div>
           </div>
         </div>
 
-        {/* Compact Metrics Grid */}
-        <div className="grid grid-cols-2 gap-3 w-full px-2 mb-2">
-          <MetricDisplay 
-            label="OI Percentile" 
-            value={`${data.score.oi}%`}
-            colors={colors}
-          />
-          <MetricDisplay 
-            label="Funding Rate" 
-            value={`${data.fundingRate.average > 0 ? '+' : ''}${data.fundingRate.average}%`}
-            colors={colors}
-          />
+        {/* Key Metrics as per client requirements */}
+        <div className="space-y-2 w-full px-2 mb-3">
+          {/* 1) Funding Rate */}
+          <div className="flex justify-between items-center">
+            <span className={`text-sm ${colors.text.muted}`}>• Funding Rate</span>
+            <span className={`text-sm font-mono ${colors.text.primary}`}>
+              {data.fundingRate8h !== undefined 
+                ? `${data.fundingRate8h >= 0 ? '+' : ''}${(data.fundingRate8h * 100).toFixed(4)}%` 
+                : `${data.fundingRate?.average >= 0 ? '+' : ''}${(data.fundingRate?.average || 0).toFixed(2)}%`}
+            </span>
+          </div>
+          
+          {/* 2) OI/Marketcap */}
+          <div className="flex justify-between items-center">
+            <span className={`text-sm ${colors.text.muted}`}>• OI/MCap</span>
+            <span className={`text-sm font-mono ${colors.text.primary}`}>
+              {data.oiMcapRatio !== undefined 
+                ? `${data.oiMcapRatio.toFixed(2)}%`
+                : `${((data.openInterest?.total || 15) / 1900 * 100).toFixed(2)}%`}
+            </span>
+          </div>
+          
+          {/* 3) OI delta over 7D */}
+          <div className="flex justify-between items-center">
+            <span className={`text-sm ${colors.text.muted}`}>• ΔOI (7D)</span>
+            <span className={`text-sm font-mono ${colors.text.primary}`}>
+              {data.oiDelta7d !== undefined 
+                ? `${data.oiDelta7d >= 0 ? '+' : ''}${data.oiDelta7d.toFixed(1)}%`
+                : `${(data.openInterest?.change24h || 0) >= 0 ? '+' : ''}${((data.openInterest?.change24h || 0) * 3.5).toFixed(1)}%`}
+            </span>
+          </div>
+          
+          {/* 4) Status */}
+          <div className="flex justify-between items-center">
+            <span className={`text-sm ${colors.text.muted}`}>• Status</span>
+            <div className="flex items-center">
+              <span className={`text-xs mr-1 ${stateConfig.color}`}>
+                {stateConfig.icon}
+              </span>
+              <span className={`text-sm font-medium ${stateConfig.color}`}>
+                {data.status || data.stateLabel}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Compact Analysis Box */}
+        {/* Description Box */}
         <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} border ${colors.border.primary}`} 
              style={{ borderRadius: '0px' }}>
-          <div className={`text-xs font-medium ${colors.text.secondary} mb-1 uppercase tracking-wide`}>
-            Analysis
-          </div>
-          <div className={`text-sm ${colors.text.primary}`}>
-            {data.analysis.sentiment}
-          </div>
           <div className={`text-xs ${colors.text.muted} leading-tight`}>
-            {data.description}
+            {data.description || data.analysis?.sentiment}
           </div>
         </div>
       </div>
