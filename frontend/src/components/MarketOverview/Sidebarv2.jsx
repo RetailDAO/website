@@ -114,22 +114,23 @@ const Sidebarv2 = React.memo(() => {
           onClick={() => setIsOpen(!isOpen)}
           className={`
             fixed left-4 z-[60] transition-all duration-200 ease-in-out
-            hover:scale-110 focus:outline-none group
-            ${colors.text.muted} hover:${colors.text.primary}
+            hover:scale-110 focus:outline-none group p-2 rounded-lg
+            ${colors.text.muted} hover:text-orange-500
+            hover:bg-black/10 active:scale-95
           `}
           style={{ 
-            top: '140px', // Position between header (~120px) and cards start (~170px)
+            top: '130px', // Moved up to better position between header and cards
           }}
           title="Toggle Terminal Navigation"
           aria-label="Open navigation menu"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {/* Minimalist hamburger icon */}
-          <div className="w-5 h-5 flex flex-col justify-center space-y-1">
-            <div className={`w-full h-0.5 bg-gray-500 transition-all duration-200 group-hover:${colors.text.primary.replace('text-', 'bg-')}`}></div>
-            <div className={`w-full h-0.5 bg-gray-500 transition-all duration-200 group-hover:${colors.text.primary.replace('text-', 'bg-')}`}></div>
-            <div className={`w-full h-0.5 bg-gray-500 transition-all duration-200 group-hover:${colors.text.primary.replace('text-', 'bg-')}`}></div>
+          {/* Enhanced hamburger icon with better sizing and hover states */}
+          <div className="w-6 h-6 flex flex-col justify-center space-y-1.5">
+            <div className={`w-full h-0.5 ${isHovered ? 'bg-orange-500' : 'bg-gray-400'} transition-all duration-200`}></div>
+            <div className={`w-full h-0.5 ${isHovered ? 'bg-orange-500' : 'bg-gray-400'} transition-all duration-200`}></div>
+            <div className={`w-full h-0.5 ${isHovered ? 'bg-orange-500' : 'bg-gray-400'} transition-all duration-200`}></div>
           </div>
         </button>
       )}

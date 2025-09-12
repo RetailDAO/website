@@ -273,7 +273,7 @@ const RotationBreadthCard = React.memo(() => {
         <div className={`text-sm ${colors.text.primary} font-semibold mb-2 text-center`}>
           Top 5 Outperforming BTC
         </div>
-        <div className="space-y-1 overflow-y-auto max-h-32">
+        <div className="space-y-1 overflow-y-auto max-h-24 pb-2">
           {data.topPerformers.map((coin, index) => (
             <div key={coin.symbol} className={`
               flex justify-between items-center p-2 rounded

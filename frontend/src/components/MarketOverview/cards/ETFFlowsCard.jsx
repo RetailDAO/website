@@ -33,61 +33,102 @@ const generateMockETFData = (period) => {
   };
 };
 
-// Terminal-style status configuration
-const getStatusConfig = (status, colors) => {
+// Terminal-style status configuration - Enhanced for API data
+const getStatusConfig = (status, colors, statusColor = null) => {
+  // Map API status to local config, with theme-aware colors
   const configs = {
-    'sustained-inflows': {
+    'Sustained Inflows': {
       color: colors.text.positive,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
-      terminalLabel: '[SUSTAINED+]',
+      terminalLabel: '[STRONG]',
       label: 'Sustained Inflows',
-      description: '>1.5B',
+      description: 'Strong institutional buying',
       icon: '🔥'
     },
-    'sustained-outflows': {
+    'Positive Flows': {
+      color: colors.text.positive,
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
+      terminalLabel: '[POSITIVE]',
+      label: 'Positive Flows',
+      description: 'Healthy accumulation',
+      icon: '📈'
+    },
+    'Sustained Outflows': {
       color: colors.text.negative,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
-      terminalLabel: '[SUSTAINED-]',
+      terminalLabel: '[OUTFLOWS]',
       label: 'Sustained Outflows',
-      description: '<-750M',
+      description: 'Heavy institutional selling',
       icon: '📉'
     },
-    'mixed': {
-      color: colors.text.warning || 'text-amber-400',
+    'Negative Flows': {
+      color: colors.text.negative,
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
+      terminalLabel: '[WEAK]',
+      label: 'Negative Flows',
+      description: 'Institutional caution',
+      icon: '⚠️'
+    },
+    'Mixed': {
+      color: colors.text.secondary,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
       terminalLabel: '[MIXED]',
       label: 'Mixed',
-      description: 'Between -750M & 1.5B',
+      description: 'Balanced flows',
       icon: '⚖️'
     }
   };
   
-  return configs[status] || configs['mixed'];
+  // Use API status or fallback to mixed
+  const config = configs[status] || configs['Mixed'];
+  
+  // Override color if statusColor provided from API
+  if (statusColor) {
+    if (statusColor === 'green') config.color = colors.text.positive;
+    else if (statusColor === 'red') config.color = colors.text.negative;
+    else if (statusColor === 'yellow' || statusColor === 'orange') config.color = colors.text.secondary;
+  }
+  
+  return config;
 };
 
-// Enhanced bar chart component for ETF flows
+// Enhanced bar chart component for ETF flows - Optimized for real API data
 const ETFFlowChart = React.memo(({ flows, colors, period }) => {
-  if (!flows || flows.length === 0) return null;
+  if (!flows || flows.length === 0) return (
+    <div className="w-full h-40 flex items-center justify-center">
+      <span className={`text-sm ${colors.text.secondary}`}>No flow data available</span>
+    </div>
+  );
   
-  const maxAbs = Math.max(...flows.map(f => Math.abs(f.inflow)));
+  const maxInflow = Math.max(...flows.map(f => f.inflow), 0);
+  const minInflow = Math.min(...flows.map(f => f.inflow), 0);
+  const maxAbs = Math.max(Math.abs(maxInflow), Math.abs(minInflow));
   const displayFlows = flows; // Show all flows for the selected period
-  const barWidth = Math.max(1.5, Math.min(8, 280 / displayFlows.length));
+  const barWidth = Math.max(2, Math.min(10, 280 / displayFlows.length));
+  
+  // Check if all flows are positive (typical for net inflows)
+  const allPositive = flows.every(f => f.inflow >= 0);
   
   return (
     <div className="w-full h-40 flex flex-col">
       {/* Chart container */}
       <div className="flex-1 flex items-center justify-center relative">
-        {/* Zero line at center */}
-        <div className={`absolute w-full h-px ${colors.border.primary} opacity-50 z-10`} style={{ top: '50%' }} />
+        {!allPositive && (
+          // Zero line at center - only show if we have negative flows
+          <div className={`absolute w-full h-px ${colors.border.primary} opacity-50 z-10`} style={{ top: '50%' }} />
+        )}
         
-        {/* Bars container with proper zero baseline */}
+        {/* Bars container */}
         <div className="flex items-center justify-center space-x-0.5 h-full relative">
           {displayFlows.map((flow, index) => {
-            const maxHeight = 70; // Maximum bar height (35px above/below zero line)
-            const height = Math.max(3, Math.abs(flow.inflow) / maxAbs * maxHeight);
+            const maxHeight = allPositive ? 120 : 70; // Use full height if all positive
+            const normalizedValue = Math.abs(flow.inflow) / maxAbs;
+            const height = Math.max(4, normalizedValue * maxHeight);
             const isPositive = flow.inflow >= 0;
             
             return (
@@ -95,7 +136,7 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
                 key={index}
                 className="relative flex items-center"
                 style={{ height: '100%' }}
-                title={`${new Date(flow.date).toLocaleDateString()}: ${flow.inflow > 0 ? '+' : ''}$${flow.inflow.toLocaleString()}M`}
+                title={`${new Date(flow.date).toLocaleDateString()}: $${flow.inflow.toLocaleString()}M • ${flow.etfsContributing || 'Multiple'} ETFs`}
               >
                 <div
                   className={`
@@ -103,15 +144,15 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
                       ? 'bg-green-500 dark:bg-green-400' 
                       : 'bg-red-500 dark:bg-red-400'
                     }
-                    opacity-75 hover:opacity-100 transition-all duration-200
-                    hover:scale-110 cursor-pointer
+                    opacity-80 hover:opacity-100 transition-all duration-200
+                    hover:scale-105 cursor-pointer rounded-sm
                     absolute
                   `}
                   style={{
                     width: `${barWidth}px`,
                     height: `${height}px`,
-                    // Position bars relative to center line (50% of container height)
-                    bottom: isPositive ? '50%' : `calc(50% - ${height}px)`,
+                    // Position bars properly based on data type
+                    bottom: allPositive ? '8px' : (isPositive ? '50%' : `calc(50% - ${height}px)`),
                     left: '50%',
                     transform: 'translateX(-50%)'
                   }}
@@ -120,14 +161,25 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
             );
           })}
         </div>
+        
+        {/* Flow value labels for recent days */}
+        {displayFlows.length <= 14 && (
+          <div className="absolute top-0 left-0 right-0 flex justify-between px-2 text-xs">
+            {displayFlows.slice(-5).map((flow, index) => (
+              <span key={index} className={`${colors.text.muted} opacity-60`}>
+                ${Math.round(flow.inflow)}M
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       
-      {/* Mini timeline labels */}
-      <div className="flex justify-between mt-1 px-2">
+      {/* Enhanced timeline labels */}
+      <div className="flex justify-between mt-2 px-2">
         <span className={`text-xs ${colors.text.muted}`}>
           {period === '2W' ? '2 weeks ago' : '1 month ago'}
         </span>
-        <span className={`text-xs ${colors.text.muted}`}>
+        <span className={`text-xs ${colors.text.accent}`}>
           Today
         </span>
       </div>
@@ -176,10 +228,19 @@ const ETFFlowsCard = React.memo(() => {
       const dataTimestamp = apiResponse.data.metadata?.timestamp || apiResponse.data.timestamp || Date.now();
       const cacheAge = Date.now() - dataTimestamp;
       
+      // Transform API flows data for proper chart rendering
+      const transformedFlows = (apiResponse.data.flows || []).map(flow => ({
+        date: flow.date,
+        inflow: flow.inflow || flow.netFlow || flow.flow || 0, // Handle different API response formats
+        cumulative: flow.cumulative || 0,
+        etfsContributing: flow.etfsContributing || flow.etfBreakdown?.length || 5
+      }));
+      
       return {
-        flows: apiResponse.data.flows || [],
+        flows: transformedFlows,
         inflow5D: apiResponse.data.inflow5D || 0,
         status: apiResponse.data.status || 'mixed',
+        statusColor: apiResponse.data.statusColor || 'yellow',
         terminalLabel: apiResponse.data.terminalLabel || '[MIXED]',
         description: apiResponse.data.description || 'ETF flows analysis',
         etfsAnalyzed: apiResponse.data.etfsAnalyzed || 5,
@@ -201,10 +262,10 @@ const ETFFlowsCard = React.memo(() => {
     };
   }, [apiResponse, period]);
   
-  // Memoized status configuration
+  // Memoized status configuration with API color support
   const statusConfig = useMemo(() => {
-    return getStatusConfig(data.status, colors);
-  }, [data.status, colors]);
+    return getStatusConfig(data.status, colors, data.statusColor);
+  }, [data.status, data.statusColor, colors]);
 
   // Loading state - only show for initial load with no cached data
   if (isLoading && !data) {
@@ -324,7 +385,7 @@ const ETFFlowsCard = React.memo(() => {
             
             <div 
               className={`${colors.text.muted} cursor-help hover:${colors.text.secondary} transition-colors`}
-              title={`Data Source: ${apiResponse?.success ? 'Yahoo Finance ETF Data' : 'Mock ETF data simulating major Bitcoin ETFs'} | ETFs Included: ${data.etfBreakdown?.map(etf => etf.symbol).join(', ') || 'GBTC, BITB, ARKB, BTCO, HODL, BRRR, IBIT, FBTC'} | Last Updated: ${new Date(data.timestamp).toLocaleString()}`}
+              title={`Data Source: ${data.metadata?.dataSource === 'yahoo_finance' ? 'Yahoo Finance ETF Data' : 'Mock ETF data simulating major Bitcoin ETFs'} | ETFs Included: ${data.etfBreakdown?.map(etf => `${etf.symbol} (${etf.name})`).join(', ') || 'IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), BITB (Bitwise), ARKB (ARK)'} | Total 5D Flow: $${data.inflow5D?.toLocaleString()}M | Last Updated: ${new Date(data.timestamp).toLocaleString()}`}
             >
               {data.etfsAnalyzed} ETFs • {data.cacheAgeFormatted}
             </div>

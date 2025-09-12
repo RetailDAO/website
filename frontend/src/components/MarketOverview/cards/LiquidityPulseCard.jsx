@@ -339,10 +339,10 @@ const LiquidityPulseCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Chart and Traffic Lights Section */}
-      <div className="flex items-center justify-center gap-4 mb-2 flex-1">
+      {/* Chart and Traffic Lights Section - Improved spacing distribution */}
+      <div className="flex items-center justify-between mb-2 flex-1 px-2">
         {/* US 2Y Treasury Chart */}
-        <div className="flex-1">
+        <div className="flex-1 pr-4">
           <div className="mb-2">
             <h4 className={`text-sm font-semibold ${colors.text.primary}`}>
               US 2Y Treasury Yield
@@ -363,8 +363,8 @@ const LiquidityPulseCard = React.memo(() => {
           )}
         </div>
         
-        {/* Traffic Lights Indicator - Centered properly */}
-        <div className="flex-shrink-0">
+        {/* Traffic Lights Indicator - Better positioning */}
+        <div className="flex-shrink-0 flex items-center justify-center">
           <TrafficLights state={trafficLightState} colors={colors} />
         </div>
       </div>

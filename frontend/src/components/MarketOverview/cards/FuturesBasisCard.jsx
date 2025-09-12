@@ -47,22 +47,22 @@ const LoadingState = ({ colors }) => (
   </div>
 );
 
-// Terminal-style regime configuration per Kevin's requirements
+// Terminal-style regime configuration per Kevin's requirements - Theme-aware styling
 const getRegimeConfig = (regime, colors) => {
   const configs = {
     'healthy': {
       color: colors.text.positive,
-      bg: 'bg-green-100 dark:bg-green-900/20',
-      border: 'border-green-200 dark:border-green-800',
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
       icon: '🟢',
       terminalLabel: '[HEALTHY]',
-      label: 'Healthy Contango',
+      label: 'Healthy',
       description: 'Normal market conditions with healthy premium'
     },
     'backwardation': {
       color: colors.text.negative,
-      bg: 'bg-red-100 dark:bg-red-900/20',
-      border: 'border-red-200 dark:border-red-800',
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
       icon: '🔴',
       terminalLabel: '[STRESS]',
       label: 'Backwardation/Stress',
@@ -70,20 +70,20 @@ const getRegimeConfig = (regime, colors) => {
     },
     'overheated': {
       color: colors.text.negative,
-      bg: 'bg-red-100 dark:bg-red-900/20',
-      border: 'border-red-200 dark:border-red-800',
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
       icon: '🔴',
       terminalLabel: '[OVERHEATED]',
       label: 'Overheated Carry',
       description: 'Excessive premium - potential correction ahead'
     },
     'neutral': {
-      color: colors.text.accent,
-      bg: 'bg-yellow-100 dark:bg-yellow-900/20',
-      border: 'border-yellow-200 dark:border-yellow-800',
+      color: colors.text.secondary,
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
       icon: '🟡',
-      terminalLabel: '[NEUTRAL]',
-      label: 'Neutral',
+      terminalLabel: '[NORMAL]',
+      label: 'Normal',
       description: 'Between healthy and stressed levels'
     }
   };
@@ -123,19 +123,15 @@ const FuturesBasisCard = React.memo(() => {
   // Memoized regime configuration - use regimeData from API if available
   const regimeConfig = useMemo(() => {
     if (regimeData) {
-      // Use regime data from API
+      // Use regime data from API with theme-aware colors
       return {
         ...regimeData,
         color: colors.text[
           regimeData.color === 'green' ? 'positive' :
-          regimeData.color === 'red' ? 'negative' : 'accent'
+          regimeData.color === 'red' ? 'negative' : 'secondary'
         ],
-        bg: regimeData.color === 'green' ? 'bg-green-100 dark:bg-green-900/20' :
-           regimeData.color === 'red' ? 'bg-red-100 dark:bg-red-900/20' :
-           'bg-yellow-100 dark:bg-yellow-900/20',
-        border: regimeData.color === 'green' ? 'border-green-200 dark:border-green-800' :
-                regimeData.color === 'red' ? 'border-red-200 dark:border-red-800' :
-                'border-yellow-200 dark:border-yellow-800'
+        bg: colors.bg.secondary,
+        border: colors.border.secondary
       };
     }
     
