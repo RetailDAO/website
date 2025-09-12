@@ -80,19 +80,21 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
     <div className="w-full h-40 flex flex-col">
       {/* Chart container */}
       <div className="flex-1 flex items-center justify-center relative">
-        {/* Zero line */}
-        <div className={`absolute w-full h-px ${colors.border.primary} opacity-30`} style={{ top: '50%' }} />
+        {/* Zero line at center */}
+        <div className={`absolute w-full h-px ${colors.border.primary} opacity-50 z-10`} style={{ top: '50%' }} />
         
-        {/* Bars */}
-        <div className="flex items-center justify-center space-x-0.5 h-full">
+        {/* Bars container with proper zero baseline */}
+        <div className="flex items-center justify-center space-x-0.5 h-full relative">
           {displayFlows.map((flow, index) => {
-            const height = Math.max(3, Math.abs(flow.inflow) / maxAbs * 60);
+            const maxHeight = 70; // Maximum bar height (35px above/below zero line)
+            const height = Math.max(3, Math.abs(flow.inflow) / maxAbs * maxHeight);
             const isPositive = flow.inflow >= 0;
             
             return (
               <div
                 key={index}
-                className="flex flex-col items-center justify-center h-full"
+                className="relative flex items-center"
+                style={{ height: '100%' }}
                 title={`${new Date(flow.date).toLocaleDateString()}: ${flow.inflow > 0 ? '+' : ''}$${flow.inflow.toLocaleString()}M`}
               >
                 <div
@@ -103,12 +105,15 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
                     }
                     opacity-75 hover:opacity-100 transition-all duration-200
                     hover:scale-110 cursor-pointer
+                    absolute
                   `}
                   style={{
                     width: `${barWidth}px`,
                     height: `${height}px`,
-                    marginTop: isPositive ? 'auto' : '0',
-                    marginBottom: isPositive ? '0' : 'auto'
+                    // Position bars relative to center line (50% of container height)
+                    bottom: isPositive ? '50%' : `calc(50% - ${height}px)`,
+                    left: '50%',
+                    transform: 'translateX(-50%)'
                   }}
                 />
               </div>
@@ -229,16 +234,16 @@ const ETFFlowsCard = React.memo(() => {
         </div>
         <div className="flex items-center space-x-1">
           {/* Period Selector */}
-          <div className="flex border border-gray-600 rounded overflow-hidden">
+          <div className={`flex border ${colors.border.primary} rounded-lg overflow-hidden`}>
             {['2W', '1M'].map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`
-                  px-1.5 py-0.5 text-xs font-mono
+                  px-2 py-1 text-xs font-mono
                   ${period === p 
-                    ? `${colors.text.primary} ${colors.bg.secondary}` 
-                    : `${colors.text.muted} hover:${colors.text.secondary}`
+                    ? `${colors.text.primary} ${colors.bg.tertiary}` 
+                    : `${colors.text.muted} hover:${colors.text.secondary} hover:${colors.bg.hover}`
                   }
                   transition-colors duration-200
                 `}
@@ -248,8 +253,8 @@ const ETFFlowsCard = React.memo(() => {
             ))}
           </div>
           <div className={`
-            px-2 py-1 text-xs font-mono uppercase tracking-wider rounded
-            ${colors.bg.secondary} ${colors.border.secondary} border
+            px-2 py-1 text-xs font-mono uppercase tracking-wider rounded-lg border
+            ${statusConfig.bg} ${statusConfig.border}
             ${statusConfig.color}
           `}>
             <span>{statusConfig.terminalLabel}</span>

@@ -166,10 +166,10 @@ const FuturesBasisCard = React.memo(() => {
           </p>
         </div>
         <div className={`
-          px-2 py-1 text-xs font-mono uppercase tracking-wider
-          ${colors.bg.tertiary} ${colors.border.primary} border-0
+          px-2 py-1 text-xs font-mono uppercase tracking-wider rounded-lg border
+          ${regimeConfig.bg} ${regimeConfig.border}
           ${regimeConfig.color}
-        `} style={{borderRadius: '0px'}}>
+        `}>
           <span>{regimeConfig.terminalLabel}</span>
         </div>
       </div>
@@ -188,9 +188,9 @@ const FuturesBasisCard = React.memo(() => {
         
         {/* Compact Regime Indicator */}
         <div className={`
-          px-2 py-1 text-center mb-3 border
+          px-3 py-2 text-center mb-3 border rounded-lg
           ${regimeConfig.bg} ${regimeConfig.border} ${regimeConfig.color}
-        `} style={{ borderRadius: '0px' }}>
+        `}>
           <div className="flex items-center justify-center space-x-1">
             <span className="text-sm">{regimeConfig.icon}</span>
             <div>

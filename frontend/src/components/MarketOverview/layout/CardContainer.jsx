@@ -46,7 +46,7 @@ const CardContainer = React.memo(({
         minHeight: sizeConfig.minHeight,
         height: sizeConfig.height,
         maxHeight: sizeConfig.maxHeight,
-        overflow: 'hidden',
+        // Remove general overflow hidden to let cards control their own overflow
         // CSS containment for performance
         contain: 'layout style paint',
         // GPU acceleration for smoother animations
@@ -55,7 +55,7 @@ const CardContainer = React.memo(({
       }}
       {...props}
     >
-      <div className="h-full flex flex-col overflow-y-auto">
+      <div className="h-full flex flex-col">
         {children}
       </div>
     </div>

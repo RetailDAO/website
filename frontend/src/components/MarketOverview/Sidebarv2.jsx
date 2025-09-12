@@ -108,51 +108,30 @@ const Sidebarv2 = React.memo(() => {
 
   return (
     <>
-      {/* Enhanced Toggle Button - Hidden when sidebar is open */}
+      {/* Minimalist Hamburger Menu Button - Positioned between header and first card */}
       {!isOpen && (
-        <div 
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-[60]"
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={`
+            fixed left-4 z-[60] transition-all duration-200 ease-in-out
+            hover:scale-110 focus:outline-none group
+            ${colors.text.muted} hover:${colors.text.primary}
+          `}
+          style={{ 
+            top: '140px', // Position between header (~120px) and cards start (~170px)
+          }}
+          title="Toggle Terminal Navigation"
+          aria-label="Open navigation menu"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className={`
-              ${colors.bg.secondary} ${colors.border.primary} ${colors.text.accent}
-              border-r-2 border-t-2 border-b-2 border-l-0
-              px-3 py-6 font-mono text-xs uppercase tracking-wider
-              transition-all duration-300 ease-in-out
-              hover:${colors.text.primary} hover:${colors.bg.tertiary} focus:outline-none
-              shadow-lg hover:shadow-xl
-              ${isHovered ? 'translate-x-0' : '-translate-x-2'}
-              hover:scale-105
-            `}
-          style={{ 
-            borderRadius: '0px',
-            borderTopLeftRadius: '0px',
-            borderBottomLeftRadius: '0px',
-            borderTopRightRadius: '12px',
-            borderBottomRightRadius: '12px'
-          }}
-          title="Toggle Terminal Navigation"
-        >
-          <div className="flex flex-col items-center space-y-2">
-            <span className={`text-[10px] opacity-80 ${!isOpen ? 'animate-pulse' : ''}`}>
-              {isOpen ? 'CLOSE' : 'MENU'}
-            </span>
-            <div className="w-5 h-4 flex flex-col justify-between">
-              <div className={`w-full h-0.5 ${colors.bg.accent} transition-all duration-300 ${isOpen ? 'rotate-45 translate-y-1.5 bg-red-400' : ''}`}></div>
-              <div className={`w-full h-0.5 ${colors.bg.accent} transition-all duration-300 ${isOpen ? 'opacity-0' : ''}`}></div>
-              <div className={`w-full h-0.5 ${colors.bg.accent} transition-all duration-300 ${isOpen ? '-rotate-45 -translate-y-1.5 bg-red-400' : ''}`}></div>
-            </div>
-            {!isOpen && (
-              <div className={`text-[8px] ${colors.text.muted} mt-1 opacity-60`}>
-                5
-              </div>
-            )}
+          {/* Minimalist hamburger icon */}
+          <div className="w-5 h-5 flex flex-col justify-center space-y-1">
+            <div className={`w-full h-0.5 bg-gray-500 transition-all duration-200 group-hover:${colors.text.primary.replace('text-', 'bg-')}`}></div>
+            <div className={`w-full h-0.5 bg-gray-500 transition-all duration-200 group-hover:${colors.text.primary.replace('text-', 'bg-')}`}></div>
+            <div className={`w-full h-0.5 bg-gray-500 transition-all duration-200 group-hover:${colors.text.primary.replace('text-', 'bg-')}`}></div>
           </div>
         </button>
-      </div>
       )}
 
       {/* Sidebar Panel - Fixed position with high z-index */}

@@ -291,7 +291,7 @@ const LiquidityPulseCard = React.memo(() => {
   return (
     <div className="h-full flex flex-col">
       {/* Header - Now at the top */}
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-2">
         <div>
           <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [LIQUIDITY_PULSE]
@@ -340,9 +340,9 @@ const LiquidityPulseCard = React.memo(() => {
       </div>
 
       {/* Chart and Traffic Lights Section */}
-      <div className="flex items-center justify-between mb-3 flex-1">
+      <div className="flex items-center justify-center gap-4 mb-2 flex-1">
         {/* US 2Y Treasury Chart */}
-        <div className="flex-1 mr-2">
+        <div className="flex-1">
           <div className="mb-2">
             <h4 className={`text-sm font-semibold ${colors.text.primary}`}>
               US 2Y Treasury Yield
@@ -363,8 +363,8 @@ const LiquidityPulseCard = React.memo(() => {
           )}
         </div>
         
-        {/* Traffic Lights Indicator - Positioned more to the left */}
-        <div className="flex-shrink-0 ml-2" style={{ marginRight: '8px' }}>
+        {/* Traffic Lights Indicator - Centered properly */}
+        <div className="flex-shrink-0">
           <TrafficLights state={trafficLightState} colors={colors} />
         </div>
       </div>
