@@ -47,7 +47,7 @@ const LoadingState = ({ colors }) => (
   </div>
 );
 
-// Terminal-style regime configuration
+// Terminal-style regime configuration per Kevin's requirements
 const getRegimeConfig = (regime, colors) => {
   const configs = {
     'healthy': {
@@ -55,31 +55,40 @@ const getRegimeConfig = (regime, colors) => {
       bg: 'bg-green-100 dark:bg-green-900/20',
       border: 'border-green-200 dark:border-green-800',
       icon: '🟢',
-      terminalLabel: '[NORMAL]',
-      label: 'Healthy Premium',
+      terminalLabel: '[HEALTHY]',
+      label: 'Healthy Contango',
       description: 'Normal market conditions with healthy premium'
     },
-    'danger': {
+    'backwardation': {
       color: colors.text.negative,
       bg: 'bg-red-100 dark:bg-red-900/20',
       border: 'border-red-200 dark:border-red-800',
       icon: '🔴',
-      terminalLabel: '[DANGER]',
-      label: 'Extreme Premium',
+      terminalLabel: '[STRESS]',
+      label: 'Backwardation/Stress',
+      description: 'Futures ≤ spot - supply constraints possible'
+    },
+    'overheated': {
+      color: colors.text.negative,
+      bg: 'bg-red-100 dark:bg-red-900/20',
+      border: 'border-red-200 dark:border-red-800',
+      icon: '🔴',
+      terminalLabel: '[OVERHEATED]',
+      label: 'Overheated Carry',
       description: 'Excessive premium - potential correction ahead'
     },
-    'caution': {
+    'neutral': {
       color: colors.text.accent,
       bg: 'bg-yellow-100 dark:bg-yellow-900/20',
       border: 'border-yellow-200 dark:border-yellow-800',
       icon: '🟡',
-      terminalLabel: '[CAUTION]',
-      label: 'Backwardation',
-      description: 'Futures below spot - supply constraints possible'
+      terminalLabel: '[NEUTRAL]',
+      label: 'Neutral',
+      description: 'Between healthy and stressed levels'
     }
   };
   
-  return configs[regime] || configs['healthy'];
+  return configs[regime] || configs['neutral'];
 };
 
 const FuturesBasisCard = React.memo(() => {

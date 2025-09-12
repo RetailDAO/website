@@ -151,36 +151,48 @@ class OptimizedFuturesDataService {
   }
 
   /**
-   * Classify basis regime according to client requirements
-   * States: Backwardation (Danger), Healthy, Overheated (Danger)
+   * Classify basis regime according to Kevin's requirements
+   * - Backwardation/Stress (🔴): Basis_ann ≤ 0%
+   * - Healthy Contango (🟢): +5% to +12% 
+   * - Overheated Carry (🔴): Basis_ann ≥ +15%
+   * - Else (🟡): Neutral
    */
   classifyBasisRegime(basis) {
-    if (basis < -5) {
+    if (basis <= 0) {
       return {
         state: 'backwardation',
-        label: 'Backwardation (Danger)',
+        label: 'Backwardation/Stress',
         color: 'red',
-        terminalLabel: '[DANGER]',
-        description: 'Futures trading below spot - potential supply shortage',
+        terminalLabel: '[STRESS]',
+        description: 'Futures ≤ spot - supply constraints possible',
         sentiment: 'bearish'
       };
-    } else if (basis > 15) {
+    } else if (basis >= 5 && basis <= 12) {
+      return {
+        state: 'healthy',
+        label: 'Healthy Contango',
+        color: 'green',
+        terminalLabel: '[HEALTHY]',
+        description: 'Normal market conditions with healthy premium',
+        sentiment: 'bullish'
+      };
+    } else if (basis >= 15) {
       return {
         state: 'overheated',
-        label: 'Overheated (Danger)',
+        label: 'Overheated Carry',
         color: 'red',
-        terminalLabel: '[DANGER]',
+        terminalLabel: '[OVERHEATED]',
         description: 'Excessive premium - potential correction ahead',
         sentiment: 'overheated'
       };
     } else {
       return {
-        state: 'healthy',
-        label: 'Healthy',
-        color: 'green',
-        terminalLabel: '[NORMAL]',
-        description: 'Normal premium reflecting healthy market conditions',
-        sentiment: 'bullish'
+        state: 'neutral',
+        label: 'Neutral',
+        color: 'yellow',
+        terminalLabel: '[NEUTRAL]',
+        description: 'Between healthy and stressed levels',
+        sentiment: 'neutral'
       };
     }
   }

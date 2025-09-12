@@ -1,3 +1,4 @@
+const { performance } = require('perf_hooks');
 const rateLimitedApiService = require('../services/rateLimitedApi');
 const axios = require('axios');
 
@@ -34,7 +35,7 @@ class LeverageController {
   }
 
   // Main endpoint for State of Leverage
-  async getLeverageState(req, res, next) {
+  async getLeverageState(req, res) {
     try {
       const startTime = performance.now();
       
@@ -52,8 +53,8 @@ class LeverageController {
         try {
           // Attempt to get real data from multiple sources
           const [openInterestData, fundingRatesData] = await Promise.allSettled([
-            this.getOpenInterestData('BTC'),
-            this.getFundingRatesData('BTC')
+            this.getOpenInterestData(),
+            this.getFundingRatesData()
           ]);
           
           // Process the data if we got at least one successful response
@@ -107,15 +108,15 @@ class LeverageController {
   }
 
   // Get Open Interest data from multiple exchanges
-  async getOpenInterestData(symbol) {
+  async getOpenInterestData() {
     try {
       console.log('🔄 Fetching real open interest data from exchanges');
       const startTime = performance.now();
       
       // Fetch data from multiple exchanges in parallel
       const [bybitData, okxData] = await Promise.allSettled([
-        this.getBybitOpenInterest(symbol),
-        this.getOKXOpenInterest(symbol)
+        this.getBybitOpenInterest(),
+        this.getOKXOpenInterest()
       ]);
       
       const exchanges = [];
@@ -188,7 +189,7 @@ class LeverageController {
   }
 
   // Get Bybit Open Interest for BTC
-  async getBybitOpenInterest(symbol) {
+  async getBybitOpenInterest() {
     const response = await this.coinglassLimiter.schedule(async () => {
       return await axios.get('https://api.bybit.com/v5/market/open-interest', {
         params: {
@@ -212,7 +213,7 @@ class LeverageController {
   }
 
   // Get OKX Open Interest for BTC
-  async getOKXOpenInterest(symbol) {
+  async getOKXOpenInterest() {
     const response = await this.coinglassLimiter.schedule(async () => {
       return await axios.get('https://www.okx.com/api/v5/public/open-interest', {
         params: {
@@ -229,15 +230,15 @@ class LeverageController {
   }
 
   // Get Funding Rates data from multiple exchanges
-  async getFundingRatesData(symbol) {
+  async getFundingRatesData() {
     try {
       console.log('🔄 Fetching real funding rates from exchanges');
       const startTime = performance.now();
       
       // Fetch funding rates from multiple exchanges in parallel
       const [bybitData, okxData] = await Promise.allSettled([
-        this.getBybitFundingRate(symbol),
-        this.getOKXFundingRate(symbol)
+        this.getBybitFundingRate(),
+        this.getOKXFundingRate()
       ]);
       
       const exchanges = [];
@@ -306,7 +307,7 @@ class LeverageController {
   }
 
   // Get Bybit Funding Rate for BTC
-  async getBybitFundingRate(symbol) {
+  async getBybitFundingRate() {
     const response = await this.coinglassLimiter.schedule(async () => {
       return await axios.get('https://api.bybit.com/v5/market/funding/history', {
         params: {
@@ -325,7 +326,7 @@ class LeverageController {
   }
 
   // Get OKX Funding Rate for BTC
-  async getOKXFundingRate(symbol) {
+  async getOKXFundingRate() {
     const response = await this.coinglassLimiter.schedule(async () => {
       return await axios.get('https://www.okx.com/api/v5/public/funding-rate', {
         params: {
