@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import apiService from '../../../services/api';
+import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
 // Mock data for now - will be replaced with real ETF API integration
 const generateMockETFData = (period) => {
@@ -236,19 +237,17 @@ const ETFFlowsCard = React.memo(() => {
   // Performance tracking
   usePerformanceTracking('ETFFlowsCard');
   
-  // Cache-first data loading - display cached data immediately without API calls
+  // Balanced data loading - allow proper cache invalidation for period toggles
   const { data: apiResponse, isLoading, error, isFetching } = useQuery({
     queryKey: ['etf-flows', period],
     queryFn: () => apiService.getETFFlows(period),
-    staleTime: Infinity, // Never consider cached data stale - true cache-first
+    staleTime: 5 * 60 * 1000, // 5 minutes - allows fresh data when toggling periods
     gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
-    retry: false, // Don't retry on mount, only background refresh
-    networkMode: 'offlineFirst',
-    // This ensures we immediately return cached data if available
-    initialDataUpdatedAt: 0
+    retry: 1, // Allow one retry for better reliability
+    networkMode: 'offlineFirst'
   });
 
   // Extract data from API response with cache age calculation
@@ -414,7 +413,10 @@ const ETFFlowsCard = React.memo(() => {
             
             <div 
               className={`${colors.text.muted} cursor-help hover:${colors.text.secondary} transition-colors`}
-              title={`Data Source: ${data.metadata?.dataSource === 'yahoo_finance' ? 'Yahoo Finance ETF Data' : 'Mock ETF data simulating major Bitcoin ETFs'} | ETFs Included: ${data.etfBreakdown?.map(etf => `${etf.symbol} (${etf.name})`).join(', ') || 'IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), BITB (Bitwise), ARKB (ARK)'} | Total 5D Flow: $${data.inflow5D?.toLocaleString()}M | Last Updated: ${new Date(data.timestamp).toLocaleString()}`}
+              title={generateTransparencyTooltip({
+                ...extractTransparencyData(data),
+                existingTooltip: `ETFs Included: ${data.etfBreakdown?.map(etf => `${etf.symbol} (${etf.name})`).join(', ') || 'IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), BITB (Bitwise), ARKB (ARK)'} | Total 5D Flow: $${data.inflow5D?.toLocaleString()}M`
+              })}
             >
               {data.etfsAnalyzed} ETFs • {data.cacheAgeFormatted}
             </div>

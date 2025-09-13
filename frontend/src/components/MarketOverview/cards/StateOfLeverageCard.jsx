@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
+import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
 // Import API service
 import apiService from '../../../services/api';
@@ -235,7 +236,10 @@ const StateOfLeverageCard = React.memo(() => {
         {/* Description Box with Hover Tooltip */}
         <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} border ${colors.border.primary} relative group cursor-help`} 
              style={{ borderRadius: '0px' }}
-             title={`Sentiment: ${data.analysis?.sentiment || 'N/A'}\nRecommendation: ${data.analysis?.recommendation || 'N/A'}`}>
+             title={generateTransparencyTooltip({
+               ...extractTransparencyData(data),
+               existingTooltip: `Sentiment: ${data.analysis?.sentiment || 'N/A'}\nRecommendation: ${data.analysis?.recommendation || 'N/A'}`
+             })}>
           <div className={`text-xs ${colors.text.muted} leading-tight`}>
             {data.description || data.analysis?.sentiment}
           </div>

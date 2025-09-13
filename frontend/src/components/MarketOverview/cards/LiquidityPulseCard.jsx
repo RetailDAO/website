@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
+import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
 // Enhanced US 2Y Treasury yield chart component
 const US2YChart = React.memo(({ data, colors, height = 60 }) => {
@@ -305,8 +306,11 @@ const LiquidityPulseCard = React.memo(() => {
           <div className="flex items-center space-x-2">
             {data?._fromCache && (
               <span 
-                className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
-                title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
+                className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`} 
+                title={generateTransparencyTooltip({
+                  ...extractTransparencyData(data),
+                  existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
+                })}
               >
                 [{data._isStale ? 'CACHE*' : 'CACHE'}]
               </span>

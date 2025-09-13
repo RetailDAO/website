@@ -12,7 +12,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { btcController } = require('./controllers/btcController');
 const { dxyController } = require('./controllers/dxyController');
 const { fundingController } = require('./controllers/fundingController');
-const { etfController } = require('./controllers/etfController');
+// ETF flows now handled via Market Overview v2 routes in api.js
 const { rsiController } = require('./controllers/rsiController');
 const { cryptoController } = require('./controllers/cryptoController');
 const { indicatorStreamController } = require('./controllers/indicatorStreamController');
@@ -81,7 +81,6 @@ app.get('/api/v1/btc-analysis', btcController.getAnalysis);
 app.get('/api/v1/btc/ma-ribbon', btcController.getMARibbon);
 app.get('/api/v1/dxy-analysis', dxyController.getAnalysis);
 app.get('/api/v1/funding-rates', fundingController.getFundingRates);
-app.get('/api/v1/etf-flows', etfController.getFlows);
 app.get('/api/v1/rsi', rsiController.getRSI);
 
 // Enhanced crypto analysis endpoints
@@ -106,7 +105,6 @@ app.get('/api/v1/test', (req, res) => {
       '/api/v1/btc-analysis', 
       '/api/v1/dxy-analysis',
       '/api/v1/funding-rates',
-      '/api/v1/etf-flows',
       '/api/v1/rsi',
       '/api/v1/crypto/analysis',
       '/api/v1/crypto/multi-analysis',

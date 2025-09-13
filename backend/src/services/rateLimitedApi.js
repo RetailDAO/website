@@ -43,6 +43,20 @@ class RateLimitedApiService {
         reservoirRefreshInterval: 60 * 1000,
         maxConcurrent: 1,
         minTime: 12000 // 12 seconds between requests
+      }),
+      'yahoo-finance': new Bottleneck({
+        reservoir: 120, // More generous: 120 calls per minute (Yahoo is lenient)
+        reservoirRefreshAmount: 120,
+        reservoirRefreshInterval: 60 * 1000,
+        maxConcurrent: 3, // Allow more concurrent requests
+        minTime: 500 // 0.5 seconds between requests (much faster than CoinGecko)
+      }),
+      'coinglass': new Bottleneck({
+        reservoir: 100, // 100 calls per minute for free tier
+        reservoirRefreshAmount: 100,
+        reservoirRefreshInterval: 60 * 1000,
+        maxConcurrent: 2,
+        minTime: 600 // 0.6 seconds between requests
       })
     };
   }

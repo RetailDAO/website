@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
+import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 import apiService from '../../../services/api';
 
 // Mock data simulating Top 100 coins analysis vs BTC (30D)
@@ -313,8 +314,11 @@ const RotationBreadthCard = React.memo(() => {
           <div className="flex items-center space-x-2">
             {data._fromCache && (
               <span 
-                className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
-                title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
+                className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`} 
+                title={generateTransparencyTooltip({
+                  ...extractTransparencyData(data),
+                  existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
+                })}
               >
                 [{data._isStale ? 'CACHE*' : 'CACHE'}]
               </span>

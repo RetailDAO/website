@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { useOptimizedFuturesBasis } from '../../../hooks/useOptimizedFuturesBasis';
+import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
 // Error states for graceful handling with retry functionality
 const ErrorState = ({ colors, error, onRetry }) => (
@@ -226,15 +227,16 @@ const FuturesBasisCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Footer with metadata - only in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className={`mt-2 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
-          {isUsingMockData() ? '🎭' : '✅'} {dataSource} • {lastUpdate ? new Date(lastUpdate).toLocaleTimeString() : 'No timestamp'}
-          {data?._metadata?.fetchTime && (
-            <span className="ml-2">• {data._metadata.fetchTime}ms</span>
-          )}
-        </div>
-      )}
+      {/* Transparency info tooltip */}
+      <div 
+        className={`mt-2 pt-2 text-xs ${colors.text.muted} cursor-help hover:${colors.text.secondary} transition-colors text-center`}
+        title={generateTransparencyTooltip({
+          ...extractTransparencyData(data),
+          existingTooltip: `Futures Basis Calculation: (Futures Price - Spot Price) / Spot Price × 365 × 100`
+        })}
+      >
+        {isUsingMockData() ? '🎭' : '✅'} Data • Hover for transparency info
+      </div>
     </div>
   );
 });

@@ -3,6 +3,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
+import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
 // Import API service
 import apiService from '../../../services/api';
@@ -150,8 +151,11 @@ const MovingAveragesCard = React.memo(() => {
         <div className="flex items-center space-x-1">
           {data?._fromCache && (
             <span 
-              className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
-              title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
+              className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`} 
+              title={generateTransparencyTooltip({
+                ...extractTransparencyData(data),
+                existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
+              })}
             >
               [{data._isStale ? 'CACHE*' : 'CACHE'}]
             </span>

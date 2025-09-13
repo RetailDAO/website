@@ -63,10 +63,16 @@ class BackgroundJobScheduler {
   }
 
   /**
-   * Tier 1: Moving Averages (Every hour at minute 0)
+   * Tier 1: Moving Averages (Hourly with randomized minutes - Anti-pattern detection)
    */
   scheduleMovingAveragesJob() {
-    const job = cron.schedule('0 * * * *', async () => {
+    // Randomize execution minute (0-59) to avoid predictable patterns
+    const randomMinute = Math.floor(Math.random() * 60);
+    const cronExpression = `${randomMinute} * * * *`;
+    
+    console.log(`🔀 Moving Averages job scheduled at random minute: :${randomMinute.toString().padStart(2, '0')} every hour`);
+    
+    const job = cron.schedule(cronExpression, async () => {
       await this.executeWithErrorHandling('moving-averages', async () => {
         console.log('🔄 [Background] Updating Moving Averages cache...');
         
@@ -171,10 +177,18 @@ class BackgroundJobScheduler {
   }
 
   /**
-   * Tier 2: Futures Basis (Every 5 hours at minute 15)
+   * Tier 2: Futures Basis (Every 5 hours with slight randomization)
    */
   scheduleFuturesBasisJob() {
-    const job = cron.schedule('15 */5 * * *', async () => {
+    // Add ±5 minute randomization to reduce predictability
+    const baseMinute = 15;
+    const randomOffset = Math.floor(Math.random() * 11) - 5; // -5 to +5 minutes
+    const randomMinute = Math.max(0, Math.min(59, baseMinute + randomOffset));
+    const cronExpression = `${randomMinute} */5 * * *`;
+    
+    console.log(`🔀 Futures Basis job scheduled at: :${randomMinute.toString().padStart(2, '0')} every 5 hours`);
+    
+    const job = cron.schedule(cronExpression, async () => {
       await this.executeWithErrorHandling('futures-basis', async () => {
         console.log('🔄 [Background] Updating Futures Basis cache...');
         // Placeholder for futures basis calculation
@@ -205,10 +219,17 @@ class BackgroundJobScheduler {
   }
 
   /**
-   * Tier 3: Rotation Breadth (Every 10 hours at minute 30)
+   * Tier 3: Rotation Breadth (Every 10 hours with randomized timing - Anti-pattern detection)
    */
   scheduleRotationBreadthJob() {
-    const job = cron.schedule('30 */10 * * *', async () => {
+    // Randomize execution time within 10-hour intervals
+    const randomMinute = Math.floor(Math.random() * 60); // 0-59 minutes
+    const randomHourOffset = Math.floor(Math.random() * 2); // 0-1 hour offset
+    const cronExpression = `${randomMinute} ${randomHourOffset},${10 + randomHourOffset},${20 + randomHourOffset} * * *`;
+    
+    console.log(`🔀 Rotation Breadth job scheduled at random times: :${randomMinute.toString().padStart(2, '0')} every ~10 hours`);
+    
+    const job = cron.schedule(cronExpression, async () => {
       await this.executeWithErrorHandling('rotation-breadth', async () => {
         console.log('🔄 [Background] Updating Rotation Breadth cache...');
         // Placeholder for rotation breadth calculation
@@ -239,10 +260,18 @@ class BackgroundJobScheduler {
   }
 
   /**
-   * Tier 3: Liquidity Pulse (Every 20 hours at minute 45)
+   * Tier 3: Liquidity Pulse (Every 20 hours with slight randomization)
    */
   scheduleLiquidityPulseJob() {
-    const job = cron.schedule('45 */20 * * *', async () => {
+    // Add ±10 minute randomization for Alpha Vantage API
+    const baseMinute = 45;
+    const randomOffset = Math.floor(Math.random() * 21) - 10; // -10 to +10 minutes
+    const randomMinute = Math.max(0, Math.min(59, baseMinute + randomOffset));
+    const cronExpression = `${randomMinute} */20 * * *`;
+    
+    console.log(`🔀 Liquidity Pulse job scheduled at: :${randomMinute.toString().padStart(2, '0')} every 20 hours`);
+    
+    const job = cron.schedule(cronExpression, async () => {
       await this.executeWithErrorHandling('liquidity-pulse', async () => {
         console.log('🔄 [Background] Updating Liquidity Pulse cache...');
         // Placeholder for liquidity pulse calculation
@@ -273,30 +302,59 @@ class BackgroundJobScheduler {
   }
 
   /**
-   * Tier 4: ETF Flows (Every day at 02:00 UTC)
+   * Tier 4: ETF Flows (Daily with randomized timing - Anti-pattern detection)
    */
   scheduleETFFlowsJob() {
-    const job = cron.schedule('0 2 * * *', async () => {
+    // Randomize daily execution time between 2-6 AM to avoid pattern detection
+    const randomHour = Math.floor(Math.random() * 4) + 2; // 2-5 AM
+    const randomMinute = Math.floor(Math.random() * 60); // 0-59 minutes
+    const cronExpression = `${randomMinute} ${randomHour} * * *`;
+    
+    console.log(`🔀 ETF flows job scheduled at random time: ${randomHour}:${randomMinute.toString().padStart(2, '0')} UTC daily`);
+    
+    const job = cron.schedule(cronExpression, async () => {
       await this.executeWithErrorHandling('etf-flows', async () => {
-        console.log('🔄 [Background] Updating ETF Flows cache...');
-        // Placeholder for ETF flows calculation
-        const result = {
-          netFlow: 1250000000, // $1.25B
-          trend: 'inflow',
-          topETFs: ['SPY', 'QQQ', 'IWM'],
+        console.log('🔥 [Background] Cache warming ETF Flows for both periods...');
+        
+        const { etfController } = require('../../controllers/etfController');
+        
+        // Warm cache for both periods in parallel
+        const warmingPromises = ['2W', '1M'].map(async (period) => {
+          try {
+            console.log(`🔥 Warming ${period} ETF flows cache...`);
+            const dayPeriod = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+            const cacheKey = `etf_flows_${period}_${dayPeriod}`;
+            
+            // Calculate fresh data
+            const result = await etfController.calculateETFFlows(period);
+            
+            // Store in cache using ETF cache service method
+            await cacheService.setETFFlows(cacheKey, result);
+            await cacheService.setFallbackData(cacheKey, result, 'etf');
+            
+            console.log(`✅ [Background] ${period} ETF flows cache warmed`);
+            return { period, success: true, dataPoints: result.flows?.length || 0 };
+          } catch (error) {
+            console.error(`❌ [Background] Failed to warm ${period} cache:`, error.message);
+            return { period, success: false, error: error.message };
+          }
+        });
+        
+        const results = await Promise.allSettled(warmingPromises);
+        const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+        
+        console.log(`🔥 [Background] Cache warming completed: ${successful}/2 periods successful`);
+        
+        return {
+          warmedPeriods: successful,
+          totalPeriods: 2,
+          results: results.map(r => r.status === 'fulfilled' ? r.value : { error: r.reason }),
           metadata: {
             calculatedAt: new Date().toISOString(),
-            source: 'background_job',
-            fresh: true,
-            nextUpdate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            source: 'cache_warming_job',
+            nextWarming: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // Next 24h
           }
         };
-        
-        const cacheKey = 'market:etf_flows:current';
-        await cacheService.setWithTTL(cacheKey, result, 4 * 24 * 60 * 60); // 4 days
-        
-        console.log('✅ [Background] ETF Flows cache updated');
-        return result;
       });
     }, {
       scheduled: false,

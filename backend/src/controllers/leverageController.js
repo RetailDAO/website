@@ -4,8 +4,8 @@ const axios = require('axios');
 
 class LeverageController {
   constructor() {
-    // CoinGlass API configuration with rate limiting
-    this.coinglassLimiter = rateLimitedApiService.limiters.coingecko; // Reuse coingecko limiter for now
+    // Use dedicated CoinGlass API configuration with proper rate limiting
+    this.coinglassLimiter = rateLimitedApiService.limiters.coinglass;
     this.baseURL = 'https://open-api.coinglass.com/public/v2';
     
     // Cache service  

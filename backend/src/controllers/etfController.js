@@ -10,14 +10,30 @@
  */
 
 const axios = require('axios');
+const { performance } = require('perf_hooks');
 const rateLimitedApiService = require('../services/rateLimitedApi');
 const cacheService = require('../services/cache/cacheService');
 
 class ETFController {
   constructor() {
-    // Use a light rate limiter for Yahoo Finance (it's quite generous)
-    this.yahooLimiter = rateLimitedApiService.limiters.coingecko; // Reuse existing limiter
+    // Use dedicated Yahoo Finance rate limiter (more generous than CoinGecko)
+    this.yahooLimiter = rateLimitedApiService.limiters['yahoo-finance'];
     this.baseURL = 'https://query1.finance.yahoo.com/v8/finance/chart';
+    
+    // User-Agent rotation to avoid pattern detection
+    this.userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (compatible; RetailDAO/1.0; +https://retaildao.org/bot)'
+    ];
+    
+    // Exponential backoff configuration for 429 errors
+    this.retryConfig = {
+      maxRetries: 3,
+      delays: [2000, 5000, 15000], // 2s, 5s, 15s
+      backoffMultiplier: 2
+    };
     
     // Major BTC ETFs to aggregate
     this.btcETFs = [
@@ -28,12 +44,12 @@ class ETFController {
       { symbol: 'ARKB', name: 'ARK 21Shares Bitcoin ETF', weight: 0.1 }
     ];
 
-    // Ultra-conservative caching strategy for ETF data
+    // Conservative caching strategy for ETF data - enhanced resilience against API blocks
     this.cacheConfig = {
       etf_flows: {
-        ttl: 5 * 24 * 60 * 60, // 5 days - ETF flows change slowly
-        fallback_ttl: 14 * 24 * 60 * 60, // 14 days fallback
-        description: 'BTC ETF flows - ultra low volatility data'
+        ttl: 48 * 60 * 60, // 48 hours - extended for Yahoo Finance blocking resilience
+        fallback_ttl: 14 * 24 * 60 * 60, // 14 days fallback for emergency situations
+        description: 'BTC ETF flows - extended cache for API blocking protection'
       },
       individual_etf: {
         ttl: 24 * 60 * 60, // 1 day for individual ETF data
@@ -44,22 +60,22 @@ class ETFController {
   }
 
   // Main endpoint for ETF Flows
-  async getETFFlows(req, res, next) {
+  async getETFFlows(req, res) {
     try {
       const startTime = performance.now();
       const period = req.query.period || '2W'; // Default to 2 weeks
       
-      // 5-day cache key (refreshes twice per week maximum)
-      const weekPeriod = Math.floor(Date.now() / (5 * 24 * 60 * 60 * 1000)); // 5-day periods
-      const cacheKey = `etf_flows_${period}_${weekPeriod}`;
+      // Daily cache key for fresh financial data
+      const dayPeriod = Math.floor(Date.now() / (24 * 60 * 60 * 1000)); // Daily periods
+      const cacheKey = `etf_flows_${period}_${dayPeriod}`;
       
       // Try cache with fallback support (stale-while-revalidate pattern)
       const cacheResult = await cacheService.getWithFallback(cacheKey, 'etf');
       let result = cacheResult.data;
       
       if (!result) {
-        console.log('🔄 Computing fresh ETF flows analysis (5-DAY STRATEGIC CACHE)');
-        console.log('💡 ETF data refreshes twice weekly to conserve API calls');
+        console.log('🔄 Computing fresh ETF flows analysis (DAILY REFRESH CACHE)');
+        console.log('💡 ETF data refreshes daily for optimal freshness and API efficiency');
         
         try {
           result = await this.calculateETFFlows(period);
@@ -71,9 +87,19 @@ class ETFController {
           await cacheService.setFallbackData(cacheKey, result, 'etf');
           
           console.log(`✅ ETF flows calculation completed in ${Math.round(performance.now() - startTime)}ms`);
-          console.log(`🎯 Ultra-conservative cache: Next refresh in 4 days`);
+          console.log('🎯 Daily refresh cache: Next refresh in ~24 hours');
         } catch (error) {
           console.log('🎭 Error calculating ETF flows, using fallback:', error.message);
+          
+          // Handle 429 Too Many Requests specifically
+          if (error.response?.status === 429) {
+            console.log('⚠️ [429 Error] Yahoo Finance rate limit hit - extending cache TTL');
+            // Extend existing cache TTL for emergency situations
+            if (cacheResult.data) {
+              await cacheService.setETFFlows(cacheKey + '_emergency', cacheResult.data);
+            }
+          }
+          
           result = await this.getFallbackData(period);
         }
       } else {
@@ -81,9 +107,9 @@ class ETFController {
         const source = cacheResult.source;
         console.log(`⚡ Serving ${freshness} ETF flows data from ${source} (${Math.round(performance.now() - startTime)}ms)`);
         if (cacheResult.fresh) {
-          console.log(`🎯 Cache TTL: ${Math.round((result.metadata?.nextRefresh - Date.now()) / (1000 * 60 * 60 * 24))} days remaining`);
+          console.log(`🎯 Cache TTL: ${Math.round((result.metadata?.nextRefresh - Date.now()) / (1000 * 60 * 60))} hours remaining`);
         } else {
-          console.log(`🔄 Stale data acceptable for ETF flows - will refresh in background`);
+          console.log('🔄 Stale data acceptable for ETF flows - will refresh in background');
         }
       }
 
@@ -184,7 +210,7 @@ class ETFController {
     };
   }
 
-  // Get individual ETF data from Yahoo Finance
+  // Get individual ETF data from Yahoo Finance with enhanced error handling
   async getETFData(symbol, startTime, endTime) {
     const dailyCacheKey = `etf_${symbol}_${Math.floor(Date.now() / (24 * 60 * 60 * 1000))}`;
     
@@ -197,41 +223,74 @@ class ETFController {
     
     console.log(`🔄 Fetching fresh data for ${symbol}`);
     
-    const response = await this.yahooLimiter.schedule(async () => {
-      return await axios.get(`${this.baseURL}/${symbol}`, {
-        params: {
-          period1: startTime,
-          period2: endTime,
-          interval: '1d',
-          includePrePost: false,
-          events: 'div|split'
-        },
-        timeout: 10000
-      });
-    });
-    
-    if (!response.data?.chart?.result?.[0]) {
-      throw new Error(`Invalid response for ${symbol}`);
+    // Retry logic with exponential backoff
+    for (let attempt = 0; attempt <= this.retryConfig.maxRetries; attempt++) {
+      try {
+        const randomUserAgent = this.userAgents[Math.floor(Math.random() * this.userAgents.length)];
+        
+        const response = await this.yahooLimiter.schedule(async () => {
+          return await axios.get(`${this.baseURL}/${symbol}`, {
+            params: {
+              period1: startTime,
+              period2: endTime,
+              interval: '1d',
+              includePrePost: false,
+              events: 'div|split'
+            },
+            headers: {
+              'User-Agent': randomUserAgent,
+              'Accept': 'application/json',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Cache-Control': 'no-cache'
+            },
+            timeout: 15000 // Increased timeout
+          });
+        });
+        
+        // Success - process response
+        if (!response.data?.chart?.result?.[0]) {
+          throw new Error(`Invalid response for ${symbol}`);
+        }
+        
+        const result = response.data.chart.result[0];
+        const timestamps = result.timestamp || [];
+        const quotes = result.indicators?.quote?.[0] || {};
+        
+        const processedData = {
+          symbol,
+          timestamps,
+          closes: quotes.close || [],
+          volumes: quotes.volume || [],
+          dataPoints: timestamps.length,
+          recentFlow: this.calculateRecentFlow(quotes.close, quotes.volume),
+          lastUpdated: Date.now()
+        };
+        
+        // Cache individual ETF data for 1 day
+        await cacheService.set(dailyCacheKey, processedData, this.cacheConfig.individual_etf.ttl);
+        
+        return processedData;
+        
+      } catch (error) {
+        const isLastAttempt = attempt === this.retryConfig.maxRetries;
+        
+        if (error.response?.status === 429) {
+          console.log(`⚠️ [429 Error] Rate limit hit for ${symbol}, attempt ${attempt + 1}/${this.retryConfig.maxRetries + 1}`);
+          
+          if (!isLastAttempt) {
+            const delay = this.retryConfig.delays[attempt] || 15000;
+            console.log(`⏳ Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+        
+        if (isLastAttempt) {
+          console.error(`❌ Failed to fetch ${symbol} after ${this.retryConfig.maxRetries + 1} attempts:`, error.message);
+          throw new Error(`Failed to fetch ${symbol}: ${error.message}`);
+        }
+      }
     }
-    
-    const result = response.data.chart.result[0];
-    const timestamps = result.timestamp || [];
-    const quotes = result.indicators?.quote?.[0] || {};
-    
-    const processedData = {
-      symbol,
-      timestamps,
-      closes: quotes.close || [],
-      volumes: quotes.volume || [],
-      dataPoints: timestamps.length,
-      recentFlow: this.calculateRecentFlow(quotes.close, quotes.volume),
-      lastUpdated: Date.now()
-    };
-    
-    // Cache individual ETF data for 1 day
-    await cacheService.set(dailyCacheKey, processedData, this.cacheConfig.individual_etf.ttl);
-    
-    return processedData;
   }
 
   // Calculate recent flow for an ETF (last 5 days average)
@@ -355,8 +414,6 @@ class ETFController {
     const maxDaysBack = 30;
     const daysToShow = period === '1M' ? 30 : 14;
     const flows = [];
-    let cumulativeFlow = 2000; // Start with $2B base
-    
     for (let i = maxDaysBack; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const dailyFlow = (Math.random() - 0.3) * 400 + 100; // Bias toward positive flows
@@ -367,8 +424,6 @@ class ETFController {
         etfsContributing: 4,
         confidence: 0.8
       });
-      
-      cumulativeFlow += dailyFlow;
     }
     
     // Filter to requested period
