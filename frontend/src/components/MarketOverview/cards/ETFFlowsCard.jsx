@@ -97,7 +97,7 @@ const getStatusConfig = (status, colors, statusColor = null) => {
   return config;
 };
 
-// Enhanced bar chart component for ETF flows - Optimized for real API data
+// Clean column chart component for ETF flows - Improved visualization
 const ETFFlowChart = React.memo(({ flows, colors, period }) => {
   if (!flows || flows.length === 0) return (
     <div className="w-full h-40 flex items-center justify-center">
@@ -105,83 +105,112 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
     </div>
   );
   
-  const maxInflow = Math.max(...flows.map(f => f.inflow), 0);
-  const minInflow = Math.min(...flows.map(f => f.inflow), 0);
-  const maxAbs = Math.max(Math.abs(maxInflow), Math.abs(minInflow));
-  const displayFlows = flows; // Show all flows for the selected period
-  const barWidth = Math.max(2, Math.min(10, 280 / displayFlows.length));
+  // Display all data returned by backend (2W = 14 days, 1M = 30 days)
+  const displayFlows = flows;
   
-  // Check if all flows are positive (typical for net inflows)
-  const allPositive = flows.every(f => f.inflow >= 0);
+  const maxInflow = Math.max(...displayFlows.map(f => f.inflow));
+  const minInflow = Math.min(...displayFlows.map(f => f.inflow));
+  
+  // Calculate optimal bar dimensions based on data length
+  const containerWidth = 320;
+  const totalBars = displayFlows.length;
+  const barSpacing = totalBars > 20 ? 1 : 2; // Reduce spacing for more bars
+  const barWidth = Math.max(3, Math.floor((containerWidth - (totalBars - 1) * barSpacing) / totalBars));
+  const chartHeight = 120;
+  
+  // Create value scale with some padding
+  const valueRange = maxInflow - Math.min(minInflow, 0);
+  const scalePadding = valueRange * 0.1;
+  const scaleMax = maxInflow + scalePadding;
+  const scaleMin = Math.min(minInflow - scalePadding, 0);
   
   return (
     <div className="w-full h-40 flex flex-col">
       {/* Chart container */}
-      <div className="flex-1 flex items-center justify-center relative">
-        {!allPositive && (
-          // Zero line at center - only show if we have negative flows
-          <div className={`absolute w-full h-px ${colors.border.primary} opacity-50 z-10`} style={{ top: '50%' }} />
+      <div className="flex-1 relative px-4">
+        {/* Background grid lines */}
+        <div className="absolute inset-0 flex flex-col justify-between opacity-20">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className={`w-full h-px ${colors.border.primary}`} />
+          ))}
+        </div>
+        
+        {/* Zero line if needed */}
+        {scaleMin < 0 && (
+          <div 
+            className={`absolute w-full h-px ${colors.border.primary} opacity-50 z-10`} 
+            style={{ 
+              bottom: `${(Math.abs(scaleMin) / valueRange) * chartHeight}px` 
+            }} 
+          />
         )}
         
         {/* Bars container */}
-        <div className="flex items-center justify-center space-x-0.5 h-full relative">
+        <div className="flex items-end justify-center h-full space-x-0.5 relative pt-4">
           {displayFlows.map((flow, index) => {
-            const maxHeight = allPositive ? 120 : 70; // Use full height if all positive
-            const normalizedValue = Math.abs(flow.inflow) / maxAbs;
-            const height = Math.max(4, normalizedValue * maxHeight);
-            const isPositive = flow.inflow >= 0;
+            const flowValue = flow.inflow;
+            const isPositive = flowValue >= 0;
+            
+            // Calculate bar height as percentage of chart height
+            const heightRatio = Math.abs(flowValue - scaleMin) / (scaleMax - scaleMin);
+            const barHeight = Math.max(3, heightRatio * chartHeight);
+            
+            // Color intensity based on flow size
+            const intensity = Math.abs(flowValue) / maxInflow;
+            const opacityClass = intensity > 0.8 ? 'opacity-100' : intensity > 0.6 ? 'opacity-80' : 'opacity-65';
             
             return (
               <div
                 key={index}
-                className="relative flex items-center"
-                style={{ height: '100%' }}
-                title={`${new Date(flow.date).toLocaleDateString()}: $${flow.inflow.toLocaleString()}M • ${flow.etfsContributing || 'Multiple'} ETFs`}
+                className="relative group cursor-pointer"
+                style={{ width: `${barWidth}px` }}
               >
+                {/* Tooltip */}
+                <div className={`
+                  absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
+                  bg-gray-900 text-white text-xs px-2 py-1 rounded
+                  opacity-0 group-hover:opacity-100 transition-opacity z-20
+                  whitespace-nowrap
+                `}>
+                  {new Date(flow.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${flowValue.toLocaleString()}M
+                </div>
+                
+                {/* Bar */}
                 <div
                   className={`
                     ${isPositive 
                       ? 'bg-green-500 dark:bg-green-400' 
                       : 'bg-red-500 dark:bg-red-400'
                     }
-                    opacity-80 hover:opacity-100 transition-all duration-200
-                    hover:scale-105 cursor-pointer rounded-sm
-                    absolute
+                    ${opacityClass} group-hover:opacity-100
+                    transition-all duration-200 group-hover:scale-105 rounded-t-sm
                   `}
                   style={{
-                    width: `${barWidth}px`,
-                    height: `${height}px`,
-                    // Position bars properly based on data type
-                    bottom: allPositive ? '8px' : (isPositive ? '50%' : `calc(50% - ${height}px)`),
-                    left: '50%',
-                    transform: 'translateX(-50%)'
+                    height: `${barHeight}px`,
+                    minHeight: '3px'
                   }}
                 />
+                
+                {/* Date label - show only for every few days if many bars */}
+                {(totalBars <= 14 || index % Math.ceil(totalBars / 10) === 0) && (
+                  <div className={`text-xs text-center mt-1 ${colors.text.muted}`}>
+                    {new Date(flow.date).toLocaleDateString('en-US', { day: 'numeric' })}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
-        
-        {/* Flow value labels for recent days */}
-        {displayFlows.length <= 14 && (
-          <div className="absolute top-0 left-0 right-0 flex justify-between px-2 text-xs">
-            {displayFlows.slice(-5).map((flow, index) => (
-              <span key={index} className={`${colors.text.muted} opacity-60`}>
-                ${Math.round(flow.inflow)}M
-              </span>
-            ))}
-          </div>
-        )}
       </div>
       
       {/* Enhanced timeline labels */}
-      <div className="flex justify-between mt-2 px-2">
+      <div className="flex justify-between items-center mt-2 px-4">
         <span className={`text-xs ${colors.text.muted}`}>
-          {period === '2W' ? '2 weeks ago' : '1 month ago'}
+          {period === '2W' ? 'Last 2 weeks (14 days)' : 'Last month (30 days)'}
         </span>
-        <span className={`text-xs ${colors.text.accent}`}>
-          Today
-        </span>
+        <div className={`text-xs ${colors.text.accent} flex items-center space-x-1`}>
+          <span>Range: ${Math.round(minInflow)}M - ${Math.round(maxInflow)}M</span>
+        </div>
       </div>
     </div>
   );

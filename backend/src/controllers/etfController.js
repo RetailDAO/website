@@ -109,10 +109,10 @@ class ETFController {
     console.log(`📊 Calculating BTC ETF flows for ${period} period`);
     console.log(`🎯 Aggregating ${this.btcETFs.length} major BTC ETFs`);
     
-    // Determine date range based on period
-    const daysBack = period === '1M' ? 30 : 14; // 2W = 14 days, 1M = 30 days
+    // Always fetch 30 days of data, then filter based on requested period
+    const maxDaysBack = 30; // Always fetch 30 days
     const endTime = Math.floor(Date.now() / 1000);
-    const startTime = endTime - (daysBack * 24 * 60 * 60);
+    const startTime = endTime - (maxDaysBack * 24 * 60 * 60);
     
     // Fetch data for all ETFs in parallel
     const etfPromises = this.btcETFs.map(etf => 
@@ -145,16 +145,20 @@ class ETFController {
     
     console.log(`📈 Successfully aggregated ${validETFs.length}/${this.btcETFs.length} ETFs`);
     
-    // Calculate aggregated flows
-    const aggregatedFlows = this.aggregateETFFlows(validETFs, totalWeight, daysBack);
+    // Calculate aggregated flows for full 30 days
+    const allAggregatedFlows = this.aggregateETFFlows(validETFs, totalWeight, maxDaysBack);
     
-    // Calculate 5D sum and status
-    const flows5D = this.calculate5DayFlows(aggregatedFlows);
+    // Filter flows based on requested period
+    const daysToShow = period === '1M' ? 30 : 14; // 2W = 14 days, 1M = 30 days
+    const filteredFlows = allAggregatedFlows.slice(-daysToShow);
+    
+    // Calculate 5D sum and status from the filtered data
+    const flows5D = this.calculate5DayFlows(filteredFlows);
     const status = this.determineFlowStatus(flows5D.totalFlow);
     
     return {
       period,
-      flows: aggregatedFlows,
+      flows: filteredFlows,
       inflow5D: flows5D.totalFlow,
       status: status.label,
       statusColor: status.color,
@@ -173,7 +177,8 @@ class ETFController {
         aggregationMethod: 'weighted_average',
         timestamp: Date.now(),
         nextRefresh: new Date(Date.now() + (this.cacheConfig.etf_flows.ttl * 1000)).toISOString(),
-        daysAnalyzed: daysBack,
+        daysAnalyzed: daysToShow,
+        totalDataFetched: maxDaysBack,
         apiCallsConserved: `5-day caching saves ~${this.btcETFs.length * 365 / 5} calls/year`
       }
     };
@@ -346,12 +351,13 @@ class ETFController {
       return { ...cachedFallback, dataSource: 'cached_fallback' };
     }
 
-    // Generate realistic mock data
-    const daysBack = period === '1M' ? 30 : 14;
+    // Generate realistic mock data - always generate 30 days, then filter
+    const maxDaysBack = 30;
+    const daysToShow = period === '1M' ? 30 : 14;
     const flows = [];
     let cumulativeFlow = 2000; // Start with $2B base
     
-    for (let i = daysBack; i >= 0; i--) {
+    for (let i = maxDaysBack; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const dailyFlow = (Math.random() - 0.3) * 400 + 100; // Bias toward positive flows
       
@@ -365,14 +371,16 @@ class ETFController {
       cumulativeFlow += dailyFlow;
     }
     
-    const flows5D = this.calculate5DayFlows(flows);
+    // Filter to requested period
+    const filteredFlows = flows.slice(-daysToShow);
+    const flows5D = this.calculate5DayFlows(filteredFlows);
     const status = this.determineFlowStatus(flows5D.totalFlow);
 
     console.log('🎭 Using generated mock ETF flows data');
 
     return {
       period,
-      flows: flows.slice(-daysBack),
+      flows: filteredFlows,
       inflow5D: flows5D.totalFlow,
       status: status.label,
       statusColor: status.color,
@@ -388,6 +396,8 @@ class ETFController {
       metadata: {
         dataSource: 'mock',
         timestamp: Date.now(),
+        daysAnalyzed: daysToShow,
+        totalDataGenerated: maxDaysBack,
         reason: 'API unavailable'
       }
     };
