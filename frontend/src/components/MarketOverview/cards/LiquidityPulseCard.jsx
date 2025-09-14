@@ -5,12 +5,11 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
-// Enhanced US 2Y Treasury yield chart component
-const US2YChart = React.memo(({ data, colors, height = 60 }) => {
+// Enhanced US 2Y Treasury yield chart component - Full width version
+const US2YChart = React.memo(({ data, colors, height = 80, width = 400 }) => {
   const { points, currentValue, minValue, maxValue } = useMemo(() => {
     if (!data || data.length < 2) return { points: '', currentValue: 0, minValue: 0, maxValue: 0 };
-    
-    const width = 200;
+
     const padding = 8;
     const actualWidth = width - padding * 2;
     const actualHeight = height - padding * 2;
@@ -43,7 +42,7 @@ const US2YChart = React.memo(({ data, colors, height = 60 }) => {
 
   if (!data || data.length < 2) {
     return (
-      <div className="flex items-center justify-center" style={{ width: 200, height }}>
+      <div className="flex items-center justify-center" style={{ width, height }}>
         <span className={`text-sm ${colors.text.secondary}`}>No chart data</span>
       </div>
     );
@@ -51,14 +50,14 @@ const US2YChart = React.memo(({ data, colors, height = 60 }) => {
 
   return (
     <div className="relative">
-      <svg width={200} height={height} className="overflow-visible">
+      <svg width={width} height={height} className="overflow-visible">
         {/* Grid lines */}
         <defs>
           <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
             <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.1"/>
           </pattern>
         </defs>
-        <rect width="200" height={height} fill="url(#grid)" className={colors.text.secondary} />
+        <rect width={width} height={height} fill="url(#grid)" className={colors.text.secondary} />
         
         {/* Chart line */}
         <path
@@ -73,7 +72,7 @@ const US2YChart = React.memo(({ data, colors, height = 60 }) => {
         
         {/* Current value indicator */}
         <circle
-          cx={200 - 8}
+          cx={width - 8}
           cy={height - ((currentValue - minValue) / (maxValue - minValue)) * (height - 16) - 8}
           r="3"
           fill="#3b82f6"
@@ -94,87 +93,46 @@ const US2YChart = React.memo(({ data, colors, height = 60 }) => {
 // Import API service
 import apiService from '../../../services/api';
 
-// Traffic light state mapping based on 30-day change
-const getTrafficLightState = (change30Day) => {
-  if (change30Day <= -25) return 'easing'; // Green: ≤ -25 bps
-  if (change30Day >= 25) return 'tightening'; // Red: ≥ +25 bps
-  return 'neutral'; // Yellow: in between
+// Status state mapping based on 30-day change in basis points
+const getLiquidityStatus = (change30Day) => {
+  if (change30Day <= -25) return {
+    status: 'easing',
+    label: 'Easing (Risk-On)',
+    color: '#10b981', // Green
+    description: 'Yields dropped ≥25 bps'
+  };
+  if (change30Day >= 25) return {
+    status: 'tightening',
+    label: 'Tightening (Risk-Off)',
+    color: '#ef4444', // Red
+    description: 'Yields rose ≥25 bps'
+  };
+  return {
+    status: 'neutral',
+    label: 'Neutral',
+    color: '#f59e0b', // Yellow
+    description: 'Between -25 and +25 bps'
+  };
 };
 
-// Stylish traffic lights component with glow effects
-const TrafficLights = React.memo(({ state, colors }) => {
-  const lights = {
-    easing: { position: 'top', color: '#10b981', label: 'Easing', description: '≤ -25 bps' },
-    neutral: { position: 'middle', color: '#f59e0b', label: 'Neutral', description: 'in between' },
-    tightening: { position: 'bottom', color: '#ef4444', label: 'Tightening', description: '≥ +25 bps' }
-  };
-
-  const activeLight = lights[state];
-
+// Simple status indicator component
+const StatusIndicator = React.memo(({ statusInfo, colors }) => {
   return (
-    <div className="flex flex-col items-center space-y-1">
-      {/* Traffic light container */}
-      <div className={`relative bg-gray-800 dark:bg-gray-900 rounded-full p-2 border-2 ${colors.border.primary}`} style={{ width: '48px', height: '120px' }}>
-        {/* Individual lights */}
-        {Object.entries(lights).map(([lightState, config]) => {
-          const isActive = state === lightState;
-          return (
-            <div
-              key={lightState}
-              className={`
-                w-8 h-8 rounded-full mx-auto mb-1 last:mb-0 transition-all duration-500
-                ${isActive 
-                  ? `shadow-lg` 
-                  : 'bg-gray-600 dark:bg-gray-700 opacity-30'
-                }
-              `}
-              style={{
-                backgroundColor: isActive ? config.color : undefined,
-                boxShadow: isActive 
-                  ? `0 0 20px ${config.color}40, 0 0 40px ${config.color}20, inset 0 0 10px ${config.color}30` 
-                  : undefined
-              }}
-            />
-          );
-        })}
-      </div>
-      
-      {/* Active state label */}
-      <div className="text-center">
-        <div className={`text-sm font-semibold ${colors.text.primary}`} style={{ color: activeLight.color }}>
-          {activeLight.label}
-        </div>
-        <div className={`text-xs ${colors.text.secondary}`}>
-          {activeLight.description}
-        </div>
+    <div className="text-center">
+      <div
+        className="text-sm font-semibold px-3 py-1 rounded"
+        style={{
+          backgroundColor: statusInfo.color + '20',
+          color: statusInfo.color,
+          border: `1px solid ${statusInfo.color}40`
+        }}
+      >
+        {statusInfo.label}
       </div>
     </div>
   );
 });
 
-// Trend direction indicator
-const TrendIndicator = React.memo(({ trend, value, colors }) => {
-  const isPositive = value > 0;
-  const isNeutral = Math.abs(value) < 0.02; // Less than 2 basis points
-  
-  if (isNeutral) {
-    return (
-      <span className={`inline-flex items-center text-sm ${colors.text.secondary}`}>
-        <span className="mr-1">➡️</span>
-        Stable
-      </span>
-    );
-  }
-  
-  return (
-    <span className={`inline-flex items-center text-sm ${
-      isPositive ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'
-    }`}>
-      <span className="mr-1">{isPositive ? '📈' : '📉'}</span>
-      {isPositive ? 'Rising' : 'Falling'}
-    </span>
-  );
-});
 
 // Helper function to format cache age
 const formatCacheAge = (ageMs) => {
@@ -236,10 +194,10 @@ const LiquidityPulseCard = React.memo(() => {
       .map(item => item.yield);
   }, [data?.treasury2Y?.data]);
 
-  // Calculate 30-day change and traffic light state
-  const trafficLightState = useMemo(() => {
-    if (!data?.pulse?.analysis?.trend30Day) return 'neutral';
-    return getTrafficLightState(data.pulse.analysis.trend30Day);
+  // Calculate 30-day change and status
+  const liquidityStatusInfo = useMemo(() => {
+    const change30Day = data?.pulse?.analysis?.trend30Day || 0;
+    return getLiquidityStatus(change30Day);
   }, [data?.pulse?.analysis?.trend30Day]);
 
   // Get current 30-day change for display
@@ -286,8 +244,6 @@ const LiquidityPulseCard = React.memo(() => {
   }
 
   const currentYield = data?.treasury2Y?.current?.yield;
-  const pulseScore = data?.pulse?.score;
-  const trend = data?.pulse?.analysis;
 
   return (
     <div className="h-full flex flex-col">
@@ -343,68 +299,32 @@ const LiquidityPulseCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Chart and Traffic Lights Section - Improved spacing distribution */}
-      <div className="flex items-center justify-between mb-2 flex-1 px-2">
-        {/* US 2Y Treasury Chart */}
-        <div className="flex-1 pr-4">
-          <div className="mb-2">
-            <h4 className={`text-sm font-semibold ${colors.text.primary}`}>
-              US 2Y Treasury Yield
-            </h4>
-            <div className={`text-lg font-bold ${colors.text.primary}`}>
-              {currentYield}%
-              <span className={`text-sm font-normal ${colors.text.secondary} ml-2`}>
-                30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
-              </span>
-            </div>
-          </div>
-          {chartData && (
-            <US2YChart 
-              data={chartData} 
-              colors={colors} 
-              height={60}
-            />
-          )}
-        </div>
-        
-        {/* Traffic Lights Indicator - Better positioning */}
-        <div className="flex-shrink-0 flex items-center justify-center">
-          <TrafficLights state={trafficLightState} colors={colors} />
-        </div>
-      </div>
-
-      {/* Third Hierarchy: Additional Info */}
-      <div className="space-y-2">
-        {/* Pulse Score */}
-        <div className="text-center">
-          <div className={`text-xl font-bold ${colors.text.primary}`}>
-            {pulseScore}
-            <span className={`text-sm font-normal ${colors.text.secondary} ml-1`}>
-              /100 Liquidity Score
+      {/* Main Content - US 2Y Treasury Chart */}
+      <div className="flex-1 mb-4">
+        <div className="mb-3">
+          <h4 className={`text-lg font-semibold ${colors.text.primary}`}>
+            US 2Y Treasury Yield
+          </h4>
+          <div className={`text-2xl font-bold ${colors.text.primary}`}>
+            {currentYield}%
+            <span className={`text-base font-normal ${colors.text.secondary} ml-3`}>
+              30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
             </span>
           </div>
         </div>
-
-        {/* Quick Stats */}
-        {trend && (
-          <div className="grid grid-cols-2 gap-2">
-            <div className="text-center">
-              <div className={`text-sm ${colors.text.secondary}`}>
-                7-Day Change: <span className={`font-medium ${colors.text.primary}`}>
-                  {trend.trend7Day > 0 ? '+' : ''}{trend.trend7Day}bp
-                </span>
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <TrendIndicator 
-                trend={trend.trend30Day} 
-                value={trend.trend30Day} 
-                colors={colors} 
-              />
-            </div>
-          </div>
+        {chartData && (
+          <US2YChart
+            data={chartData}
+            colors={colors}
+            height={80}
+            width={400}
+          />
         )}
+      </div>
+
+      {/* Status Indicator at Bottom */}
+      <div className="flex justify-center">
+        <StatusIndicator statusInfo={liquidityStatusInfo} colors={colors} />
       </div>
 
       {/* Development metadata */}
@@ -421,8 +341,7 @@ const LiquidityPulseCard = React.memo(() => {
 
 // Display names for better debugging
 US2YChart.displayName = 'US2YChart';
-TrafficLights.displayName = 'TrafficLights';
-TrendIndicator.displayName = 'TrendIndicator';
+StatusIndicator.displayName = 'StatusIndicator';
 LiquidityPulseCard.displayName = 'LiquidityPulseCard';
 
 export default LiquidityPulseCard;

@@ -175,9 +175,16 @@ class MacroDataService {
         signals.level = 'moderate_yields';
       }
 
+      // Calculate 30-day ago value for proper basis points calculation
+      const thirtyDaysAgo = data.length >= 30 ? data[data.length - 30] : data[0];
+      const thirtyDaysAgoYield = thirtyDaysAgo.yield;
+
       // Analyze trend (rising yields = tightening liquidity)
       const trendVs7Day = (currentYield - avg7Day) / avg7Day;
       const trendVs30Day = (currentYield - avg30Day) / avg30Day;
+
+      // Calculate 30-day change in basis points (bp = yield difference * 100)
+      const change30DayBps = Math.round((currentYield - thirtyDaysAgoYield) * 100);
 
       if (trendVs7Day > 0.05) { // 5% increase vs 7-day avg
         pulseScore -= 15;
@@ -214,7 +221,8 @@ class MacroDataService {
           avg7Day: Math.round(avg7Day * 100) / 100,
           avg30Day: Math.round(avg30Day * 100) / 100,
           trend7Day: Math.round(trendVs7Day * 10000) / 100, // basis points
-          trend30Day: Math.round(trendVs30Day * 10000) / 100
+          trend30Day: change30DayBps, // basis points using subtraction
+          thirtyDaysAgoYield: Math.round(thirtyDaysAgoYield * 100) / 100
         },
         description: this.getPulseDescription(pulseScore, signals)
       };
