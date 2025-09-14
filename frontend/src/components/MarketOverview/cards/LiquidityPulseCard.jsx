@@ -1,91 +1,194 @@
-// Performance-optimized Liquidity Pulse card with sparkline for Market Overview v2
+// Performance-optimized Liquidity Pulse card with interactive ApexCharts for Market Overview v2
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
+import Chart from 'react-apexcharts';
 
-// Enhanced US 2Y Treasury yield chart component - Full width version
-const US2YChart = React.memo(({ data, colors, height = 80, width = 400 }) => {
-  const { points, currentValue, minValue, maxValue } = useMemo(() => {
-    if (!data || data.length < 2) return { points: '', currentValue: 0, minValue: 0, maxValue: 0 };
+// Interactive US 2Y Treasury yield chart with ApexCharts - supports all theme variants
+const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
+  const { currentTheme, colors } = useTheme();
 
-    const padding = 8;
-    const actualWidth = width - padding * 2;
-    const actualHeight = height - padding * 2;
-    
-    const minValue = Math.min(...data);
-    const maxValue = Math.max(...data);
-    const range = maxValue - minValue;
-    const currentValue = data[data.length - 1];
-    
-    if (range === 0) {
-      const y = actualHeight / 2 + padding;
-      return { 
-        points: `M${padding},${y} L${width - padding},${y}`, 
-        currentValue, 
-        minValue, 
-        maxValue 
-      };
-    }
-    
-    const points = data
-      .map((value, index) => {
-        const x = (index / (data.length - 1)) * actualWidth + padding;
-        const y = actualHeight - ((value - minValue) / range) * actualHeight + padding;
-        return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(' ');
-      
-    return { points, currentValue, minValue, maxValue };
-  }, [data, height]);
+  const chartOptions = useMemo(() => {
+    if (!data || data.length < 2) return null;
+
+    // Theme-specific chart colors
+    const getChartColors = () => {
+      switch (currentTheme) {
+        case 'bloomberg': // Traditional Terminal
+          return {
+            lineColor: '#3b82f6', // Blue for treasury data
+            gradientFrom: '#3b82f6',
+            gradientTo: '#1d4ed8',
+            textColor: colors.chart.text,
+            gridColor: colors.chart.grid,
+            axisColor: colors.chart.axis,
+          };
+        case 'accessible': // High Contrast
+          return {
+            lineColor: '#60a5fa', // Accessible blue
+            gradientFrom: '#60a5fa',
+            gradientTo: '#3b82f6',
+            textColor: colors.chart.text,
+            gridColor: colors.chart.grid,
+            axisColor: colors.chart.axis,
+          };
+        case 'retro': // Retro Terminal
+          return {
+            lineColor: '#4ade80', // Terminal green
+            gradientFrom: '#4ade80',
+            gradientTo: '#22c55e',
+            textColor: colors.chart.text,
+            gridColor: colors.chart.grid,
+            axisColor: colors.chart.axis,
+          };
+        default:
+          return {
+            lineColor: '#3b82f6',
+            gradientFrom: '#3b82f6',
+            gradientTo: '#1d4ed8',
+            textColor: colors.chart.text,
+            gridColor: colors.chart.grid,
+            axisColor: colors.chart.axis,
+          };
+      }
+    };
+
+    const chartColors = getChartColors();
+
+    return {
+      chart: {
+        type: 'area',
+        height: height,
+        toolbar: { show: false },
+        background: 'transparent',
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 800,
+        },
+        zoom: { enabled: false },
+        selection: { enabled: false },
+        fontFamily: colors.font || 'inherit',
+      },
+      stroke: {
+        curve: 'smooth',
+        width: 2.5,
+        colors: [chartColors.lineColor],
+      },
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shade: 'dark',
+          gradientToColors: [chartColors.gradientTo],
+          shadeIntensity: 1,
+          type: 'vertical',
+          opacityFrom: 0.4,
+          opacityTo: 0.05,
+          stops: [0, 100],
+        },
+      },
+      grid: {
+        show: true,
+        borderColor: chartColors.gridColor,
+        strokeDashArray: currentTheme === 'retro' ? 0 : 2, // Solid lines for retro
+        xaxis: { lines: { show: false } },
+        yaxis: { lines: { show: true } },
+        padding: { left: 0, right: 0 },
+      },
+      xaxis: {
+        type: 'category',
+        categories: data.map((_, index) => `D${index + 1}`),
+        labels: { show: false },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+      },
+      yaxis: {
+        labels: {
+          style: {
+            colors: [chartColors.textColor],
+            fontSize: '11px',
+            fontFamily: currentTheme === 'retro' ? 'monospace' : 'inherit',
+          },
+          formatter: (value) => `${value.toFixed(2)}%`,
+        },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+        min: function(min) { return (min * 0.998).toFixed(3); },
+        max: function(max) { return (max * 1.002).toFixed(3); },
+      },
+      tooltip: {
+        enabled: true,
+        theme: 'dark', // All themes are dark
+        style: {
+          fontSize: '12px',
+          fontFamily: currentTheme === 'retro' ? 'monospace' : 'inherit',
+        },
+        custom: function({ series, seriesIndex, dataPointIndex }) {
+          const value = series[seriesIndex][dataPointIndex];
+          const date = historicalData[dataPointIndex]?.date || `Point ${dataPointIndex + 1}`;
+
+          // Theme-specific tooltip styling
+          const tooltipStyle = currentTheme === 'retro'
+            ? 'bg-black border border-green-700 text-green-400 font-mono'
+            : currentTheme === 'accessible'
+            ? 'bg-gray-900 border border-gray-600 text-white'
+            : 'bg-gray-950 border border-gray-700 text-orange-400';
+
+          return `
+            <div class="${tooltipStyle} rounded-lg p-3 shadow-lg">
+              <div class="text-xs font-medium opacity-70 mb-1">US 2Y Treasury</div>
+              <div class="text-sm font-semibold">${value.toFixed(3)}%</div>
+              <div class="text-xs opacity-60 mt-1">${date}</div>
+            </div>
+          `;
+        },
+      },
+      markers: {
+        size: 0,
+        hover: {
+          size: 6,
+          sizeOffset: 2,
+          strokeColors: [chartColors.lineColor],
+          strokeWidth: 2,
+        },
+      },
+      legend: { show: false },
+      dataLabels: { enabled: false },
+    };
+  }, [data, colors, height, historicalData, currentTheme]);
+
+  const chartSeries = useMemo(() => {
+    if (!data || data.length < 2) return [];
+
+    return [{
+      name: 'US 2Y Treasury Yield',
+      data: data,
+    }];
+  }, [data]);
 
   if (!data || data.length < 2) {
     return (
-      <div className="flex items-center justify-center" style={{ width, height }}>
-        <span className={`text-sm ${colors.text.secondary}`}>No chart data</span>
+      <div className="flex items-center justify-center w-full" style={{ height }}>
+        <span className={`text-sm ${colors.text.secondary} ${currentTheme === 'retro' ? 'font-mono' : ''}`}>
+          No chart data available
+        </span>
       </div>
     );
   }
 
+  if (!chartOptions) return null;
+
   return (
-    <div className="relative">
-      <svg width={width} height={height} className="overflow-visible">
-        {/* Grid lines */}
-        <defs>
-          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.1"/>
-          </pattern>
-        </defs>
-        <rect width={width} height={height} fill="url(#grid)" className={colors.text.secondary} />
-        
-        {/* Chart line */}
-        <path
-          d={points}
-          fill="none"
-          stroke="#3b82f6"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ filter: 'drop-shadow(0 1px 3px rgba(59, 130, 246, 0.3))' }}
-        />
-        
-        {/* Current value indicator */}
-        <circle
-          cx={width - 8}
-          cy={height - ((currentValue - minValue) / (maxValue - minValue)) * (height - 16) - 8}
-          r="3"
-          fill="#3b82f6"
-          stroke="white"
-          strokeWidth="2"
-        />
-      </svg>
-      
-      {/* Y-axis labels */}
-      <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs" style={{ marginLeft: '-2rem' }}>
-        <span className={colors.text.muted}>{maxValue.toFixed(2)}%</span>
-        <span className={colors.text.muted}>{minValue.toFixed(2)}%</span>
-      </div>
+    <div className="w-full" style={{ height }}>
+      <Chart
+        options={chartOptions}
+        series={chartSeries}
+        type="area"
+        height={height}
+        width="100%"
+      />
     </div>
   );
 });
@@ -115,19 +218,29 @@ const getLiquidityStatus = (change30Day) => {
   };
 };
 
-// Simple status indicator component
+// Modern status indicator component
 const StatusIndicator = React.memo(({ statusInfo, colors }) => {
+  const { currentTheme } = useTheme();
+
   return (
-    <div className="text-center">
+    <div className="flex justify-center">
       <div
-        className="text-sm font-semibold px-3 py-1 rounded"
+        className={`
+          inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold
+          transition-all duration-300 ease-in-out
+          ${currentTheme === 'retro' ? 'font-mono' : ''}
+          hover:scale-105 hover:shadow-lg
+        `}
         style={{
-          backgroundColor: statusInfo.color + '20',
+          backgroundColor: statusInfo.color + '15',
           color: statusInfo.color,
-          border: `1px solid ${statusInfo.color}40`
+          border: `1.5px solid ${statusInfo.color}60`,
+          boxShadow: `0 0 20px ${statusInfo.color}20`,
         }}
       >
-        {statusInfo.label}
+        <span className="tracking-wide">
+          {statusInfo.label}
+        </span>
       </div>
     </div>
   );
@@ -184,14 +297,20 @@ const LiquidityPulseCard = React.memo(() => {
     return null;
   }, [apiResponse]);
 
-  // Memoize chart data for performance
-  const chartData = useMemo(() => {
-    if (!data?.treasury2Y?.data) return null;
-    
-    // Extract yields for chart (last 30 points for better visualization)
-    return data.treasury2Y.data
-      .slice(-30)
-      .map(item => item.yield);
+  // Memoize chart data and historical data for performance
+  const { chartData, historicalData } = useMemo(() => {
+    if (!data?.treasury2Y?.data) return { chartData: null, historicalData: [] };
+
+    // Extract last 30 points for better visualization
+    const recentData = data.treasury2Y.data.slice(-30);
+
+    return {
+      chartData: recentData.map(item => item.yield),
+      historicalData: recentData.map(item => ({
+        date: item.date ? new Date(item.date).toLocaleDateString() : 'Unknown',
+        yield: item.yield
+      }))
+    };
   }, [data?.treasury2Y?.data]);
 
   // Calculate 30-day change and status
@@ -300,8 +419,8 @@ const LiquidityPulseCard = React.memo(() => {
       </div>
 
       {/* Main Content - US 2Y Treasury Chart */}
-      <div className="flex-1 mb-4">
-        <div className="mb-3">
+      <div className="flex-1 mb-3">
+        <div className="mb-4">
           <h4 className={`text-lg font-semibold ${colors.text.primary}`}>
             US 2Y Treasury Yield
           </h4>
@@ -313,17 +432,18 @@ const LiquidityPulseCard = React.memo(() => {
           </div>
         </div>
         {chartData && (
-          <US2YChart
-            data={chartData}
-            colors={colors}
-            height={80}
-            width={400}
-          />
+          <div className="w-full mb-4">
+            <US2YChart
+              data={chartData}
+              height={100}
+              historicalData={historicalData}
+            />
+          </div>
         )}
       </div>
 
       {/* Status Indicator at Bottom */}
-      <div className="flex justify-center">
+      <div className="mt-auto">
         <StatusIndicator statusInfo={liquidityStatusInfo} colors={colors} />
       </div>
 
