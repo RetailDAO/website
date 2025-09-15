@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
+import CountdownTimer from '../../common/CountdownTimer';
 
 // Import API service
 import apiService from '../../../services/api';
@@ -173,30 +174,10 @@ const StateOfLeverageCard = React.memo(() => {
             [STATE_OF_LEVERAGE]
           </h3>
         </div>
-        <div className="flex items-center space-x-1">
-          <StatusIndicator 
-            status={data.status || data.state}
-            colors={colors} 
-          />
-          {isStale && (
-            <span className={`text-xs font-mono ${colors.text.accent}`} title="Data refresh in progress">
-              [REF...]
-            </span>
-          )}
-        </div>
       </div>
 
       {/* Compact Content */}
       <div className="flex-1 flex flex-col items-center min-h-0">
-        {/* Status with Traffic Light */}
-        <div className="flex items-center justify-center mb-3">
-          <TrafficLight status={data.status || data.state} colors={colors} size="md" />
-          <div className="ml-3 text-center">
-            <div className={`text-sm font-semibold ${stateConfig.color}`}>
-              {stateConfig.statusText || data.status || data.stateLabel}
-            </div>
-          </div>
-        </div>
 
         {/* Key Metrics as per client requirements */}
         <div className="space-y-2 w-full px-2 mb-3">
@@ -253,15 +234,23 @@ const StateOfLeverageCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Footer with simplified metadata */}
-      {data.metadata && (
-        <div className={`mt-4 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted} flex items-center justify-center space-x-2`}>
-          <span className="text-orange-500">🔥</span>
-          <span>Fresh</span>
-          <span>•</span>
-          <span>{data.metadata.dataSource}</span>
-          <span>•</span>
-          <span>{new Date(data.metadata.calculatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      {/* Data refresh countdown */}
+      {data.metadata?.calculatedAt && (
+        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center">
+          <div className={`text-xs ${colors.text.muted}`}>
+            Time until next data update:
+          </div>
+          <div
+            className={`text-xs font-mono ${colors.text.primary} cursor-help hover:${colors.text.secondary} transition-colors`}
+            title="Leverage State Analysis: Based on Funding Rates (8h), Open Interest/Market Cap ratio, and 7-day OI changes from multiple exchanges"
+          >
+            <CountdownTimer
+              nextUpdateTime={new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()}
+              size="xs"
+              variant="subtle"
+              showLabel={false}
+            />
+          </div>
         </div>
       )}
     </div>

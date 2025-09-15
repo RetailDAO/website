@@ -1,5 +1,6 @@
 const { performance } = require('perf_hooks');
 const rateLimitedApiService = require('../services/rateLimitedApi');
+const { coinGlassService } = require('../services/dataProviders/coinglassService');
 const axios = require('axios');
 
 class LeverageController {
@@ -51,22 +52,44 @@ class LeverageController {
         console.log('🔄 Computing fresh leverage state data');
         
         try {
-          // Attempt to get real data from multiple sources
-          const [openInterestData, fundingRatesData] = await Promise.allSettled([
-            this.getOpenInterestData(),
-            this.getFundingRatesData()
-          ]);
-          
-          // Process the data if we got at least one successful response
-          if (openInterestData.status === 'fulfilled' || fundingRatesData.status === 'fulfilled') {
-            const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
-            const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
-            
-            result = this.calculateLeverageState(oiData, frData);
+          // Try CoinGlass API first if available, then fallback to individual exchanges
+          if (coinGlassService.isApiAvailable()) {
+            console.log('🔑 [CoinGlass] Using premium API for leverage data');
+            try {
+              const comprehensiveData = await coinGlassService.getComprehensiveLeverageData();
+              result = this.processCoinGlassData(comprehensiveData);
+            } catch (coinglassError) {
+              console.log('⚠️ [CoinGlass] API failed, falling back to individual exchanges:', coinglassError.message);
+              const [openInterestData, fundingRatesData] = await Promise.allSettled([
+                this.getOpenInterestData(),
+                this.getFundingRatesData()
+              ]);
+
+              if (openInterestData.status === 'fulfilled' || fundingRatesData.status === 'fulfilled') {
+                const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
+                const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
+                result = this.calculateLeverageState(oiData, frData);
+              } else {
+                console.log('🎭 All APIs failed, using fallback data');
+                result = this.generateFallbackData();
+              }
+            }
           } else {
-            // Both API calls failed, use fallback
-            console.log('🎭 Using fallback leverage data (APIs unavailable)');
-            result = this.generateFallbackData();
+            // No CoinGlass API key, use existing exchange APIs
+            console.log('🔓 [CoinGlass] API key not configured, using individual exchange APIs');
+            const [openInterestData, fundingRatesData] = await Promise.allSettled([
+              this.getOpenInterestData(),
+              this.getFundingRatesData()
+            ]);
+
+            if (openInterestData.status === 'fulfilled' || fundingRatesData.status === 'fulfilled') {
+              const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
+              const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
+              result = this.calculateLeverageState(oiData, frData);
+            } else {
+              console.log('🎭 Exchange APIs failed, using fallback data');
+              result = this.generateFallbackData();
+            }
           }
         } catch (error) {
           console.log('🎭 Error fetching leverage data, using fallback:', error.message);
@@ -461,6 +484,60 @@ class LeverageController {
     const oiDelta7d = (Math.random() - 0.5) * 10; // Random delta for fallback
     
     return this.determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d);
+  }
+
+  /**
+   * Process comprehensive CoinGlass data into leverage state
+   */
+  processCoinGlassData(comprehensiveData) {
+    console.log('🔍 [CoinGlass] Processing comprehensive leverage data');
+
+    // Extract data from CoinGlass response
+    const openInterest = comprehensiveData.openInterest ? {
+      total: comprehensiveData.openInterest.totalOpenInterest / 1e9, // Convert to billions
+      change24h: comprehensiveData.openInterest.change24h,
+      metadata: {
+        source: 'coinglass_api',
+        timestamp: comprehensiveData.openInterest.timestamp
+      }
+    } : null;
+
+    const fundingRates = comprehensiveData.fundingRates ? {
+      averageRate: comprehensiveData.fundingRates.averageRate,
+      metadata: {
+        source: 'coinglass_api',
+        timestamp: comprehensiveData.fundingRates.timestamp,
+        exchanges: comprehensiveData.fundingRates.exchanges.length
+      }
+    } : null;
+
+    // Additional CoinGlass specific data
+    const longShortRatio = comprehensiveData.longShortRatio ? {
+      longRatio: comprehensiveData.longShortRatio.longRatio,
+      shortRatio: comprehensiveData.longShortRatio.shortRatio,
+      ratio: comprehensiveData.longShortRatio.longShortRatio
+    } : null;
+
+    // Use existing calculation method with enhanced data
+    const result = this.calculateLeverageState(openInterest, fundingRates);
+
+    // Enhance with CoinGlass specific data
+    if (longShortRatio) {
+      result.longShortRatio = longShortRatio;
+    }
+
+    // Update metadata to indicate CoinGlass source
+    result.metadata = {
+      ...result.metadata,
+      dataSource: 'coinglass_premium',
+      fetchTime: comprehensiveData.metadata.fetchTime,
+      successful: comprehensiveData.metadata.successful,
+      longShortData: !!longShortRatio
+    };
+
+    console.log(`✅ [CoinGlass] Leverage state calculated with premium data (${comprehensiveData.metadata.successful}/3 endpoints successful)`);
+
+    return result;
   }
 
   // Generate fallback data when APIs are unavailable

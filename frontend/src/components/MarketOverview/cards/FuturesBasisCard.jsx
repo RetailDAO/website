@@ -4,6 +4,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { useOptimizedFuturesBasis } from '../../../hooks/useOptimizedFuturesBasis';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
+import CountdownTimer from '../../common/CountdownTimer';
 
 // Error states for graceful handling with retry functionality
 const ErrorState = ({ colors, error, onRetry }) => (
@@ -227,16 +228,25 @@ const FuturesBasisCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Transparency info tooltip */}
-      <div 
-        className={`mt-2 pt-2 text-xs ${colors.text.muted} cursor-help hover:${colors.text.secondary} transition-colors text-center`}
-        title={generateTransparencyTooltip({
-          ...extractTransparencyData(data),
-          existingTooltip: `Futures Basis Calculation: (Futures Price - Spot Price) / Spot Price × 365 × 100`
-        })}
-      >
-        {isUsingMockData() ? '🎭' : '✅'} Data • Hover for transparency info
-      </div>
+      {/* Data refresh countdown */}
+      {data.metadata?.nextUpdate && (
+        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center">
+          <div className={`text-xs ${colors.text.muted}`}>
+            Time until next data update:
+          </div>
+          <div
+            className={`text-xs font-mono ${colors.text.primary} cursor-help hover:${colors.text.secondary} transition-colors`}
+            title="Futures Basis Calculation: (Futures Price - Spot Price) / Spot Price × 365 × 100"
+          >
+            <CountdownTimer
+              nextUpdateTime={data.metadata.nextUpdate}
+              size="xs"
+              variant="subtle"
+              showLabel={false}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 });

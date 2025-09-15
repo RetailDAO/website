@@ -5,6 +5,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import apiService from '../../../services/api';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
+import CountdownTimer from '../../common/CountdownTimer';
 
 // Mock data with realistic positive and negative flows
 const generateMockETFData = (period) => {
@@ -363,50 +364,25 @@ const ETFFlowsCard = React.memo(() => {
           </div>
         </div>
 
-        {/* Data Source and Status */}
-        <div className="space-y-1">
-          {/* Cache/Fetching Status Indicators */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-2">
-              {data._fromCache && (
-                <span 
-                  className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive}`} 
-                  title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
-                >
-                  [{data._isStale ? 'CACHE*' : 'CACHE'}]
-                </span>
-              )}
-              
-              {isFetching && (
-                <span className={`font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
-                  [UPD...]
-                </span>
-              )}
-              
-              {!data._fromCache && !isFetching && apiResponse?.success && (
-                <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
-                  [LIVE]
-                </span>
-              )}
-              
-              {error && (
-                <span className={`font-mono ${colors.text.negative}`} title="Using fallback data">
-                  [FALLBACK]
-                </span>
-              )}
+        {/* Data refresh countdown */}
+        {data.metadata?.nextRefresh && (
+          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center">
+            <div className={`text-xs ${colors.text.muted}`}>
+              Time until next data update:
             </div>
-            
-            <div 
-              className={`${colors.text.muted} cursor-help hover:${colors.text.secondary} transition-colors`}
-              title={generateTransparencyTooltip({
-                ...extractTransparencyData(data),
-                existingTooltip: `ETFs Included: ${data.etfBreakdown?.map(etf => `${etf.symbol} (${etf.name})`).join(', ') || 'IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), BITB (Bitwise), ARKB (ARK)'} | Total 5D Flow: ${formatFlowValue(data.inflow5D)}`
-              })}
+            <div
+              className={`text-xs font-mono ${colors.text.primary} cursor-help hover:${colors.text.secondary} transition-colors`}
+              title={`ETFs Tracked: ${data.etfBreakdown?.map(etf => `${etf.symbol} (${etf.name})`).join(', ') || 'IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), BITB (Bitwise), ARKB (ARK)'} | Data Source: Yahoo Finance`}
             >
-              {data.etfsAnalyzed} ETFs • {data.cacheAgeFormatted}
+              <CountdownTimer
+                nextUpdateTime={data.metadata.nextRefresh}
+                size="xs"
+                variant="subtle"
+                showLabel={false}
+              />
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

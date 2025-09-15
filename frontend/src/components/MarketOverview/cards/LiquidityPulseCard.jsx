@@ -5,6 +5,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 import Chart from 'react-apexcharts';
+import CountdownTimer from '../../common/CountdownTimer';
 
 // Interactive US 2Y Treasury yield chart with ApexCharts - supports all theme variants
 const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
@@ -461,11 +462,29 @@ const LiquidityPulseCard = React.memo(() => {
         <StatusIndicator statusInfo={liquidityStatusInfo} colors={colors} />
       </div>
 
+      {/* Data refresh countdown */}
+      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center">
+        <div className={`text-xs ${colors.text.muted}`}>
+          Time until next data update:
+        </div>
+        <div
+          className={`text-xs font-mono ${colors.text.primary} cursor-help hover:${colors.text.secondary} transition-colors`}
+          title="US 2Y Treasury Yield Analysis: Daily data from Federal Reserve Economic Data (FRED) | Source: U.S. Department of Treasury"
+        >
+          <CountdownTimer
+            nextUpdateTime={new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString()}
+            size="xs"
+            variant="subtle"
+            showLabel={false}
+          />
+        </div>
+      </div>
+
       {/* Development metadata */}
       {process.env.NODE_ENV === 'development' && data?.metadata && (
         <div className={`mt-2 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
-          FRED • {data.metadata.dataPoints} points • 
-          {data.metadata.fresh ? ' 🔥 Fresh' : ' 💾 Cached'} • 
+          FRED • {data.metadata.dataPoints} points •
+          {data.metadata.fresh ? ' 🔥 Fresh' : ' 💾 Cached'} •
           {Math.round(data.metadata.processingTime)}ms
         </div>
       )}

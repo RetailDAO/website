@@ -5,6 +5,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 import apiService from '../../../services/api';
+import CountdownTimer from '../../common/CountdownTimer';
 
 // Mock data simulating Top 100 coins analysis vs BTC (30D)
 const generateMockRotationData = () => {
@@ -309,6 +310,26 @@ const RotationBreadthCard = React.memo(() => {
             {apiResponse?.success ? 'CoinGecko' : 'Mock'} • {data.cacheAgeFormatted}
           </div>
         </div>
+
+        {/* Data refresh countdown */}
+        {data.metadata?.nextRefresh && (
+          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center">
+            <div className={`text-xs ${colors.text.muted}`}>
+              Time until next data update:
+            </div>
+            <div
+              className={`text-xs font-mono ${colors.text.primary} cursor-help hover:${colors.text.secondary} transition-colors`}
+              title={`Analysis: Top ${data.coinsAnalyzed || 88} cryptocurrency performance vs BTC over 30 days | Data Source: CoinGecko API`}
+            >
+              <CountdownTimer
+                nextUpdateTime={data.metadata.nextRefresh}
+                size="xs"
+                variant="subtle"
+                showLabel={false}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
