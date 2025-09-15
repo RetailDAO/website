@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
-import CountdownTimer from '../../common/CountdownTimer';
+import TimeTooltip from '../../common/TimeTooltip';
 
 // Import API service
 import apiService from '../../../services/api';
@@ -166,7 +166,11 @@ const StateOfLeverageCard = React.memo(() => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <TimeTooltip
+      nextUpdateTime={new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()}
+      position="bottom"
+    >
+      <div className="h-full flex flex-col">
       {/* Compact Header */}
       <div className="flex justify-between items-center mb-2">
         <div>
@@ -234,26 +238,8 @@ const StateOfLeverageCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Data refresh countdown */}
-      {data.metadata?.calculatedAt && (
-        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center">
-          <div className={`text-xs ${colors.text.muted}`}>
-            Time until next data update:
-          </div>
-          <div
-            className={`text-xs font-mono ${colors.text.primary} cursor-help hover:${colors.text.secondary} transition-colors`}
-            title="Leverage State Analysis: Based on Funding Rates (8h), Open Interest/Market Cap ratio, and 7-day OI changes from multiple exchanges"
-          >
-            <CountdownTimer
-              nextUpdateTime={new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()}
-              size="xs"
-              variant="subtle"
-              showLabel={false}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
+    </TimeTooltip>
   );
 });
 

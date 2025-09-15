@@ -5,7 +5,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 import Chart from 'react-apexcharts';
-import CountdownTimer from '../../common/CountdownTimer';
+import TimeTooltip from '../../common/TimeTooltip';
 
 // Interactive US 2Y Treasury yield chart with ApexCharts - supports all theme variants
 const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
@@ -14,11 +14,13 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
   const chartOptions = useMemo(() => {
     if (!data || data.length < 2) return null;
 
-    // Calculate data range for proper scaling
+    // Calculate data range with better scaling for Treasury yields
     const minValue = Math.min(...data);
     const maxValue = Math.max(...data);
-    const range = maxValue - minValue;
-    const padding = range * 0.05; // 5% padding
+
+    // For Treasury yields, use fixed ranges for better readability
+    const yAxisMin = Math.floor(minValue * 4) / 4 - 0.25; // Round down to nearest 0.25% and subtract 0.25%
+    const yAxisMax = Math.ceil(maxValue * 4) / 4 + 0.25;  // Round up to nearest 0.25% and add 0.25%
 
     // Theme-specific chart colors
     const getChartColors = () => {
@@ -106,8 +108,24 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
       },
       xaxis: {
         type: 'category',
-        categories: data.map((_, index) => `D${index + 1}`),
-        labels: { show: false },
+        categories: historicalData.map(item => {
+          // Show date every 5-7 days or less for 30-day period
+          const date = new Date(item.date);
+          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }),
+        labels: {
+          show: true,
+          rotate: -45,
+          style: {
+            colors: [chartColors.textColor],
+            fontSize: '10px',
+            fontFamily: currentTheme === 'retro' ? 'monospace' : 'inherit',
+          },
+          formatter: function(value, index) {
+            // Show every 5th label to avoid crowding
+            return index % 5 === 0 ? value : '';
+          }
+        },
         axisBorder: { show: false },
         axisTicks: { show: false },
       },
@@ -127,10 +145,11 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
         },
         axisBorder: { show: false },
         axisTicks: { show: false },
-        forceNiceScale: false,
-        decimalsInFloat: 3,
-        min: minValue - padding,
-        max: maxValue + padding,
+        forceNiceScale: true,
+        decimalsInFloat: 2,
+        tickAmount: 5,
+        min: yAxisMin,
+        max: yAxisMax,
       },
       tooltip: {
         enabled: true,
@@ -380,17 +399,21 @@ const LiquidityPulseCard = React.memo(() => {
   const currentYield = data?.treasury2Y?.current?.yield;
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header - Now at the top */}
-      <div className="flex justify-between items-center mb-2">
-        <div>
-          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
-            [LIQUIDITY_PULSE]
-          </h3>
-          <p className={`text-xs ${colors.text.secondary}`}>
-            States (30-day change)
-          </p>
-        </div>
+    <TimeTooltip
+      nextUpdateTime={new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString()}
+      position="bottom"
+    >
+      <div className="h-full flex flex-col">
+        {/* Header - Now at the top */}
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+              [LIQUIDITY_PULSE]
+            </h3>
+            <p className={`text-xs ${colors.text.secondary}`}>
+              States (30-day change)
+            </p>
+          </div>
         
         <div className="flex items-center space-x-1">
           <div className="flex items-center space-x-2">
@@ -457,38 +480,21 @@ const LiquidityPulseCard = React.memo(() => {
         )}
       </div>
 
-      {/* Status Indicator at Bottom */}
-      <div className="mt-auto">
-        <StatusIndicator statusInfo={liquidityStatusInfo} colors={colors} />
-      </div>
+        {/* Status Indicator at Bottom */}
+        <div className="mt-auto">
+          <StatusIndicator statusInfo={liquidityStatusInfo} colors={colors} />
+        </div>
 
-      {/* Data refresh countdown */}
-      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center">
-        <div className={`text-xs ${colors.text.muted}`}>
-          Time until next data update:
-        </div>
-        <div
-          className={`text-xs font-mono ${colors.text.primary} cursor-help hover:${colors.text.secondary} transition-colors`}
-          title="US 2Y Treasury Yield Analysis: Daily data from Federal Reserve Economic Data (FRED) | Source: U.S. Department of Treasury"
-        >
-          <CountdownTimer
-            nextUpdateTime={new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString()}
-            size="xs"
-            variant="subtle"
-            showLabel={false}
-          />
-        </div>
+        {/* Development metadata */}
+        {process.env.NODE_ENV === 'development' && data?.metadata && (
+          <div className={`mt-2 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
+            FRED • {data.metadata.dataPoints} points •
+            {data.metadata.fresh ? ' 🔥 Fresh' : ' 💾 Cached'} •
+            {Math.round(data.metadata.processingTime)}ms
+          </div>
+        )}
       </div>
-
-      {/* Development metadata */}
-      {process.env.NODE_ENV === 'development' && data?.metadata && (
-        <div className={`mt-2 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
-          FRED • {data.metadata.dataPoints} points •
-          {data.metadata.fresh ? ' 🔥 Fresh' : ' 💾 Cached'} •
-          {Math.round(data.metadata.processingTime)}ms
-        </div>
-      )}
-    </div>
+    </TimeTooltip>
   );
 });
 

@@ -5,7 +5,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import apiService from '../../../services/api';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
-import CountdownTimer from '../../common/CountdownTimer';
+import TimeTooltip from '../../common/TimeTooltip';
 
 // Mock data with realistic positive and negative flows
 const generateMockETFData = (period) => {
@@ -137,9 +137,20 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
             const flowValue = flow.inflow;
             const isPositive = flowValue >= 0;
             
-            // Calculate bar height as percentage of chart height
-            const heightRatio = Math.abs(flowValue - scaleMin) / (scaleMax - scaleMin);
-            const barHeight = Math.max(3, heightRatio * chartHeight);
+            // Calculate bar height properly for positive and negative values
+            let barHeight, barBottom;
+
+            if (isPositive) {
+              // Positive bars grow upward from zero line
+              const heightRatio = flowValue / (scaleMax - Math.max(0, scaleMin));
+              barHeight = Math.max(3, heightRatio * (chartHeight * 0.9));
+              barBottom = scaleMin < 0 ? (Math.abs(scaleMin) / (scaleMax - scaleMin)) * chartHeight : 0;
+            } else {
+              // Negative bars grow downward from zero line
+              const heightRatio = Math.abs(flowValue) / Math.abs(Math.min(0, scaleMin));
+              barHeight = Math.max(3, heightRatio * (chartHeight * 0.9));
+              barBottom = scaleMin < 0 ? (Math.abs(scaleMin) / (scaleMax - scaleMin)) * chartHeight - barHeight : chartHeight - barHeight;
+            }
             
             // Color intensity based on flow size
             const intensity = Math.abs(flowValue) / maxInflow;
@@ -164,16 +175,20 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
                 {/* Bar */}
                 <div
                   className={`
-                    ${isPositive 
-                      ? 'bg-green-500 dark:bg-green-400' 
+                    absolute
+                    ${isPositive
+                      ? 'bg-green-500 dark:bg-green-400'
                       : 'bg-red-500 dark:bg-red-400'
                     }
                     ${opacityClass} group-hover:opacity-100
-                    transition-all duration-200 group-hover:scale-105 rounded-t-sm
+                    transition-all duration-200 group-hover:scale-105
+                    ${isPositive ? 'rounded-t-sm' : 'rounded-b-sm'}
                   `}
                   style={{
                     height: `${barHeight}px`,
-                    minHeight: '3px'
+                    minHeight: '3px',
+                    bottom: `${barBottom}px`,
+                    width: '100%'
                   }}
                 />
                 
@@ -300,7 +315,11 @@ const ETFFlowsCard = React.memo(() => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <TimeTooltip
+      nextUpdateTime={new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString()}
+      position="bottom"
+    >
+      <div className="h-full flex flex-col">
       {/* Header - First Hierarchy - Moved to top */}
       <div className="flex justify-between items-center mb-3">
         <div>
@@ -364,27 +383,8 @@ const ETFFlowsCard = React.memo(() => {
           </div>
         </div>
 
-        {/* Data refresh countdown */}
-        {data.metadata?.nextRefresh && (
-          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-center">
-            <div className={`text-xs ${colors.text.muted}`}>
-              Time until next data update:
-            </div>
-            <div
-              className={`text-xs font-mono ${colors.text.primary} cursor-help hover:${colors.text.secondary} transition-colors`}
-              title={`ETFs Tracked: ${data.etfBreakdown?.map(etf => `${etf.symbol} (${etf.name})`).join(', ') || 'IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), BITB (Bitwise), ARKB (ARK)'} | Data Source: Yahoo Finance`}
-            >
-              <CountdownTimer
-                nextUpdateTime={data.metadata.nextRefresh}
-                size="xs"
-                variant="subtle"
-                showLabel={false}
-              />
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+    </TimeTooltip>
   );
 });
 
