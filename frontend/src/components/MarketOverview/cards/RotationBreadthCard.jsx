@@ -316,6 +316,7 @@ const RotationBreadthCard = React.memo(() => {
         </div>
 
       </div>
+      </div>
     </TimeTooltip>
   );
 });
