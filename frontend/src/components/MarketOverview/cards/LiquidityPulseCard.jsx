@@ -13,6 +13,12 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
   const chartOptions = useMemo(() => {
     if (!data || data.length < 2) return null;
 
+    // Calculate data range for proper scaling
+    const minValue = Math.min(...data);
+    const maxValue = Math.max(...data);
+    const range = maxValue - minValue;
+    const padding = range * 0.05; // 5% padding
+
     // Theme-specific chart colors
     const getChartColors = () => {
       switch (currentTheme) {
@@ -111,12 +117,19 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
             fontSize: '11px',
             fontFamily: currentTheme === 'retro' ? 'monospace' : 'inherit',
           },
-          formatter: (value) => `${value.toFixed(2)}%`,
+          formatter: (value) => {
+            if (typeof value === 'number' && !isNaN(value)) {
+              return `${value.toFixed(2)}%`;
+            }
+            return '0.00%';
+          },
         },
         axisBorder: { show: false },
         axisTicks: { show: false },
-        min: function(min) { return (min * 0.998).toFixed(3); },
-        max: function(max) { return (max * 1.002).toFixed(3); },
+        forceNiceScale: false,
+        decimalsInFloat: 3,
+        min: minValue - padding,
+        max: maxValue + padding,
       },
       tooltip: {
         enabled: true,
@@ -303,9 +316,10 @@ const LiquidityPulseCard = React.memo(() => {
 
     // Extract last 30 points for better visualization
     const recentData = data.treasury2Y.data.slice(-30);
+    const chartDataArray = recentData.map(item => item.yield);
 
     return {
-      chartData: recentData.map(item => item.yield),
+      chartData: chartDataArray,
       historicalData: recentData.map(item => ({
         date: item.date ? new Date(item.date).toLocaleDateString() : 'Unknown',
         yield: item.yield
