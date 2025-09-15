@@ -8,6 +8,17 @@ import { generateTransparencyTooltip, extractTransparencyData } from '../../../u
 // Import API service
 import apiService from '../../../services/api';
 
+// Analysis text based on state
+const getAnalysisText = (status) => {
+  const analysisTexts = {
+    'Squeeze Risk': 'Shorts Crowded, Potential Squeeze Coming',
+    'Balanced': 'No Squeeze or Flush Risk Currently',
+    'Flush Risk': 'Longs Crowded, Potential Flush Coming'
+  };
+
+  return analysisTexts[status] || 'No Squeeze or Flush Risk Currently';
+};
+
 // Optimized API service
 const fetchLeverageState = async () => {
   const startTime = performance.now();
@@ -28,9 +39,9 @@ const getStateConfig = (status, colors) => {
       bg: colors.bg.tertiary,
       border: colors.border.positive,
       icon: '🟢',
-      terminalLabel: '[SQUEEZE RISK]',
+      terminalLabel: '[SHORTS CROWDED]',
       bgClass: 'bg-green-100 dark:bg-green-900/20',
-      statusText: 'Short-Crowded / Squeeze Risk'
+      statusText: 'Shorts Crowded'
     },
     'Balanced': {
       color: colors.text.accent,
@@ -46,12 +57,12 @@ const getStateConfig = (status, colors) => {
       bg: colors.bg.tertiary,
       border: colors.border.negative,
       icon: '🔴',
-      terminalLabel: '[FLUSH RISK]',
+      terminalLabel: '[LONGS CROWDED]',
       bgClass: 'bg-red-100 dark:bg-red-900/20',
-      statusText: 'Long-Crowded / Flush Risk'
+      statusText: 'Longs Crowded'
     }
   };
-  
+
   return configs[status] || configs['Balanced'];
 };
 
@@ -193,9 +204,9 @@ const StateOfLeverageCard = React.memo(() => {
           <div className="flex justify-between items-center">
             <span className={`text-sm ${colors.text.muted}`}>• Funding Rate</span>
             <span className={`text-sm font-mono ${colors.text.primary}`}>
-              {data.fundingRate8h !== undefined 
-                ? `${data.fundingRate8h >= 0 ? '+' : ''}${(data.fundingRate8h * 100).toFixed(4)}%` 
-                : `${data.fundingRate?.average >= 0 ? '+' : ''}${(data.fundingRate?.average || 0).toFixed(2)}%`}
+              {data.fundingRate8h !== undefined
+                ? `${data.fundingRate8h >= 0 ? '+' : ''}${(data.fundingRate8h * 100).toFixed(4)}%`
+                : `${data.fundingRate?.average >= 0 ? '+' : ''}${((data.fundingRate?.average || 0) * 100).toFixed(4)}%`}
             </span>
           </div>
           
@@ -233,36 +244,24 @@ const StateOfLeverageCard = React.memo(() => {
           </div>
         </div>
 
-        {/* Description Box with Hover Tooltip */}
-        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} border ${colors.border.primary} relative group cursor-help`} 
-             style={{ borderRadius: '0px' }}
-             title={generateTransparencyTooltip({
-               ...extractTransparencyData(data),
-               existingTooltip: `Sentiment: ${data.analysis?.sentiment || 'N/A'}\nRecommendation: ${data.analysis?.recommendation || 'N/A'}`
-             })}>
-          <div className={`text-xs ${colors.text.muted} leading-tight`}>
-            {data.description || data.analysis?.sentiment}
-          </div>
-          
-          {/* Advanced Tooltip - appears on hover */}
-          <div className={`absolute bottom-full left-0 right-0 mb-2 p-2 ${colors.bg.primary} border ${colors.border.primary} 
-                          opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 
-                          text-xs leading-tight`}
-               style={{ borderRadius: '4px' }}>
-            <div className={`${colors.text.accent} font-medium mb-1`}>Sentiment:</div>
-            <div className={`${colors.text.muted} mb-2`}>{data.analysis?.sentiment || 'N/A'}</div>
-            <div className={`${colors.text.accent} font-medium mb-1`}>Recommendation:</div>
-            <div className={`${colors.text.muted}`}>{data.analysis?.recommendation || 'N/A'}</div>
+        {/* Description Box */}
+        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} border ${colors.border.primary}`}
+             style={{ borderRadius: '0px' }}>
+          <div className={`text-xs ${colors.text.muted} leading-tight text-center`}>
+            {getAnalysisText(data.status || data.state)}
           </div>
         </div>
       </div>
 
-      {/* Footer with metadata */}
+      {/* Footer with simplified metadata */}
       {data.metadata && (
-        <div className={`mt-4 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
-          {data.metadata.fresh ? '🔥 Fresh' : '💾 Cached'} • 
-          {data.metadata.dataSource} • 
-          {new Date(data.metadata.calculatedAt).toLocaleTimeString()}
+        <div className={`mt-4 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted} flex items-center justify-center space-x-2`}>
+          <span className="text-orange-500">🔥</span>
+          <span>Fresh</span>
+          <span>•</span>
+          <span>{data.metadata.dataSource}</span>
+          <span>•</span>
+          <span>{new Date(data.metadata.calculatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       )}
     </div>

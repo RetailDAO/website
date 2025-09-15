@@ -6,75 +6,69 @@ import { usePerformanceTracking } from '../../../utils/performance';
 import apiService from '../../../services/api';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
-// Mock data for now - will be replaced with real ETF API integration
+// Mock data with realistic positive and negative flows
 const generateMockETFData = (period) => {
   const days = period === '2W' ? 14 : 30;
   const flows = [];
-  
+
+  // More realistic flow patterns - some days positive, some negative
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
-    const inflow = (Math.random() - 0.4) * 2000; // -800 to +1200M range
+
+    // Create more realistic flow patterns
+    const baseFlow = Math.random() < 0.7 ? 1 : -1; // 70% chance positive, 30% negative
+    const magnitude = Math.random() * 1500 + 200; // 200-1700M magnitude
+    const inflow = Math.round(baseFlow * magnitude);
+
     flows.push({
       date: date.toISOString().split('T')[0],
-      inflow: Math.round(inflow),
+      inflow: inflow,
       cumulative: flows.length > 0 ? flows[flows.length - 1].cumulative + inflow : inflow
     });
   }
-  
+
   const inflow5D = flows.slice(-5).reduce((sum, day) => sum + day.inflow, 0);
-  const status = inflow5D > 1500 ? 'sustained-inflows' : inflow5D < -750 ? 'sustained-outflows' : 'mixed';
-  
+
   return {
     period,
     flows,
     inflow5D: Math.round(inflow5D),
-    status,
     timestamp: Date.now()
   };
 };
 
-// Terminal-style status configuration - Enhanced for API data
-const getStatusConfig = (status, colors, statusColor = null) => {
-  // Map API status to local config, with theme-aware colors
+// Get ETF status based on 5D net flows according to Kevin's requirements
+const getETFStatus = (inflow5D) => {
+  if (inflow5D >= 1500) return 'INFLOWS';
+  if (inflow5D <= -750) return 'OUTFLOWS';
+  return 'MIXED';
+};
+
+// Terminal-style status configuration - Updated for Kevin's requirements
+const getStatusConfig = (inflow5D, colors) => {
+  const status = getETFStatus(inflow5D);
+
   const configs = {
-    'Sustained Inflows': {
+    'INFLOWS': {
       color: colors.text.positive,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
-      terminalLabel: '[STRONG]',
-      label: 'Sustained Inflows',
+      terminalLabel: '[INFLOWS]',
+      label: 'Inflows',
       description: 'Strong institutional buying',
       icon: '🔥'
     },
-    'Positive Flows': {
-      color: colors.text.positive,
-      bg: colors.bg.secondary,
-      border: colors.border.secondary,
-      terminalLabel: '[POSITIVE]',
-      label: 'Positive Flows',
-      description: 'Healthy accumulation',
-      icon: '📈'
-    },
-    'Sustained Outflows': {
+    'OUTFLOWS': {
       color: colors.text.negative,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
       terminalLabel: '[OUTFLOWS]',
-      label: 'Sustained Outflows',
+      label: 'Outflows',
       description: 'Heavy institutional selling',
       icon: '📉'
     },
-    'Negative Flows': {
-      color: colors.text.negative,
-      bg: colors.bg.secondary,
-      border: colors.border.secondary,
-      terminalLabel: '[WEAK]',
-      label: 'Negative Flows',
-      description: 'Institutional caution',
-      icon: '⚠️'
-    },
-    'Mixed': {
+    'MIXED': {
       color: colors.text.secondary,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
@@ -84,18 +78,8 @@ const getStatusConfig = (status, colors, statusColor = null) => {
       icon: '⚖️'
     }
   };
-  
-  // Use API status or fallback to mixed
-  const config = configs[status] || configs['Mixed'];
-  
-  // Override color if statusColor provided from API
-  if (statusColor) {
-    if (statusColor === 'green') config.color = colors.text.positive;
-    else if (statusColor === 'red') config.color = colors.text.negative;
-    else if (statusColor === 'yellow' || statusColor === 'orange') config.color = colors.text.secondary;
-  }
-  
-  return config;
+
+  return configs[status];
 };
 
 // Clean column chart component for ETF flows - Improved visualization
@@ -173,7 +157,7 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
                   opacity-0 group-hover:opacity-100 transition-opacity z-20
                   whitespace-nowrap
                 `}>
-                  {new Date(flow.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${flowValue.toLocaleString()}M
+                  {new Date(flow.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: {formatFlowValue(flowValue)}
                 </div>
                 
                 {/* Bar */}
@@ -204,18 +188,23 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
         </div>
       </div>
       
-      {/* Enhanced timeline labels */}
-      <div className="flex justify-between items-center mt-2 px-4">
+      {/* Timeline label */}
+      <div className="flex justify-center items-center mt-2 px-4">
         <span className={`text-xs ${colors.text.muted}`}>
           {period === '2W' ? 'Last 2 weeks (14 days)' : 'Last month (30 days)'}
         </span>
-        <div className={`text-xs ${colors.text.accent} flex items-center space-x-1`}>
-          <span>Range: ${Math.round(minInflow)}M - ${Math.round(maxInflow)}M</span>
-        </div>
       </div>
     </div>
   );
 });
+
+// Helper function to format millions to billions
+const formatFlowValue = (value) => {
+  if (Math.abs(value) >= 1000) {
+    return `${(value > 0 ? '+' : '')}${(value / 1000).toFixed(1)}B`;
+  }
+  return `${(value > 0 ? '+' : '')}${value.toFixed(0)}M`;
+};
 
 // Helper function to format cache age
 const formatCacheAge = (ageMs) => {
@@ -223,7 +212,7 @@ const formatCacheAge = (ageMs) => {
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  
+
   if (days > 0) return `${days}d ago`;
   if (hours > 0) return `${hours}h ago`;
   if (minutes > 0) return `${minutes}m ago`;
@@ -290,10 +279,10 @@ const ETFFlowsCard = React.memo(() => {
     };
   }, [apiResponse, period]);
   
-  // Memoized status configuration with API color support
+  // Memoized status configuration based on 5D flow value
   const statusConfig = useMemo(() => {
-    return getStatusConfig(data.status, colors, data.statusColor);
-  }, [data.status, data.statusColor, colors]);
+    return getStatusConfig(data.inflow5D, colors);
+  }, [data.inflow5D, colors]);
 
   // Loading state - only show for initial load with no cached data
   if (isLoading && !data) {
@@ -362,12 +351,8 @@ const ETFFlowsCard = React.memo(() => {
         <div className="text-center">
           <div className="flex items-baseline justify-center space-x-2 mb-1">
             <span className={`text-xs ${colors.text.secondary}`}>5D Net:</span>
-            <div className={`text-xl font-bold ${
-              data.inflow5D > 1500 ? colors.text.positive :
-              data.inflow5D < -750 ? colors.text.negative :
-              colors.text.warning
-            }`}>
-              {data.inflow5D > 0 ? '+' : ''}${data.inflow5D.toLocaleString()}M
+            <div className={`text-xl font-bold ${statusConfig.color}`}>
+              {formatFlowValue(data.inflow5D)}
             </div>
             <span className={`text-xs ${statusConfig.color} font-medium`}>
               {statusConfig.icon} {statusConfig.label}
@@ -415,7 +400,7 @@ const ETFFlowsCard = React.memo(() => {
               className={`${colors.text.muted} cursor-help hover:${colors.text.secondary} transition-colors`}
               title={generateTransparencyTooltip({
                 ...extractTransparencyData(data),
-                existingTooltip: `ETFs Included: ${data.etfBreakdown?.map(etf => `${etf.symbol} (${etf.name})`).join(', ') || 'IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), BITB (Bitwise), ARKB (ARK)'} | Total 5D Flow: $${data.inflow5D?.toLocaleString()}M`
+                existingTooltip: `ETFs Included: ${data.etfBreakdown?.map(etf => `${etf.symbol} (${etf.name})`).join(', ') || 'IBIT (BlackRock), FBTC (Fidelity), GBTC (Grayscale), BITB (Bitwise), ARKB (ARK)'} | Total 5D Flow: ${formatFlowValue(data.inflow5D)}`
               })}
             >
               {data.etfsAnalyzed} ETFs • {data.cacheAgeFormatted}

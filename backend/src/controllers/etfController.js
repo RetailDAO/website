@@ -323,16 +323,40 @@ class ETFController {
       
       validETFs.forEach(etf => {
         const dataIndex = etf.data.dataPoints - maxDataPoints + dayIndex;
-        
-        if (dataIndex >= 0 && 
-            etf.data.closes[dataIndex] && 
+
+        if (dataIndex >= 0 &&
+            etf.data.closes[dataIndex] &&
             etf.data.volumes[dataIndex]) {
-          
-          const price = etf.data.closes[dataIndex];
+
+          const currentPrice = etf.data.closes[dataIndex];
           const volume = etf.data.volumes[dataIndex];
-          const dailyFlow = (price * volume) / 1000000; // Millions
-          
-          dailyAggregatedFlow += dailyFlow * (etf.weight / totalWeight);
+
+          // Calculate net flow from real price movement + volume data
+          let netFlow = 0;
+
+          if (dataIndex > 0 && etf.data.closes[dataIndex - 1]) {
+            const previousPrice = etf.data.closes[dataIndex - 1];
+            const priceChangePercent = (currentPrice - previousPrice) / previousPrice;
+
+            // Volume in dollars
+            const volumeUSD = currentPrice * volume;
+
+            // Net flow estimation:
+            // - Up days (price increase) = net inflows (people buying)
+            // - Down days (price decrease) = net outflows (people selling)
+            // - Volume represents the magnitude of the flow
+
+            // Convert percentage change to flow estimate
+            // Use a reasonable flow-to-price-movement ratio
+            const flowRatio = 0.1; // 10% of volume represents estimated net flow
+            netFlow = (volumeUSD * priceChangePercent * flowRatio) / 1000000; // Convert to millions
+
+          } else {
+            // First day - use small neutral flow
+            netFlow = 0;
+          }
+
+          dailyAggregatedFlow += netFlow * (etf.weight / totalWeight);
           weightUsed += etf.weight;
           validETFsForDay++;
         }
@@ -410,14 +434,18 @@ class ETFController {
       return { ...cachedFallback, dataSource: 'cached_fallback' };
     }
 
-    // Generate realistic mock data - always generate 30 days, then filter
+    // Generate realistic mock data with both positive and negative flows
     const maxDaysBack = 30;
     const daysToShow = period === '1M' ? 30 : 14;
     const flows = [];
     for (let i = maxDaysBack; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      const dailyFlow = (Math.random() - 0.3) * 400 + 100; // Bias toward positive flows
-      
+
+      // More realistic flow patterns - some days positive, some negative
+      const isPositiveDay = Math.random() < 0.65; // 65% chance positive
+      const magnitude = Math.random() * 1500 + 300; // 300-1800M magnitude
+      const dailyFlow = isPositiveDay ? magnitude : -magnitude * 0.7; // Negative days are typically smaller
+
       flows.push({
         date: date.toISOString().split('T')[0],
         inflow: Math.round(dailyFlow * 10) / 10,

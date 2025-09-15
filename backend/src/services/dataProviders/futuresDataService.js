@@ -139,41 +139,36 @@ class OptimizedFuturesDataService {
    */
   calculateAnnualizedBasis(spot, futures, daysToExpiry) {
     if (daysToExpiry <= 0 || spot <= 0) return 0;
-    
-    // For perpetual swaps, use funding rate approach
-    if (daysToExpiry >= 90) {
-      // Simplified basis calculation for perpetual contracts
-      return ((futures - spot) / spot) * 100;
-    }
-    
-    // Traditional futures basis calculation
-    return ((futures - spot) / spot) * (365 / daysToExpiry) * 100;
+
+    // Always use traditional annualized futures basis calculation for fixed-term contracts
+    const result = ((futures - spot) / spot) * (365 / daysToExpiry) * 100;
+    return result;
   }
 
   /**
-   * Classify basis regime according to Kevin's requirements
-   * - Backwardation/Stress (🔴): Basis_ann ≤ 0%
-   * - Healthy Contango (🟢): +5% to +12% 
-   * - Overheated Carry (🔴): Basis_ann ≥ +15%
-   * - Else (🟡): Neutral
+   * Classify basis regime according to updated client requirements
+   * - Backwardation (🔴): ≤ 0% - Market under stress – futures below spot
+   * - Healthy (🟢): +5% to +12% - Balanced premium – supportive conditions
+   * - Overheated Carry (🔴): ≥ +15% - Crowded longs – flush risk elevated
+   * - Neutral (🟡): Everything else - No strong signal – mid-range
    */
   classifyBasisRegime(basis) {
     if (basis <= 0) {
       return {
         state: 'backwardation',
-        label: 'Backwardation/Stress',
+        label: 'Backwardation',
         color: 'red',
-        terminalLabel: '[STRESS]',
-        description: 'Futures ≤ spot - supply constraints possible',
+        terminalLabel: '[BACKWARDATION]',
+        description: 'Market under stress – futures below spot',
         sentiment: 'bearish'
       };
     } else if (basis >= 5 && basis <= 12) {
       return {
         state: 'healthy',
-        label: 'Healthy Contango',
+        label: 'Healthy',
         color: 'green',
         terminalLabel: '[HEALTHY]',
-        description: 'Normal market conditions with healthy premium',
+        description: 'Balanced premium – supportive conditions',
         sentiment: 'bullish'
       };
     } else if (basis >= 15) {
@@ -182,7 +177,7 @@ class OptimizedFuturesDataService {
         label: 'Overheated Carry',
         color: 'red',
         terminalLabel: '[OVERHEATED]',
-        description: 'Excessive premium - potential correction ahead',
+        description: 'Crowded longs – flush risk elevated',
         sentiment: 'overheated'
       };
     } else {
@@ -191,7 +186,7 @@ class OptimizedFuturesDataService {
         label: 'Neutral',
         color: 'yellow',
         terminalLabel: '[NEUTRAL]',
-        description: 'Between healthy and stressed levels',
+        description: 'No strong signal – mid-range',
         sentiment: 'neutral'
       };
     }

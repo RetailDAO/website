@@ -353,14 +353,15 @@ class LeverageController {
     const btcMarketCap = 1900; // $1.9T in billions
     const oiMcapRatio = (openInterest.total / btcMarketCap) * 100; // OI/MCap as percentage
 
-    // Convert funding rate to 8-hour percentage
-    const funding8h = fundingRates.averageRate * 800; // Convert to 8-hour % (8h * 100)
+    // Funding rate is already in percentage form (8h rate)
+    // Most exchanges provide 8-hour funding rates as percentage
+    const funding8h = fundingRates.averageRate; // Keep as-is, should be like 0.01 for 0.01%
     
     // Calculate 7-day OI delta (mock for now - in production, get historical data)
     const oiDelta7d = openInterest.change24h * 3.5; // Approximate 7-day from 24h change
 
     // Determine leverage state based on new criteria
-    const state = this.determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d);
+    const state = this.determineLeverageStateNew(funding8h * 100, oiMcapRatio, oiDelta7d); // Convert to percentage for comparison
 
     return {
       // Status indicators
@@ -368,8 +369,8 @@ class LeverageController {
       statusColor: state.color,
       description: state.description,
       
-      // Key metrics for display
-      fundingRate8h: Math.round(funding8h * 10000) / 10000, // 4 decimal places for 8h rate
+      // Key metrics for display (keep full precision for small funding rates)
+      fundingRate8h: Number(funding8h.toFixed(6)), // Keep 6 decimal places for small rates like 0.0036%
       oiMcapRatio: Math.round(oiMcapRatio * 100) / 100, // 2 decimal places for percentage
       oiDelta7d: Math.round(oiDelta7d * 100) / 100, // 2 decimal places for percentage
       
@@ -405,47 +406,48 @@ class LeverageController {
     };
   }
 
-  // Determine leverage state based on new client criteria
+  // Determine leverage state based on client's rules from Image #3
   determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d) {
-    // Short-Crowded / Squeeze Risk (Green)
-    // Funding <= -0.02% per 8h AND ΔOI >= +5% over 7 days
+    console.log(`🔍 State determination: Funding8h=${funding8h.toFixed(4)}%, OI/MCap=${oiMcapRatio.toFixed(2)}%, ΔOI7d=${oiDelta7d.toFixed(2)}%`);
+
+    // Short-Crowded → Squeeze Risk (Green)
+    // Rules: Funding ≤ -0.02% per 8h AND ΔOI ≥ +5% in 7 days AND Price flat/down (≤ +2% in 7d)
     if (funding8h <= -0.02 && oiDelta7d >= 5.0) {
+      console.log('✅ State: Short-Crowded (Squeeze Risk conditions met)');
       return {
         key: 'green',
         status: 'Squeeze Risk',
-        label: 'Short-Crowded / Squeeze Risk',
+        label: 'Shorts Crowded',
         color: 'green',
-        description: 'Funding <= -0.02% per 8h and ΔOI >= +5% over 7 days.',
+        description: 'Shorts Crowded, Potential Squeeze Coming',
         sentiment: 'Short squeeze potential',
         recommendation: 'Monitor for upward price pressure'
       };
     }
 
-    // Long-Crowded / Flush Risk (Red)
-    // Funding >= +0.02% per 8h AND (OI/MCap >= 2.5% (BTC) or 3.5% (ETH)) AND ΔOI >= +10% with price up > +8%
-    // Note: Using BTC threshold of 2.5% and simplified price condition
-    if (funding8h >= 0.02 && oiMcapRatio >= 2.5) {
-      // Additional check for high OI delta with price increase (simplified)
-      if (oiDelta7d >= 10.0) {
-        return {
-          key: 'red',
-          status: 'Flush Risk',
-          label: 'Long-Crowded / Flush Risk',
-          color: 'red',
-          description: 'Funding >= +0.02% per 8h and OI/MCap >= 2.5% (BTC) and ΔOI >= +10% with price up > +8%.',
-          sentiment: 'Long flush potential',
-          recommendation: 'Exercise caution, potential downward correction'
-        };
-      }
+    // Long-Crowded → Flush Risk (Red)
+    // Rules: Funding ≥ +0.02% per 8h AND (OI/MCap ≥ 2.5% BTC or 3.5% ETH, OR ΔOI ≥ +10% in 7d with price up > +8%)
+    if (funding8h >= 0.02 && (oiMcapRatio >= 2.5 || oiDelta7d >= 10.0)) {
+      console.log('✅ State: Long-Crowded (Flush Risk conditions met)');
+      return {
+        key: 'red',
+        status: 'Flush Risk',
+        label: 'Longs Crowded',
+        color: 'red',
+        description: 'Longs Crowded, Potential Flush Coming',
+        sentiment: 'Long flush potential',
+        recommendation: 'Exercise caution, potential downward correction'
+      };
     }
 
-    // Balanced (Yellow) - Default for anything else
+    // Balanced (Yellow) - Anything else
+    console.log('⚖️ State: Balanced (no extreme conditions met)');
     return {
       key: 'yellow',
       status: 'Balanced',
       label: 'Balanced',
       color: 'yellow',
-      description: 'Not Squeeze Risk / Flush Risk Currently',
+      description: 'No Squeeze or Flush Risk Currently',
       sentiment: 'Neutral leverage conditions',
       recommendation: 'Monitor for changes in funding and OI dynamics'
     };
@@ -478,7 +480,7 @@ class LeverageController {
       description: state.description,
       
       // Key metrics for display
-      fundingRate8h: Math.round(funding8h * 10000) / 10000,
+      fundingRate8h: Number(funding8h.toFixed(6)),
       oiMcapRatio: Math.round(oiMcapRatio * 100) / 100,
       oiDelta7d: Math.round(oiDelta7d * 100) / 100,
       

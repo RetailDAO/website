@@ -224,15 +224,12 @@ const RotationBreadthCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header - Moved to top */}
+      {/* Header - Simplified */}
       <div className="flex justify-between items-center mb-3">
         <div>
           <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [ROTATION_BREADTH]
           </h3>
-          <p className={`text-xs ${colors.text.secondary}`}>
-            {data.coinsOutperforming} of {data.totalAnalyzed} beating BTC
-          </p>
         </div>
         <div className={`
           px-2 py-1 text-xs font-mono uppercase tracking-wider rounded
@@ -269,43 +266,8 @@ const RotationBreadthCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Top 5 Outperforming Coins */}
-      <div className="flex-1 min-h-0">
-        <div className={`text-sm ${colors.text.primary} font-semibold mb-2 text-center`}>
-          Top 5 Outperforming BTC
-        </div>
-        <div className="space-y-1 overflow-y-auto max-h-24 pb-2">
-          {data.topPerformers.map((coin, index) => (
-            <div key={coin.symbol} className={`
-              flex justify-between items-center p-2 rounded
-              ${colors.bg.tertiary} border ${colors.border.primary}
-            `}>
-              <div className="flex items-center space-x-2">
-                <div className={`
-                  w-6 h-6 rounded-full ${colors.bg.secondary} 
-                  flex items-center justify-center text-xs font-bold
-                  ${colors.text.primary}
-                `}>
-                  {index + 1}
-                </div>
-                <div>
-                  <div className={`font-mono text-sm ${colors.text.primary}`}>
-                    {coin.symbol}
-                  </div>
-                  <div className={`text-xs ${colors.text.secondary}`}>
-                    {coin.name}
-                  </div>
-                </div>
-              </div>
-              <div className={`text-sm font-bold ${
-                coin.performance > 0 ? colors.text.positive : colors.text.negative
-              }`}>
-                +{coin.performance}%
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Spacer for better layout */}
+      <div className="flex-1"></div>
 
       {/* Data Source and Status */}
       <div className="space-y-1">
