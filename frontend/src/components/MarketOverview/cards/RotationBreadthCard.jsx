@@ -5,7 +5,6 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 import apiService from '../../../services/api';
-import TimeTooltip from '../../common/TimeTooltip';
 
 // Mock data simulating Top 100 coins analysis vs BTC (30D)
 const generateMockRotationData = () => {
@@ -224,10 +223,6 @@ const RotationBreadthCard = React.memo(() => {
   }
 
   return (
-    <TimeTooltip
-      nextUpdateTime={new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()}
-      position="bottom"
-    >
       <div className="h-full flex flex-col">
       {/* Header - Simplified */}
       <div className="flex justify-between items-center mb-3">
@@ -317,7 +312,6 @@ const RotationBreadthCard = React.memo(() => {
 
       </div>
       </div>
-    </TimeTooltip>
   );
 });
 

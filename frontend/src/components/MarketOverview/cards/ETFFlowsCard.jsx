@@ -5,7 +5,6 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import apiService from '../../../services/api';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
-import TimeTooltip from '../../common/TimeTooltip';
 
 // Mock data with realistic positive and negative flows
 const generateMockETFData = (period) => {
@@ -315,11 +314,7 @@ const ETFFlowsCard = React.memo(() => {
   }
 
   return (
-    <TimeTooltip
-      nextUpdateTime={new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString()}
-      position="bottom"
-    >
-      <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Header - First Hierarchy - Moved to top */}
       <div className="flex justify-between items-center mb-3">
         <div>
@@ -384,7 +379,7 @@ const ETFFlowsCard = React.memo(() => {
         </div>
 
       </div>
-    </TimeTooltip>
+    </div>
   );
 });
 

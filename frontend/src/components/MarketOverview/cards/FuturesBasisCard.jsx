@@ -4,7 +4,6 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { useOptimizedFuturesBasis } from '../../../hooks/useOptimizedFuturesBasis';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
-import TimeTooltip from '../../common/TimeTooltip';
 
 // Error states for graceful handling with retry functionality
 const ErrorState = ({ colors, error, onRetry }) => (
@@ -152,10 +151,6 @@ const FuturesBasisCard = React.memo(() => {
   }
 
   return (
-    <TimeTooltip
-      nextUpdateTime={new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()}
-      position="bottom"
-    >
       <div className="h-full flex flex-col">
       {/* Compact Header */}
       <div className="flex justify-between items-center mb-2">
@@ -233,7 +228,6 @@ const FuturesBasisCard = React.memo(() => {
       </div>
 
       </div>
-    </TimeTooltip>
   );
 });
 

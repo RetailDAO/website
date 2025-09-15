@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
-import TimeTooltip from '../../common/TimeTooltip';
 
 // Import API service
 import apiService from '../../../services/api';
@@ -166,10 +165,6 @@ const StateOfLeverageCard = React.memo(() => {
   }
 
   return (
-    <TimeTooltip
-      nextUpdateTime={new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()}
-      position="bottom"
-    >
       <div className="h-full flex flex-col">
       {/* Compact Header */}
       <div className="flex justify-between items-center mb-2">
@@ -239,7 +234,6 @@ const StateOfLeverageCard = React.memo(() => {
       </div>
 
       </div>
-    </TimeTooltip>
   );
 });
 
