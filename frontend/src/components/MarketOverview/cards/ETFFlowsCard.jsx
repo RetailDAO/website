@@ -133,22 +133,25 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
         {/* Bars container */}
         <div className="flex items-end justify-center h-full space-x-0.5 relative pt-4">
           {displayFlows.map((flow, index) => {
-            const flowValue = flow.inflow;
+            const flowValue = flow.netFlow || flow.flow || 0;
             const isPositive = flowValue >= 0;
             
-            // Calculate bar height properly for positive and negative values
+            // Simplified bar height calculation for positive and negative values
+            const totalRange = scaleMax - scaleMin;
+            const zeroLinePosition = Math.abs(scaleMin) / totalRange * chartHeight;
+
             let barHeight, barBottom;
 
             if (isPositive) {
               // Positive bars grow upward from zero line
-              const heightRatio = flowValue / (scaleMax - Math.max(0, scaleMin));
-              barHeight = Math.max(3, heightRatio * (chartHeight * 0.9));
-              barBottom = scaleMin < 0 ? (Math.abs(scaleMin) / (scaleMax - scaleMin)) * chartHeight : 0;
+              const heightRatio = flowValue / totalRange;
+              barHeight = Math.max(3, heightRatio * chartHeight);
+              barBottom = zeroLinePosition - barHeight;
             } else {
               // Negative bars grow downward from zero line
-              const heightRatio = Math.abs(flowValue) / Math.abs(Math.min(0, scaleMin));
-              barHeight = Math.max(3, heightRatio * (chartHeight * 0.9));
-              barBottom = scaleMin < 0 ? (Math.abs(scaleMin) / (scaleMax - scaleMin)) * chartHeight - barHeight : chartHeight - barHeight;
+              const heightRatio = Math.abs(flowValue) / totalRange;
+              barHeight = Math.max(3, heightRatio * chartHeight);
+              barBottom = zeroLinePosition;
             }
             
             // Color intensity based on flow size
@@ -263,7 +266,9 @@ const ETFFlowsCard = React.memo(() => {
       // Transform API flows data for proper chart rendering
       const transformedFlows = (apiResponse.data.flows || []).map(flow => ({
         date: flow.date,
-        inflow: flow.inflow || flow.netFlow || flow.flow || 0, // Handle different API response formats
+        netFlow: flow.netFlow || flow.flow || 0, // Net flow (can be positive or negative)
+        inflow: flow.inflow || 0, // Separate inflow tracking
+        outflow: flow.outflow || 0, // Separate outflow tracking
         cumulative: flow.cumulative || 0,
         etfsContributing: flow.etfsContributing || flow.etfBreakdown?.length || 5
       }));

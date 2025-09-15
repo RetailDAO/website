@@ -17,9 +17,9 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
     const minValue = Math.min(...data);
     const maxValue = Math.max(...data);
 
-    // Use fixed meaningful range for Treasury yields (0-10% covers full historical range)
-    const yAxisMin = 0;    // Start from 0% for clear reference
-    const yAxisMax = 10;   // 10% covers all historical Treasury yield scenarios
+    // Use focused range for current Treasury yields (3-4.5% for better visualization)
+    const yAxisMin = 3.0;    // Start from 3% for focused view
+    const yAxisMax = 4.5;    // 4.5% covers current range with proper scaling
 
     // Theme-specific chart colors
     const getChartColors = () => {
@@ -154,9 +154,9 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
         },
         axisBorder: { show: false },
         axisTicks: { show: false },
-        forceNiceScale: true,
-        decimalsInFloat: 1,
-        tickAmount: 10,
+        forceNiceScale: false,
+        decimalsInFloat: 2,
+        tickAmount: 6,
         min: yAxisMin,
         max: yAxisMax,
       },

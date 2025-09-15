@@ -476,7 +476,9 @@ class ETFFlowsService {
   dateRangeToDays(dateRange) {
     const mapping = {
       '7D': 7,
-      '30D': 30,  
+      '2W': 14,  // 2 weeks
+      '30D': 30,
+      '1M': 30,  // 1 month
       '90D': 90,
       '1Y': 365
     };
