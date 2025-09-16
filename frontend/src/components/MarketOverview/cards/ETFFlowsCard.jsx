@@ -24,6 +24,7 @@ const generateMockETFData = (period) => {
     flows.push({
       date: date.toISOString().split('T')[0],
       inflow: inflow,
+      netFlow: inflow,
       cumulative: flows.length > 0 ? flows[flows.length - 1].cumulative + inflow : inflow
     });
   }
@@ -133,7 +134,7 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
         {/* Bars container */}
         <div className="flex items-end justify-center h-full space-x-0.5 relative pt-4">
           {displayFlows.map((flow, index) => {
-            const flowValue = flow.netFlow || flow.flow || 0;
+            const flowValue = flow.inflow || flow.netFlow || flow.flow || 0;
             const isPositive = flowValue >= 0;
             
             // Simplified bar height calculation for positive and negative values
@@ -266,8 +267,8 @@ const ETFFlowsCard = React.memo(() => {
       // Transform API flows data for proper chart rendering
       const transformedFlows = (apiResponse.data.flows || []).map(flow => ({
         date: flow.date,
-        netFlow: flow.netFlow || flow.flow || 0, // Net flow (can be positive or negative)
-        inflow: flow.inflow || 0, // Separate inflow tracking
+        inflow: flow.inflow || flow.netFlow || flow.flow || 0, // Primary flow value for chart
+        netFlow: flow.netFlow || flow.inflow || flow.flow || 0, // Net flow (can be positive or negative)
         outflow: flow.outflow || 0, // Separate outflow tracking
         cumulative: flow.cumulative || 0,
         etfsContributing: flow.etfsContributing || flow.etfBreakdown?.length || 5
@@ -291,8 +292,13 @@ const ETFFlowsCard = React.memo(() => {
       };
     }
     // Fallback to mock data if no cached data available
+    const mockData = generateMockETFData(period);
     return {
-      ...generateMockETFData(period),
+      flows: mockData.flows.map(flow => ({
+        ...flow,
+        inflow: flow.inflow || flow.netFlow || 0
+      })),
+      inflow5D: mockData.inflow5D,
       _fromCache: false,
       cacheAge: 0,
       cacheAgeFormatted: 'Just now'
