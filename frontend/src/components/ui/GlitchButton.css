@@ -1,0 +1,134 @@
+/* Global Glitch Button Component - Theme Aware */
+.glitch-btn {
+  display: inline-block;
+  border: 1px solid var(--status-color);
+  color: var(--status-color);
+  line-height: 1.5em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  position: relative;
+  overflow: hidden;
+}
+
+.glitch-btn .text,
+.glitch-btn .decoration {
+  display: inline-block;
+}
+
+.glitch-btn .decoration {
+  float: right;
+  margin-left: 8px;
+}
+
+.glitch-btn .text-decoration {
+  display: inline-block;
+}
+
+/* Hover and Focus States with Status-Responsive Colors */
+.glitch-btn:hover,
+.glitch-btn:focus {
+  animation: glitch 0.2s ease-in-out;
+  background-color: var(--status-hover);
+  color: var(--status-text);
+  border-color: var(--status-hover);
+  outline: none;
+}
+
+.glitch-btn:hover .text-decoration,
+.glitch-btn:focus .text-decoration {
+  animation: blink 0.9s infinite;
+}
+
+.glitch-btn:hover .decoration,
+.glitch-btn:focus .decoration {
+  animation: blink 0.9s infinite;
+}
+
+/* Active State */
+.glitch-btn:active {
+  background: transparent;
+  color: var(--status-color);
+  transform: scale(0.98);
+}
+
+.glitch-btn:active .text-decoration,
+.glitch-btn:active .decoration {
+  animation: none;
+}
+
+/* Keyframe Animations */
+@keyframes glitch {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    background-color: var(--status-hover);
+    transform: translateX(-2px);
+    letter-spacing: 2px;
+  }
+  35% {
+    background-color: var(--status-hover);
+    transform: translateX(2px);
+  }
+  59% {
+    opacity: 0.8;
+  }
+  60% {
+    background-color: var(--status-hover);
+    transform: translateX(-1px);
+    filter: blur(1px);
+  }
+  100% {
+    background-color: var(--status-hover);
+    filter: blur(0);
+    transform: translateX(0);
+  }
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Theme-specific adjustments */
+.glitch-btn.retro {
+  font-family: monospace;
+}
+
+/* Size-specific adjustments */
+.glitch-btn.xs {
+  font-size: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+.glitch-btn.sm {
+  font-size: 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.glitch-btn.md {
+  font-size: 0.875rem;
+  border-radius: 0.75rem;
+}
+
+.glitch-btn.lg {
+  font-size: 1rem;
+  border-radius: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .glitch-btn {
+    min-width: auto;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .glitch-btn .decoration {
+    margin-left: 4px;
+  }
+}

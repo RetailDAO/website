@@ -5,6 +5,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 import apiService from '../../../services/api';
+import GlitchButton from '../../ui/GlitchButton';
 
 // Mock data simulating Top 100 coins analysis vs BTC (30D)
 const generateMockRotationData = () => {
@@ -95,41 +96,6 @@ const getSeasonConfig = (season, colors) => {
   return configs[season] || configs['neutral'];
 };
 
-// Simple gauge component
-const SimpleGauge = React.memo(({ percentage, config, colors }) => {
-  const gaugeAngle = (percentage / 100) * 180; // 0-180 degrees
-  
-  return (
-    <div className="relative w-20 h-10 mx-auto">
-      <svg width="80" height="40" className="transform">
-        {/* Background arc */}
-        <path
-          d="M 6 32 A 26 26 0 0 1 74 32"
-          fill="none"
-          stroke={colors.border.secondary.replace('border-', '#')}
-          strokeWidth="3"
-        />
-        {/* Progress arc */}
-        <path
-          d="M 6 32 A 26 26 0 0 1 74 32"
-          fill="none"
-          stroke={config.color.replace('text-', '#')}
-          strokeWidth="3"
-          strokeDasharray={`${(percentage / 100) * 82} 82`}
-          className="transition-all duration-500"
-        />
-        {/* Pointer */}
-        <circle
-          cx={40 + 26 * Math.cos((180 - gaugeAngle) * Math.PI / 180)}
-          cy={32 - 26 * Math.sin((180 - gaugeAngle) * Math.PI / 180)}
-          r="2"
-          fill={config.color.replace('text-', '#')}
-          className="transition-all duration-500"
-        />
-      </svg>
-    </div>
-  );
-});
 
 // Helper function to format cache age
 const formatCacheAge = (ageMs) => {
@@ -240,34 +206,27 @@ const RotationBreadthCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Highest Hierarchy: Percentage and Season (Key Indicators) */}
-      <div className="mb-3">
+      {/* Main Content - Centered and Evenly Distributed */}
+      <div className="flex-1 flex flex-col justify-center items-center space-y-6">
         {/* Main percentage display */}
-        <div className="text-center mb-2">
+        <div className="text-center">
           <div className={`text-3xl font-bold ${colors.text.primary}`}>
             {data.percentage}%
           </div>
-          <div className={`text-sm ${colors.text.secondary}`}>
+          <div className={`text-sm ${colors.text.secondary} mt-2`}>
             of Top {data.totalAnalyzed} coins outperforming BTC (30D)
           </div>
         </div>
-        
-        {/* Season indicator */}
+
+        {/* Glitch Button Season Indicator */}
         <div className="text-center">
-          <div className={`
-            inline-flex items-center px-3 py-2 border rounded-lg
-            ${seasonConfig.bg} ${seasonConfig.border} ${seasonConfig.color}
-          `}>
-            <div className="text-center">
-              <div className="text-sm font-bold">{seasonConfig.label}</div>
-              <div className="text-xs opacity-75">{seasonConfig.threshold}</div>
-            </div>
-          </div>
+          <GlitchButton
+            text={seasonConfig.label}
+            statusType={marketSeason === 'altseason' || marketSeason === 'frothy' ? 'easing' : marketSeason === 'btc-season' ? 'tightening' : 'neutral'}
+            size="sm"
+          />
         </div>
       </div>
-
-      {/* Spacer for better layout */}
-      <div className="flex-1"></div>
 
       {/* Data Source and Status */}
       <div className="space-y-1">

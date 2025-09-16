@@ -4,6 +4,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { useOptimizedFuturesBasis } from '../../../hooks/useOptimizedFuturesBasis';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
+import GlitchButton from '../../ui/GlitchButton';
 
 // Helper function to format cache age
 const formatCacheAge = (ageMs) => {
@@ -196,17 +197,13 @@ const FuturesBasisCard = React.memo(() => {
           </div>
         </div>
         
-        {/* Compact Regime Indicator */}
-        <div className={`
-          px-3 py-2 text-center mb-3 border rounded-lg
-          ${regimeConfig.bg} ${regimeConfig.border} ${regimeConfig.color}
-        `}>
-          <div className="flex items-center justify-center space-x-1">
-            <span className="text-sm">{regimeConfig.icon}</span>
-            <div>
-              <div className="font-semibold text-xs">{regimeConfig.label}</div>
-            </div>
-          </div>
+        {/* Glitch Button Regime Indicator */}
+        <div className="mb-3">
+          <GlitchButton
+            text={regimeConfig.label}
+            statusType={regime === 'healthy' ? 'easing' : regime === 'backwardation' || regime === 'overheated' ? 'tightening' : 'neutral'}
+            size="sm"
+          />
         </div>
 
         {/* Compact Metrics Grid */}

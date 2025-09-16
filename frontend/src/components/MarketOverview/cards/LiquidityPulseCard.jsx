@@ -5,6 +5,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 import Chart from 'react-apexcharts';
+import GlitchButton from '../../ui/GlitchButton';
 
 // Interactive US 2Y Treasury yield chart with ApexCharts - supports all theme variants
 const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
@@ -17,9 +18,9 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
     const minValue = Math.min(...data);
     const maxValue = Math.max(...data);
 
-    // Use focused range for current Treasury yields (3-4.5% for better visualization)
-    const yAxisMin = 3.0;    // Start from 3% for focused view
-    const yAxisMax = 4.5;    // 4.5% covers current range with proper scaling
+    // Use focused range for current Treasury yields (3.5-3.8% for steeper movements visualization)
+    const yAxisMin = 3.5;    // Start from 3.5% for steeper movements
+    const yAxisMax = 3.8;    // 3.8% shows fine-grained changes
 
     // Theme-specific chart colors
     const getChartColors = () => {
@@ -260,33 +261,6 @@ const getLiquidityStatus = (change30Day) => {
   };
 };
 
-// Modern status indicator component
-const StatusIndicator = React.memo(({ statusInfo, colors }) => {
-  const { currentTheme } = useTheme();
-
-  return (
-    <div className="flex justify-center">
-      <div
-        className={`
-          inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold
-          transition-all duration-300 ease-in-out
-          ${currentTheme === 'retro' ? 'font-mono' : ''}
-          hover:scale-105 hover:shadow-lg
-        `}
-        style={{
-          backgroundColor: statusInfo.color + '15',
-          color: statusInfo.color,
-          border: `1.5px solid ${statusInfo.color}60`,
-          boxShadow: `0 0 20px ${statusInfo.color}20`,
-        }}
-      >
-        <span className="tracking-wide">
-          {statusInfo.label}
-        </span>
-      </div>
-    </div>
-  );
-});
 
 
 // Helper function to format cache age
@@ -423,8 +397,8 @@ const LiquidityPulseCard = React.memo(() => {
         <div className="flex items-center space-x-1">
           <div className="flex items-center space-x-2">
             {data?._fromCache && (
-              <span 
-                className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`} 
+              <span
+                className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`}
                 title={generateTransparencyTooltip({
                   ...extractTransparencyData(data),
                   existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
@@ -433,31 +407,31 @@ const LiquidityPulseCard = React.memo(() => {
                 [{data._isStale ? 'CACHE*' : 'CACHE'}]
               </span>
             )}
-            
+
             {isFetching && (
               <span className={`text-xs font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
                 [UPD...]
               </span>
             )}
-            
+
             {!data?._fromCache && !isFetching && (
               <span className={`text-xs font-mono ${colors.text.positive}`} title="Live data from server">
                 [LIVE]
               </span>
             )}
-            
+
             {error && (
               <span className={`text-xs font-mono ${colors.text.negative}`} title="Using fallback data">
                 [FALLBACK]
               </span>
             )}
+
+            {data && (
+              <div className={`text-xs ${colors.text.muted}`}>
+                {data.cacheAgeFormatted || 'Just now'}
+              </div>
+            )}
           </div>
-          
-          {data && (
-            <div className={`text-xs ${colors.text.muted}`}>
-              {data.cacheAgeFormatted || 'Just now'}
-            </div>
-          )}
         </div>
       </div>
 
@@ -467,11 +441,21 @@ const LiquidityPulseCard = React.memo(() => {
           <h4 className={`text-lg font-semibold ${colors.text.primary}`}>
             US 2Y Treasury Yield
           </h4>
-          <div className={`text-2xl font-bold ${colors.text.primary}`}>
-            {currentYield}%
-            <span className={`text-base font-normal ${colors.text.secondary} ml-3`}>
-              30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
-            </span>
+          <div className="flex items-center justify-between">
+            <div className={`text-2xl font-bold ${colors.text.primary}`}>
+              {currentYield}%
+              <span className={`text-base font-normal ${colors.text.secondary} ml-3`}>
+                30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
+              </span>
+            </div>
+
+            {data && (
+              <GlitchButton
+                text={liquidityStatusInfo.label}
+                statusType={liquidityStatusInfo.status}
+                size="sm"
+              />
+            )}
           </div>
         </div>
         {chartData && (
@@ -531,7 +515,6 @@ const LiquidityPulseCard = React.memo(() => {
 
 // Display names for better debugging
 US2YChart.displayName = 'US2YChart';
-StatusIndicator.displayName = 'StatusIndicator';
 LiquidityPulseCard.displayName = 'LiquidityPulseCard';
 
 export default LiquidityPulseCard;

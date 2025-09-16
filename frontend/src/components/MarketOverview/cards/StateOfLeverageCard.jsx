@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
+import GlitchButton from '../../ui/GlitchButton';
 
 // Import API service
 import apiService from '../../../services/api';
@@ -124,7 +125,7 @@ const StateOfLeverageCard = React.memo(() => {
   usePerformanceTracking('StateOfLeverageCard');
   
   // Optimized data fetching with intelligent caching
-  const { data, isLoading, error, isStale } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['leverage-state'],
     queryFn: fetchLeverageState,
     staleTime: 3 * 60 * 1000, // 3 minutes - leverage changes frequently
@@ -175,61 +176,65 @@ const StateOfLeverageCard = React.memo(() => {
         </div>
       </div>
 
-      {/* Compact Content */}
-      <div className="flex-1 flex flex-col items-center min-h-0">
+      {/* Main Content - Centered with Better Spacing */}
+      <div className="flex-1 flex flex-col justify-center items-center space-y-4">
 
-        {/* Key Metrics as per client requirements */}
-        <div className="space-y-2 w-full px-2 mb-3">
+        {/* Key Metrics - Centered with Improved Typography */}
+        <div className="space-y-3 w-full px-4">
           {/* 1) Funding Rate */}
           <div className="flex justify-between items-center">
-            <span className={`text-sm ${colors.text.muted}`}>• Funding Rate</span>
-            <span className={`text-sm font-mono ${colors.text.primary}`}>
+            <span className={`text-base ${colors.text.muted}`}>• Funding Rate</span>
+            <span className={`text-base font-mono font-semibold ${colors.text.primary}`}>
               {data.fundingRate8h !== undefined
                 ? `${data.fundingRate8h >= 0 ? '+' : ''}${(data.fundingRate8h * 100).toFixed(4)}%`
                 : `${data.fundingRate?.average >= 0 ? '+' : ''}${((data.fundingRate?.average || 0) * 100).toFixed(4)}%`}
             </span>
           </div>
-          
+
           {/* 2) OI/Marketcap */}
           <div className="flex justify-between items-center">
-            <span className={`text-sm ${colors.text.muted}`}>• OI/MCap</span>
-            <span className={`text-sm font-mono ${colors.text.primary}`}>
-              {data.oiMcapRatio !== undefined 
+            <span className={`text-base ${colors.text.muted}`}>• OI/MCap</span>
+            <span className={`text-base font-mono font-semibold ${colors.text.primary}`}>
+              {data.oiMcapRatio !== undefined
                 ? `${data.oiMcapRatio.toFixed(2)}%`
                 : `${((data.openInterest?.total || 15) / 1900 * 100).toFixed(2)}%`}
             </span>
           </div>
-          
+
           {/* 3) OI delta over 7D */}
           <div className="flex justify-between items-center">
-            <span className={`text-sm ${colors.text.muted}`}>• ΔOI (7D)</span>
-            <span className={`text-sm font-mono ${colors.text.primary}`}>
-              {data.oiDelta7d !== undefined 
+            <span className={`text-base ${colors.text.muted}`}>• ΔOI (7D)</span>
+            <span className={`text-base font-mono font-semibold ${colors.text.primary}`}>
+              {data.oiDelta7d !== undefined
                 ? `${data.oiDelta7d >= 0 ? '+' : ''}${data.oiDelta7d.toFixed(1)}%`
                 : `${(data.openInterest?.change24h || 0) >= 0 ? '+' : ''}${((data.openInterest?.change24h || 0) * 3.5).toFixed(1)}%`}
             </span>
           </div>
-          
+
           {/* 4) Status */}
           <div className="flex justify-between items-center">
-            <span className={`text-sm ${colors.text.muted}`}>• Status</span>
+            <span className={`text-base ${colors.text.muted}`}>• Status</span>
             <div className="flex items-center">
-              <span className={`text-xs mr-1 ${stateConfig.color}`}>
+              <span className={`text-sm mr-2 ${stateConfig.color}`}>
                 {stateConfig.icon}
               </span>
-              <span className={`text-sm font-medium ${stateConfig.color}`}>
+              <span className={`text-base font-semibold ${stateConfig.color}`}>
                 {data.status || data.stateLabel}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Description Box */}
-        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} border ${colors.border.primary}`}
-             style={{ borderRadius: '0px' }}>
-          <div className={`text-xs ${colors.text.muted} leading-tight text-center`}>
-            {getAnalysisText(data.status || data.state)}
-          </div>
+        {/* GlitchButton Status Indicator */}
+        <div className="text-center">
+          <GlitchButton
+            text={getAnalysisText(data.status || data.state)}
+            statusType={
+              (data.status || data.state) === 'Squeeze Risk' ? 'easing' :
+              (data.status || data.state) === 'Flush Risk' ? 'tightening' : 'neutral'
+            }
+            size="sm"
+          />
         </div>
       </div>
 
