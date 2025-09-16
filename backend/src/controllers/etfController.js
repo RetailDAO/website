@@ -312,30 +312,47 @@ class ETFController {
   // Aggregate multiple ETF flows with weighted average
   aggregateETFFlows(validETFs, totalWeight, daysBack) {
     const flows = [];
-    
-    // Find the maximum data points available
+
+    // Generate complete date range for requested period (including weekends)
+    // This ensures we always return the full calendar period requested
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - daysBack + 1);
+
+    // Find the maximum data points available from ETF sources
     const maxDataPoints = Math.max(...validETFs.map(etf => etf.data.dataPoints));
-    
-    for (let dayIndex = 0; dayIndex < Math.min(maxDataPoints, daysBack); dayIndex++) {
+
+    // Create flows for each calendar day in the range
+    for (let dayOffset = 0; dayOffset < daysBack; dayOffset++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + dayOffset);
+      const dateString = currentDate.toISOString().split('T')[0];
+
       let dailyAggregatedFlow = 0;
       let weightUsed = 0;
       let validETFsForDay = 0;
-      
+      let hasValidData = false;
+
+      // Try to find matching data from ETF sources
       validETFs.forEach(etf => {
-        const dataIndex = etf.data.dataPoints - maxDataPoints + dayIndex;
+        // Look for matching date in ETF timestamps
+        const matchingIndex = etf.data.timestamps.findIndex(timestamp => {
+          const etfDate = new Date(timestamp * 1000).toISOString().split('T')[0];
+          return etfDate === dateString;
+        });
 
-        if (dataIndex >= 0 &&
-            etf.data.closes[dataIndex] &&
-            etf.data.volumes[dataIndex]) {
+        if (matchingIndex >= 0 &&
+            etf.data.closes[matchingIndex] &&
+            etf.data.volumes[matchingIndex]) {
 
-          const currentPrice = etf.data.closes[dataIndex];
-          const volume = etf.data.volumes[dataIndex];
+          const currentPrice = etf.data.closes[matchingIndex];
+          const volume = etf.data.volumes[matchingIndex];
 
           // Calculate net flow from real price movement + volume data
           let netFlow = 0;
 
-          if (dataIndex > 0 && etf.data.closes[dataIndex - 1]) {
-            const previousPrice = etf.data.closes[dataIndex - 1];
+          if (matchingIndex > 0 && etf.data.closes[matchingIndex - 1]) {
+            const previousPrice = etf.data.closes[matchingIndex - 1];
             const priceChangePercent = (currentPrice - previousPrice) / previousPrice;
 
             // Volume in dollars
@@ -359,29 +376,35 @@ class ETFController {
           dailyAggregatedFlow += netFlow * (etf.weight / totalWeight);
           weightUsed += etf.weight;
           validETFsForDay++;
+          hasValidData = true;
         }
       });
-      
+
+      // Always include the day, even if no trading data (weekends/holidays get 0 flow)
       flows.push({
-        date: new Date((validETFs[0].data.timestamps[validETFs[0].data.dataPoints - maxDataPoints + dayIndex] || Date.now()) * 1000).toISOString().split('T')[0],
-        inflow: Math.round(dailyAggregatedFlow * 10) / 10, // 1 decimal place
+        date: dateString,
+        inflow: hasValidData ? Math.round(dailyAggregatedFlow * 10) / 10 : 0, // 0 for non-trading days
         etfsContributing: validETFsForDay,
-        confidence: weightUsed / totalWeight // How much of total weight we have data for
+        confidence: hasValidData ? (weightUsed / totalWeight) : 0, // 0 confidence for non-trading days
+        isMarketOpen: hasValidData // Flag to indicate if this was a trading day
       });
     }
-    
-    return flows.filter(flow => flow.confidence > 0.5); // Only include days with >50% data coverage
+
+    // Return all days - no confidence filtering to ensure full calendar period
+    return flows;
   }
 
   // Calculate 5-day flows sum
   calculate5DayFlows(flows) {
-    const last5Days = flows.slice(-5);
-    const totalFlow = last5Days.reduce((sum, day) => sum + day.inflow, 0);
-    
+    // Get last 5 trading days (exclude weekends/holidays with 0 confidence)
+    const tradingDays = flows.filter(flow => flow.isMarketOpen);
+    const last5TradingDays = tradingDays.slice(-5);
+    const totalFlow = last5TradingDays.reduce((sum, day) => sum + day.inflow, 0);
+
     return {
       totalFlow: Math.round(totalFlow * 10) / 10,
-      dailyBreakdown: last5Days,
-      averageDaily: Math.round((totalFlow / last5Days.length) * 10) / 10
+      dailyBreakdown: last5TradingDays,
+      averageDaily: Math.round((totalFlow / last5TradingDays.length) * 10) / 10
     };
   }
 
@@ -438,7 +461,7 @@ class ETFController {
     const maxDaysBack = 30;
     const daysToShow = period === '1M' ? 30 : 14;
     const flows = [];
-    for (let i = maxDaysBack; i >= 0; i--) {
+    for (let i = maxDaysBack - 1; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
 
       // More realistic flow patterns - some days positive, some negative

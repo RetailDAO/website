@@ -147,12 +147,12 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
               // Positive bars grow upward from zero line
               const heightRatio = flowValue / totalRange;
               barHeight = Math.max(3, heightRatio * chartHeight);
-              barBottom = zeroLinePosition - barHeight;
+              barBottom = chartHeight - zeroLinePosition - barHeight;
             } else {
               // Negative bars grow downward from zero line
               const heightRatio = Math.abs(flowValue) / totalRange;
               barHeight = Math.max(3, heightRatio * chartHeight);
-              barBottom = zeroLinePosition;
+              barBottom = chartHeight - zeroLinePosition;
             }
             
             // Color intensity based on flow size
