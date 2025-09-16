@@ -5,6 +5,19 @@ import { usePerformanceTracking } from '../../../utils/performance';
 import { useOptimizedFuturesBasis } from '../../../hooks/useOptimizedFuturesBasis';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
+// Helper function to format cache age
+const formatCacheAge = (ageMs) => {
+  const seconds = Math.floor(ageMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return seconds > 0 ? `${seconds}s ago` : 'Just now';
+};
+
 // Error states for graceful handling with retry functionality
 const ErrorState = ({ colors, error, onRetry }) => (
   <div className="h-full flex flex-col items-center justify-center p-4" style={{ minHeight: '280px' }}>
@@ -217,12 +230,53 @@ const FuturesBasisCard = React.memo(() => {
         </div>
 
         {/* Compact Description & Expiry */}
-        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} rounded-lg`}>
+        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} rounded-lg mb-2`}>
           <div className={`text-xs ${colors.text.primary} text-center mb-1`}>
             {regimeConfig.description}
           </div>
           <div className={`text-xs ${colors.text.muted} text-center`}>
             Expires in {daysToExpiry} days
+          </div>
+        </div>
+      </div>
+
+      {/* Data Source Footer */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            {data?._fromCache && (
+              <span
+                className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`}
+                title={generateTransparencyTooltip({
+                  ...extractTransparencyData(data),
+                  existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
+                })}
+              >
+                [{data._isStale ? 'CACHE*' : 'CACHE'}]
+              </span>
+            )}
+
+            {isLoading && (
+              <span className={`font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
+                [UPD...]
+              </span>
+            )}
+
+            {!data?._fromCache && !isLoading && data && (
+              <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
+                [LIVE]
+              </span>
+            )}
+
+            {isError && (
+              <span className={`font-mono ${colors.text.negative}`} title="Using fallback data">
+                [FALLBACK]
+              </span>
+            )}
+          </div>
+
+          <div className={`${colors.text.muted}`}>
+            {dataSource || (isUsingMockData ? 'Mock' : 'Deribit')} • {lastUpdate ? formatCacheAge(Date.now() - new Date(lastUpdate).getTime()) : 'Just now'}
           </div>
         </div>
       </div>

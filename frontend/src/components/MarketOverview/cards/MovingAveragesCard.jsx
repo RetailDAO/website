@@ -58,6 +58,19 @@ const getRegimeColor = (regime, colors) => {
   return regime === 'Bullish Regime' ? colors.text.positive : colors.text.negative;
 };
 
+// Helper function to format cache age
+const formatCacheAge = (ageMs) => {
+  const seconds = Math.floor(ageMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return seconds > 0 ? `${seconds}s ago` : 'Just now';
+};
+
 // Simple metric display component
 const MetricRow = React.memo(({ label, value, status, statusColor, colors, isPrice = false }) => {
   return (
@@ -65,7 +78,7 @@ const MetricRow = React.memo(({ label, value, status, statusColor, colors, isPri
       <span className={`text-sm font-medium ${colors.text.secondary}`}>
         {label}:
       </span>
-      
+
       <div className="text-right">
         <div className={`text-base font-mono ${colors.text.primary} mb-1`}>
           {isPrice ? `$${value.toLocaleString()}` : value}
@@ -132,6 +145,11 @@ const MovingAveragesCard = React.memo(() => {
   const ma50Price = data?.ma50?.value || 0;
   const ma200Price = data?.ma200?.value || 0;
   const deviationFrom50DMA = data?.ma50?.deviation || 0;
+
+  // Calculate cache age for footer
+  const dataTimestamp = data?.metadata?.timestamp || data?.metadata?.calculatedAt || Date.now();
+  const cacheAge = Date.now() - new Date(dataTimestamp).getTime();
+  const cacheAgeFormatted = formatCacheAge(cacheAge);
   
   // Status calculations
   const ma50Status = get50DMAStatus(deviationFrom50DMA);
@@ -211,14 +229,50 @@ const MovingAveragesCard = React.memo(() => {
         />
       </div>
 
-      {/* Footer with metadata - only in development */}
-      {import.meta.env.DEV && data?.metadata && (
-        <div className={`mt-4 pt-2 border-t ${colors.border.primary} text-xs ${colors.text.muted}`}>
-          {data.metadata.fresh ? '🔥 Fresh' : '💾 Cached'} • 
-          {data.metadata.dataPoints} data points • 
-          {new Date(data.metadata.calculatedAt).toLocaleTimeString()}
+      {/* Spacer for better layout */}
+      <div className="flex-1"></div>
+
+      {/* Data Source and Status Footer */}
+      <div className="space-y-1">
+        {/* Cache/Fetching Status Indicators */}
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            {data?._fromCache && (
+              <span
+                className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`}
+                title={generateTransparencyTooltip({
+                  ...extractTransparencyData(data),
+                  existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
+                })}
+              >
+                [{data._isStale ? 'CACHE*' : 'CACHE'}]
+              </span>
+            )}
+
+            {isFetching && (
+              <span className={`font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
+                [UPD...]
+              </span>
+            )}
+
+            {!data?._fromCache && !isFetching && data && (
+              <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
+                [LIVE]
+              </span>
+            )}
+
+            {error && (
+              <span className={`font-mono ${colors.text.negative}`} title="Using fallback data">
+                [FALLBACK]
+              </span>
+            )}
+          </div>
+
+          <div className={`${colors.text.muted}`}>
+            {data ? 'Binance' : 'Mock'} • {cacheAgeFormatted}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 });
