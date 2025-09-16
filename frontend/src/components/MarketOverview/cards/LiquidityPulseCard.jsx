@@ -462,7 +462,7 @@ const LiquidityPulseCard = React.memo(() => {
           <div className="w-full mb-2">
             <US2YChart
               data={chartData}
-              height={200}
+              height={185}
               historicalData={historicalData}
             />
           </div>

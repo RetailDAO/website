@@ -74,13 +74,13 @@ const formatCacheAge = (ageMs) => {
 // Simple metric display component
 const MetricRow = React.memo(({ label, value, status, statusColor, colors, isPrice = false }) => {
   return (
-    <div className="flex justify-between items-center py-2">
+    <div className="flex justify-between items-center py-1">
       <span className={`text-sm font-medium ${colors.text.secondary}`}>
         {label}:
       </span>
 
       <div className="text-right">
-        <div className={`text-base font-mono ${colors.text.primary} mb-1`}>
+        <div className={`text-base font-mono ${colors.text.primary} mb-0`}>
           {isPrice ? `$${value.toLocaleString()}` : value}
         </div>
         {status && (
@@ -188,7 +188,7 @@ const MovingAveragesCard = React.memo(() => {
       </div>
 
       {/* 4 Key Metrics as requested by client */}
-      <div className="space-y-1">
+      <div className="space-y-0">
         {/* 1) Price of BTC */}
         <MetricRow
           label="Price of BTC"
