@@ -123,11 +123,11 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
         
         {/* Zero line if needed */}
         {scaleMin < 0 && (
-          <div 
-            className={`absolute w-full h-px ${colors.border.primary} opacity-50 z-10`} 
-            style={{ 
-              bottom: `${(Math.abs(scaleMin) / valueRange) * chartHeight}px` 
-            }} 
+          <div
+            className={`absolute w-full h-px ${colors.border.primary} opacity-50 z-10`}
+            style={{
+              bottom: `${(Math.abs(scaleMin) / (scaleMax - scaleMin)) * chartHeight}px`
+            }}
           />
         )}
         
@@ -137,22 +137,22 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
             const flowValue = flow.inflow || flow.netFlow || flow.flow || 0;
             const isPositive = flowValue >= 0;
             
-            // Simplified bar height calculation for positive and negative values
+            // Corrected bar height calculation for proper positive/negative positioning
             const totalRange = scaleMax - scaleMin;
             const zeroLinePosition = Math.abs(scaleMin) / totalRange * chartHeight;
 
             let barHeight, barBottom;
 
             if (isPositive) {
-              // Positive bars grow upward from zero line
+              // Positive bars: grow upward from zero line
               const heightRatio = flowValue / totalRange;
               barHeight = Math.max(3, heightRatio * chartHeight);
-              barBottom = chartHeight - zeroLinePosition - barHeight;
+              barBottom = zeroLinePosition; // Start at zero line going up
             } else {
-              // Negative bars grow downward from zero line
+              // Negative bars: grow downward from zero line
               const heightRatio = Math.abs(flowValue) / totalRange;
               barHeight = Math.max(3, heightRatio * chartHeight);
-              barBottom = chartHeight - zeroLinePosition;
+              barBottom = zeroLinePosition - barHeight; // Start below zero line
             }
             
             // Color intensity based on flow size
@@ -291,17 +291,15 @@ const ETFFlowsCard = React.memo(() => {
         cacheAgeFormatted: formatCacheAge(cacheAge)
       };
     }
-    // Fallback to mock data if no cached data available
-    const mockData = generateMockETFData(period);
+    // No API data available - return empty state instead of mock data
+    console.warn('⚠️ No ETF flows data available from API - showing empty state');
     return {
-      flows: mockData.flows.map(flow => ({
-        ...flow,
-        inflow: flow.inflow || flow.netFlow || 0
-      })),
-      inflow5D: mockData.inflow5D,
+      flows: [],
+      inflow5D: 0,
       _fromCache: false,
       cacheAge: 0,
-      cacheAgeFormatted: 'Just now'
+      cacheAgeFormatted: 'No data',
+      isEmpty: true
     };
   }, [apiResponse, period]);
   
