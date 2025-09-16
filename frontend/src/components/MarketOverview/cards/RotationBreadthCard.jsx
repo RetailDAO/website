@@ -193,7 +193,7 @@ const RotationBreadthCard = React.memo(() => {
       {/* Header - Simplified */}
       <div className="flex justify-between items-center mb-3">
         <div>
-          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [ROTATION_BREADTH]
           </h3>
         </div>
@@ -223,7 +223,7 @@ const RotationBreadthCard = React.memo(() => {
           <GlitchButton
             text={seasonConfig.label}
             statusType={marketSeason === 'altseason' || marketSeason === 'frothy' ? 'easing' : marketSeason === 'btc-season' ? 'tightening' : 'neutral'}
-            size="sm"
+            size="md"
           />
         </div>
       </div>

@@ -169,7 +169,7 @@ const FuturesBasisCard = React.memo(() => {
       {/* Compact Header */}
       <div className="flex justify-between items-center mb-2">
         <div>
-          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [FUTURES_BASIS]
           </h3>
           <p className={`text-xs ${colors.text.secondary} mt-1`}>
@@ -202,7 +202,7 @@ const FuturesBasisCard = React.memo(() => {
           <GlitchButton
             text={regimeConfig.label}
             statusType={regime === 'healthy' ? 'easing' : regime === 'backwardation' || regime === 'overheated' ? 'tightening' : 'neutral'}
-            size="sm"
+            size="md"
           />
         </div>
 

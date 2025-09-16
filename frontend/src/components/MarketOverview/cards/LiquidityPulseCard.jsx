@@ -386,11 +386,11 @@ const LiquidityPulseCard = React.memo(() => {
         {/* Header - Now at the top */}
         <div className="flex justify-between items-center mb-2">
           <div>
-            <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+            <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
               [LIQUIDITY_PULSE]
             </h3>
             <p className={`text-xs ${colors.text.secondary}`}>
-              States (30-day change)
+              (30-day change)
             </p>
           </div>
         
@@ -453,7 +453,7 @@ const LiquidityPulseCard = React.memo(() => {
               <GlitchButton
                 text={liquidityStatusInfo.label}
                 statusType={liquidityStatusInfo.status}
-                size="sm"
+                size="md"
               />
             )}
           </div>

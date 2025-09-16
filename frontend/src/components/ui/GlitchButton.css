@@ -63,24 +63,24 @@
   }
   25% {
     background-color: var(--status-hover);
-    transform: translateX(-2px);
-    letter-spacing: 2px;
+    transform: translateX(-3px);
+    letter-spacing: 3px;
   }
   35% {
     background-color: var(--status-hover);
-    transform: translateX(2px);
+    transform: translateX(3px);
   }
   59% {
-    opacity: 0.8;
+    opacity: 0;
   }
   60% {
     background-color: var(--status-hover);
-    transform: translateX(-1px);
-    filter: blur(1px);
+    transform: translateX(-3px);
+    filter: blur(5px);
   }
   100% {
     background-color: var(--status-hover);
-    filter: blur(0);
+    filter: blur(5px);
     transform: translateX(0);
   }
 }

@@ -327,7 +327,7 @@ const ETFFlowsCard = React.memo(() => {
       {/* Header - First Hierarchy - Moved to top */}
       <div className="flex justify-between items-center mb-3">
         <div>
-          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [ETF_FLOWS]
           </h3>
           <p className={`text-xs ${colors.text.secondary} mt-1`}>

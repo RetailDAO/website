@@ -161,7 +161,7 @@ const MovingAveragesCard = React.memo(() => {
     <div className="h-full flex flex-col p-4">
       {/* Simple Header */}
       <div className="flex justify-between items-center mb-4">
-        <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+        <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
           [BTC_MOVING_AVERAGES]
         </h3>
         

@@ -170,7 +170,7 @@ const StateOfLeverageCard = React.memo(() => {
       {/* Compact Header */}
       <div className="flex justify-between items-center mb-2">
         <div>
-          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [STATE_OF_LEVERAGE]
           </h3>
         </div>
