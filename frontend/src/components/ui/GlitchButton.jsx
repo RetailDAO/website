@@ -49,8 +49,16 @@ const GlitchButton = ({
     setIsGlitching(true);
 
     let step = 0;
-    const totalSteps = 20; // Animation duration in steps
     const originalText = text;
+    const revealDelay = 4; // Steps between each character reveal
+    const totalSteps = originalText.length * revealDelay + 10; // Extra steps for final reveal
+
+    // Initialize with all glitch characters
+    const initGlitchedText = originalText
+      .split('')
+      .map(char => char === ' ' ? ' ' : glitchChars[Math.floor(Math.random() * glitchChars.length)])
+      .join('');
+    setDisplayText(initGlitchedText);
 
     intervalRef.current = setInterval(() => {
       if (step >= totalSteps) {
@@ -60,23 +68,25 @@ const GlitchButton = ({
         return;
       }
 
-      // Create glitched text by replacing characters progressively
+      // Create text with progressive reveal from left to right
       const glitchedText = originalText
         .split('')
         .map((char, index) => {
           if (char === ' ') return ' '; // Keep spaces
 
-          // Randomly glitch characters based on step progression
-          const shouldGlitch = Math.random() < (0.8 - (step / totalSteps) * 0.8);
-          return shouldGlitch
-            ? glitchChars[Math.floor(Math.random() * glitchChars.length)]
-            : char;
+          // Calculate if this character should be revealed based on step and index
+          const revealStep = index * revealDelay;
+          const shouldReveal = step >= revealStep;
+
+          return shouldReveal
+            ? char
+            : glitchChars[Math.floor(Math.random() * glitchChars.length)];
         })
         .join('');
 
       setDisplayText(glitchedText);
       step++;
-    }, 60); // 60ms intervals for smooth animation
+    }, 50); // 50ms intervals for smooth animation
   };
 
   // Stop glitch animation

@@ -202,7 +202,7 @@ const FuturesBasisCard = React.memo(() => {
           <GlitchButton
             text={regimeConfig.label}
             statusType={regime === 'healthy' ? 'easing' : regime === 'backwardation' || regime === 'overheated' ? 'tightening' : 'neutral'}
-            size="sm"
+            size="md"
           />
         </div>
 

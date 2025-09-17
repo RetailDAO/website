@@ -19,7 +19,7 @@
   cursor: pointer;
   transition: var(--btn-transition);
   overflow: hidden;
-  border: none;
+  border: 0.5px solid var(--status-color);
   line-height: 1.5em;
   white-space: nowrap;
   text-transform: uppercase;

@@ -389,9 +389,7 @@ const LiquidityPulseCard = React.memo(() => {
             <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
               [LIQUIDITY_PULSE]
             </h3>
-            <p className={`text-xs ${colors.text.secondary}`}>
-              (30-day change)
-            </p>
+            
           </div>
         
         <div className="flex items-center space-x-1">
@@ -453,13 +451,13 @@ const LiquidityPulseCard = React.memo(() => {
               <GlitchButton
                 text={liquidityStatusInfo.label}
                 statusType={liquidityStatusInfo.status}
-                size="sm"
+                size="md"
               />
             )}
           </div>
         </div>
         {chartData && (
-          <div className="w-full mb-1">
+          <div className="w-full mb-0.5">
             <US2YChart
               data={chartData}
               height={185}
@@ -493,7 +491,7 @@ const LiquidityPulseCard = React.memo(() => {
 
             {!data?._fromCache && !isFetching && data && (
               <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
-                [LIVE]
+                [SERVER LIVE]
               </span>
             )}
 
