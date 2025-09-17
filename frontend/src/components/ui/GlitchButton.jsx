@@ -50,7 +50,7 @@ const GlitchButton = ({
 
     let step = 0;
     const originalText = text;
-    const totalSteps = 6; // 0.3 seconds at 50ms intervals (300ms / 50ms = 6 steps)
+    const totalSteps = 14; // 0.7 seconds at 50ms intervals (700ms / 50ms = 14 steps)
 
     // Initialize with all glitch characters
     const initGlitchedText = originalText

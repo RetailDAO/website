@@ -19,7 +19,7 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
     const maxValue = Math.max(...data);
 
     // Use focused range for current Treasury yields (3.5-3.8% for steeper movements visualization)
-    const yAxisMin = 3.3;    // Start from 3.3% for steeper movements
+    const yAxisMin = 3.45;    // Start from 3.4% for steeper movements
     const yAxisMax = 3.8;    // 3.8% shows fine-grained changes
 
     // Theme-specific chart colors
@@ -434,7 +434,7 @@ const LiquidityPulseCard = React.memo(() => {
       </div>
 
       {/* Main Content - US 2Y Treasury Chart */}
-      <div className="flex-1 mb-1">
+      <div className="flex-1 mb-0.5">
         <div className="mb-1">
           <h4 className={`text-lg font-semibold ${colors.text.primary}`}>
             US 2Y Treasury Yield
@@ -457,10 +457,10 @@ const LiquidityPulseCard = React.memo(() => {
           </div>
         </div>
         {chartData && (
-          <div className="w-full mb-0.5">
+          <div className="w-full mb-0.2">
             <US2YChart
               data={chartData}
-              height={185}
+              height={175}
               historicalData={historicalData}
             />
           </div>
@@ -468,7 +468,7 @@ const LiquidityPulseCard = React.memo(() => {
       </div>
 
       {/* Data Source Footer */}
-      <div className="space-y-1">
+      <div className="space-y-0.3">
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center space-x-2">
             {data?._fromCache && (
