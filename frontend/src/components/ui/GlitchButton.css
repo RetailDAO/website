@@ -1,34 +1,25 @@
-/* Global Glitch Button Component - Theme Aware with Chitchat Animation */
+/* Global Glitch Button Component - Theme Aware with JavaScript Animation */
 .glitch-btn {
   /* Button Variables - Adapted for status-based colors */
   --btn-default-bg: transparent;
-  --btn-padding: 15px 20px;
-  --btn-hover-bg: var(--status-color);
   --btn-transition: 0.3s;
   --btn-letter-spacing: 0.1rem;
-  --btn-animation-duration: 1.2s;
-  --btn-shadow-color: var(--status-color);
-  --btn-shadow: 0 2px 10px 0 var(--btn-shadow-color);
-  --hover-btn-color: var(--status-color);
-  --default-btn-color: var(--status-color);
-  --font-size: 16px;
   --font-weight: 600;
   --font-family: inherit;
 
   /* Main button styling */
   box-sizing: border-box;
-  padding: var(--btn-padding);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--default-btn-color);
-  font: var(--font-weight) var(--font-size) var(--font-family);
+  color: var(--status-color);
+  font-weight: var(--font-weight);
+  font-family: var(--font-family);
   background: var(--btn-default-bg);
   cursor: pointer;
   transition: var(--btn-transition);
   overflow: hidden;
-  box-shadow: var(--btn-shadow);
-  border: 2px solid var(--status-color);
+  border: none;
   line-height: 1.5em;
   white-space: nowrap;
   text-transform: uppercase;
@@ -40,38 +31,20 @@
   transition: var(--btn-transition);
   box-sizing: border-box;
   position: relative;
-  background: inherit;
-}
-
-.glitch-btn span::before {
-  box-sizing: border-box;
-  position: absolute;
-  content: "";
-  background: inherit;
 }
 
 /* Focus State */
 .glitch-btn:focus {
   scale: 1.09;
   outline: none;
-}
-
-/* Hover and Focus States with Status-Responsive Colors */
-.glitch-btn:hover,
-.glitch-btn:focus {
-  background: var(--btn-default-bg);
-  box-shadow: 0px 0px 10px 0px rgba(119, 68, 255, 0.7);
   border: 2px solid var(--status-color);
+  box-shadow: 0px 0px 10px 0px var(--status-color);
 }
 
-.glitch-btn:hover span,
-.glitch-btn:focus span {
-  color: var(--status-color);
-}
-
-.glitch-btn:hover span::before,
-.glitch-btn:focus span::before {
-  animation: chitchat linear both var(--btn-animation-duration);
+/* Hover State - Add border and glow effect */
+.glitch-btn:hover {
+  border: 2px solid var(--status-color);
+  box-shadow: 0px 0px 10px 0px var(--status-color);
 }
 
 /* Active State */
@@ -79,121 +52,34 @@
   background: transparent;
   color: var(--status-color);
   transform: scale(0.98);
+  border: 2px solid var(--status-color);
 }
 
-.glitch-btn:active span::before {
-  animation: none;
-}
-
-/* Chitchat Animation */
-@keyframes chitchat {
-  0% {
-    content: "#";
-  }
-  5% {
-    content: ".";
-  }
-  10% {
-    content: "^{";
-  }
-  15% {
-    content: "-!";
-  }
-  20% {
-    content: "#$_";
-  }
-  25% {
-    content: "№:0";
-  }
-  30% {
-    content: "#{+.";
-  }
-  35% {
-    content: "@}-?";
-  }
-  40% {
-    content: "?{4@%";
-  }
-  45% {
-    content: "=.,^!";
-  }
-  50% {
-    content: "?2@%";
-  }
-  55% {
-    content: "\;1}]";
-  }
-  60% {
-    content: "?{%:%";
-    right: 0;
-  }
-  65% {
-    content: "|{f[4";
-    right: 0;
-  }
-  70% {
-    content: "{4%0%";
-    right: 0;
-  }
-  75% {
-    content: "'1_0<";
-    right: 0;
-  }
-  80% {
-    content: "{0%";
-    right: 0;
-  }
-  85% {
-    content: "]>'";
-    right: 0;
-  }
-  90% {
-    content: "4";
-    right: 0;
-  }
-  95% {
-    content: "2";
-    right: 0;
-  }
-  100% {
-    content: "";
-    right: 0;
-  }
-}
 
 /* Theme-specific adjustments */
 .glitch-btn.font-mono {
   font-family: monospace;
 }
 
-/* Size-specific adjustments */
+/* Size-specific adjustments - reduced for less distraction */
 .glitch-btn.xs {
   font-size: 0.75rem;
   border-radius: 0.5rem;
-  --btn-padding: 8px 12px;
 }
 
 .glitch-btn.sm {
   font-size: 0.75rem;
   border-radius: 0.75rem;
-  --btn-padding: 12px 16px;
 }
 
 .glitch-btn.md {
   font-size: 0.875rem;
   border-radius: 0.75rem;
-  --btn-padding: 16px 20px;
 }
 
 .glitch-btn.lg {
   font-size: 1rem;
   border-radius: 1rem;
-  --btn-padding: 20px 24px;
-}
-
-/* Status-based shadow colors for better visual feedback */
-.glitch-btn:hover {
-  box-shadow: 0px 0px 10px 0px var(--status-color);
 }
 
 /* Responsive adjustments */

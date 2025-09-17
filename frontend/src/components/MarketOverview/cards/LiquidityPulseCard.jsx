@@ -453,7 +453,7 @@ const LiquidityPulseCard = React.memo(() => {
               <GlitchButton
                 text={liquidityStatusInfo.label}
                 statusType={liquidityStatusInfo.status}
-                size="md"
+                size="sm"
               />
             )}
           </div>

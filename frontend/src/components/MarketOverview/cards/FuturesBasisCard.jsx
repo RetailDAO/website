@@ -44,7 +44,7 @@ const ErrorState = ({ colors, error, onRetry }) => (
 
 const LoadingState = ({ colors }) => (
   <div className="h-full flex flex-col animate-pulse">
-    <div className="flex justify-between items-center mb-2">
+    <div className="flex justify-between items-center mb-1">
       <div>
         <div className={`h-4 w-28 rounded mb-1 ${colors.bg.tertiary}`}></div>
         <div className={`h-3 w-20 rounded ${colors.bg.tertiary}`}></div>
@@ -198,11 +198,11 @@ const FuturesBasisCard = React.memo(() => {
         </div>
         
         {/* Glitch Button Regime Indicator */}
-        <div className="mb-3">
+        <div className="mb-2">
           <GlitchButton
             text={regimeConfig.label}
             statusType={regime === 'healthy' ? 'easing' : regime === 'backwardation' || regime === 'overheated' ? 'tightening' : 'neutral'}
-            size="md"
+            size="sm"
           />
         </div>
 
