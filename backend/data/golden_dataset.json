@@ -2,10 +2,10 @@
   "btc_binance_220D": {
     "data": {
       "current": {
-        "price": 115676,
-        "change24h": -0.22387367136995395,
-        "volume24h": 43029363205.76644,
-        "marketCap": 2304670030110.697
+        "price": 115594,
+        "change24h": -0.8371418576715395,
+        "volume24h": 50681132980.141815,
+        "marketCap": 2303049948451.508
       },
       "historical": [
         {
@@ -886,13 +886,13 @@
         },
         {
           "timestamp": "2025-09-17T00:00:00.000Z",
-          "price": 115674.34
+          "price": 115698.43
         }
       ]
     },
-    "timestamp": "2025-09-17T16:55:01.446Z",
+    "timestamp": "2025-09-17T19:24:01.431Z",
     "tier": "stale",
-    "expiresAt": "2025-09-17T18:57:42.765Z",
+    "expiresAt": "2025-09-17T20:31:00.804Z",
     "source": "api_success",
     "dataPoints": 221
   }

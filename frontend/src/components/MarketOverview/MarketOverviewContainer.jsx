@@ -108,11 +108,11 @@ const MarketOverviewContainer = React.memo(() => {
   });
 
   return (
-    <div ref={containerRef} className={`market-overview-container ${colors.bg.primary} min-h-screen`}>
+    <div ref={containerRef} className={`market-overview-container ${colors.bg.primary} min-h-screen overflow-auto`}>
       {/* Interactive Terminal Sidebar */}
       <Sidebarv2 />
       {/* Terminal-style header with theme switcher - compact */}
-      <header className="mb-4 p-4">
+      <header className="mb-2 md:mb-4 p-2 md:p-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className={`text-2xl md:text-3xl font-bold ${colors.text.primary} tracking-wide`}>
@@ -174,7 +174,7 @@ const MarketOverviewContainer = React.memo(() => {
       </header>
 
       {/* Terminal-style grid layout with cards */}
-      <div className="px-4">
+      <div className="px-2 md:px-4 pb-4">
         <GridLayout>
           {cardConfigs
             .sort((a, b) => a.priority - b.priority) // Load by priority order

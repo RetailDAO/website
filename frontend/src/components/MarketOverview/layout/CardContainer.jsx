@@ -32,10 +32,11 @@ const CardContainer = React.memo(({
   return (
     <div
       className={`
+        card-container
         ${colors.bg.card}
         ${colors.border.primary}
         ${colors.shadow.card}
-        border rounded-xl p-6
+        border rounded-xl p-4 md:p-6
         transition-shadow duration-200
         ${colors.bg.hover}
         ${className}
@@ -46,16 +47,20 @@ const CardContainer = React.memo(({
         minHeight: sizeConfig.minHeight,
         height: sizeConfig.height,
         maxHeight: sizeConfig.maxHeight,
-        // Remove general overflow hidden to let cards control their own overflow
+        // Enable scrolling when content overflows
+        overflow: 'auto',
         // CSS containment for performance
         contain: 'layout style paint',
         // GPU acceleration for smoother animations
         willChange: 'box-shadow',
+        // Ensure proper scrollbar styling
+        scrollbarWidth: 'thin',
+        scrollbarColor: '#fb923c #000000',
         ...style
       }}
       {...props}
     >
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col overflow-visible">
         {children}
       </div>
     </div>

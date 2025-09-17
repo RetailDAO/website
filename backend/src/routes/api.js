@@ -79,14 +79,66 @@ router.get('/market-overview/etf-flows',
 // ========== ESSENTIAL UTILITY ENDPOINTS ==========
 
 // Cache management routes
-router.delete('/cache', (req, res) => {
-  // Clear all cache
-  res.json({ success: true, message: 'All cache cleared' });
+const cacheService = require('../services/cache/cacheService');
+
+router.delete('/cache', async (req, res) => {
+  try {
+    await cacheService.flush();
+    res.json({ success: true, message: 'All cache cleared' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to clear cache: ${error.message}` });
+  }
 });
 
-router.delete('/cache/:key', (req, res) => {
-  // Clear specific cache key
-  res.json({ success: true, message: `Cache key ${req.params.key} cleared` });
+router.delete('/cache/:key', async (req, res) => {
+  try {
+    await cacheService.del(req.params.key);
+    res.json({ success: true, message: `Cache key ${req.params.key} cleared` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to clear cache key: ${error.message}` });
+  }
+});
+
+// ETF cache specific clearing
+router.delete('/cache/etf/flows', async (req, res) => {
+  try {
+    // Get current day period for cache key calculation
+    const dayPeriod = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+
+    // Clear all ETF flows cache keys
+    const keysToDelete = [
+      `etf_flows_2W_${dayPeriod}`,
+      `etf_flows_1M_${dayPeriod}`,
+      `etf_flows_2W_${dayPeriod - 1}`, // Previous day as well
+      `etf_flows_1M_${dayPeriod - 1}`,
+      'etf_flows_fallback',
+      `etf_flows_2W_${dayPeriod}_fallback`,
+      `etf_flows_1M_${dayPeriod}_fallback`
+    ];
+
+    // Clear individual ETF caches too
+    const etfSymbols = ['IBIT', 'FBTC', 'GBTC', 'BITB', 'ARKB'];
+    etfSymbols.forEach(symbol => {
+      keysToDelete.push(`etf_${symbol}_${dayPeriod}`);
+      keysToDelete.push(`etf_${symbol}_${dayPeriod - 1}`);
+    });
+
+    let deletedCount = 0;
+    for (const key of keysToDelete) {
+      const deleted = await cacheService.del(key);
+      if (deleted) deletedCount++;
+    }
+
+    res.json({
+      success: true,
+      message: `ETF flows cache cleared`,
+      keysAttempted: keysToDelete.length,
+      keysDeleted: deletedCount,
+      clearedKeys: keysToDelete
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: `Failed to clear ETF cache: ${error.message}` });
+  }
 });
 
 // Health check for API

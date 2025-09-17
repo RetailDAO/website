@@ -83,9 +83,10 @@ const ETFFlowChart = React.memo(({ flows, period }) => {
   const displayFlows = flows;
   const totalBars = displayFlows.length;
 
-  // Professional chart dimensions
+  // Responsive chart dimensions
   const chartHeight = 120;
-  const chartWidth = 360;
+  const baseChartWidth = 360;
+  const minChartWidth = 280; // Minimum width for mobile
 
   // Dynamic scale based on actual data for better visibility
   const maxInflow = Math.max(...displayFlows.map(f => Math.abs(f.inflow || 0)));
@@ -99,23 +100,25 @@ const ETFFlowChart = React.memo(({ flows, period }) => {
   const totalRange = scaleMax - scaleMin;
   const zeroLinePosition = Math.abs(scaleMin) / totalRange;
 
-  // Optimized bar width with proper spacing
-  const barWidth = 10; // Increased to 10px for better visibility
-  const barSpacing = Math.max(2, Math.floor((chartWidth - (totalBars * barWidth)) / Math.max(1, totalBars - 1)));
+  // Responsive bar width calculation
+  const availableWidth = Math.max(minChartWidth, baseChartWidth);
+  const barWidth = Math.max(6, Math.min(12, Math.floor(availableWidth / (totalBars * 1.5)))); // Responsive bar width
+  const barSpacing = Math.max(1, Math.floor((availableWidth - (totalBars * barWidth)) / Math.max(1, totalBars - 1)));
 
   return (
     <div className="w-full h-44 flex flex-col">
-      {/* Professional chart container with transparent background */}
-      <div className="flex-1 relative bg-transparent rounded-lg p-4">
-        {/* Y-axis labels */}
-        <div className="absolute left-1 top-2 bottom-8 flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 font-mono">
-          <span>+{formatFlowValue(scaleMax).replace('+', '')}</span>
-          <span>0</span>
-          <span>{formatFlowValue(scaleMin)}</span>
-        </div>
+      {/* Professional chart container with responsive overflow */}
+      <div className="flex-1 relative bg-transparent rounded-lg p-4 overflow-x-auto overflow-y-hidden">
+        <div style={{ minWidth: `${availableWidth + 50}px`, height: `${chartHeight}px`, position: 'relative' }}>
+          {/* Y-axis labels */}
+          <div className="absolute left-1 top-2 bottom-8 flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 font-mono">
+            <span>+{formatFlowValue(scaleMax).replace('+', '')}</span>
+            <span>0</span>
+            <span>{formatFlowValue(scaleMin)}</span>
+          </div>
 
-        {/* Chart area */}
-        <div className="ml-8 mr-2 h-full relative">
+          {/* Chart area */}
+          <div className="ml-8 mr-2 relative" style={{ height: `${chartHeight}px` }}>
           {/* Grid lines */}
           <div className="absolute inset-0 flex flex-col justify-between">
             {/* Top line */}
@@ -126,8 +129,8 @@ const ETFFlowChart = React.memo(({ flows, period }) => {
             <div className="w-full h-px bg-gray-400 dark:bg-gray-600 opacity-40"></div>
           </div>
 
-          {/* Bars container */}
-          <div className="absolute inset-0 flex items-end justify-start pt-2 pb-6">
+            {/* Bars container */}
+            <div className="absolute inset-0 flex items-end justify-start pt-2 pb-6">
             {displayFlows.map((flow, index) => {
               const flowValue = flow.inflow || flow.netFlow || flow.flow || 0;
               const isPositive = flowValue >= 0;
@@ -169,9 +172,10 @@ const ETFFlowChart = React.memo(({ flows, period }) => {
                         : 'bg-red-400 opacity-80 hover:bg-red-300'
                     }`}
                     style={{
-                      height: `${barHeight}px`,
+                      height: `${Math.max(2, barHeight)}px`, // Ensure minimum visible height
                       width: '100%',
-                      bottom: `${barBottom}px`
+                      bottom: `${barBottom}px`,
+                      position: 'absolute'
                     }}
                   />
                 </div>
@@ -201,6 +205,7 @@ const ETFFlowChart = React.memo(({ flows, period }) => {
             })}
           </div>
         </div>
+      </div>
       </div>
 
       {/* Timeline label */}
