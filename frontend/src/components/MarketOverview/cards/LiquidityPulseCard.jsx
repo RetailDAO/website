@@ -19,7 +19,7 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
     const maxValue = Math.max(...data);
 
     // Use focused range for current Treasury yields (3.5-3.8% for steeper movements visualization)
-    const yAxisMin = 3.5;    // Start from 3.5% for steeper movements
+    const yAxisMin = 3.3;    // Start from 3.3% for steeper movements
     const yAxisMax = 3.8;    // 3.8% shows fine-grained changes
 
     // Theme-specific chart colors
@@ -75,7 +75,7 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
         animations: {
           enabled: true,
           easing: 'easeinout',
-          speed: 800,
+          speed: 600,
         },
         zoom: { enabled: false },
         selection: { enabled: false },
@@ -414,7 +414,7 @@ const LiquidityPulseCard = React.memo(() => {
 
             {!data?._fromCache && !isFetching && (
               <span className={`text-xs font-mono ${colors.text.positive}`} title="Live data from server">
-                [LIVE]
+                [SERVER LIVE]
               </span>
             )}
 

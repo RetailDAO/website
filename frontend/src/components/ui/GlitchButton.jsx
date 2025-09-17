@@ -40,8 +40,8 @@ const GlitchButton = ({
 
   const statusColors = getStatusColors();
 
-  // Glitch characters for animation
-  const glitchChars = ['#', '.', '^{', '-!', '#$_', '№:0', '#{+.', '@}-?', '?{4@%', '=.,^!', '?2@%', '\\;1}]', '?{%:%', '|{f[4', '{4%0%', "'1_0<", '{0%', "]>'", '4', '2'];
+  // Glitch characters for animation - single characters only to prevent width overflow
+  const glitchChars = ['#', '.', '^', '-', '_', '№', '%', '&', '*', '@', '!', '?', '/', '\\', '~', '+', '='];
 
   // Start glitch animation
   const startGlitch = () => {
@@ -50,8 +50,7 @@ const GlitchButton = ({
 
     let step = 0;
     const originalText = text;
-    const revealDelay = 4; // Steps between each character reveal
-    const totalSteps = originalText.length * revealDelay + 10; // Extra steps for final reveal
+    const totalSteps = 6; // 0.3 seconds at 50ms intervals (300ms / 50ms = 6 steps)
 
     // Initialize with all glitch characters
     const initGlitchedText = originalText
@@ -75,7 +74,8 @@ const GlitchButton = ({
           if (char === ' ') return ' '; // Keep spaces
 
           // Calculate if this character should be revealed based on step and index
-          const revealStep = index * revealDelay;
+          // Distribute character reveals evenly across the animation duration
+          const revealStep = Math.floor(index * totalSteps / originalText.length);
           const shouldReveal = step >= revealStep;
 
           return shouldReveal
