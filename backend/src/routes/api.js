@@ -78,6 +78,10 @@ router.get('/market-overview/etf-flows',
 
 // ========== ESSENTIAL UTILITY ENDPOINTS ==========
 
+// Authentication routes
+const authRoutes = require('./auth');
+router.use('/auth', authRoutes);
+
 // Cache management routes
 const cacheService = require('../services/cache/cacheService');
 

@@ -51,7 +51,7 @@ class BackgroundJobScheduler {
     this.scheduleRotationBreadthJob();
     this.scheduleLiquidityPulseJob();
     
-    // Tier 4: Daily Refresh (24 hours) - ETF Flows
+    // Tier 4: 6-Hour Refresh - ETF Flows (optimized for CoinGlass)
     this.scheduleETFFlowsJob();
     
     // Health monitoring job (every 30 minutes)
@@ -302,32 +302,35 @@ class BackgroundJobScheduler {
   }
 
   /**
-   * Tier 4: ETF Flows (Daily with randomized timing - Anti-pattern detection)
+   * Tier 4: ETF Flows (6-hour refresh with randomized timing - CoinGlass optimized)
    */
   scheduleETFFlowsJob() {
-    // Randomize daily execution time between 2-6 AM to avoid pattern detection
-    const randomHour = Math.floor(Math.random() * 4) + 2; // 2-5 AM
+    // Execute every 6 hours with randomized minutes to avoid pattern detection
     const randomMinute = Math.floor(Math.random() * 60); // 0-59 minutes
-    const cronExpression = `${randomMinute} ${randomHour} * * *`;
-    
-    console.log(`🔀 ETF flows job scheduled at random time: ${randomHour}:${randomMinute.toString().padStart(2, '0')} UTC daily`);
+    const cronExpression = `${randomMinute} */6 * * *`; // Every 6 hours
+
+    console.log(`🔀 ETF flows job scheduled at random minute: :${randomMinute.toString().padStart(2, '0')} every 6 hours`);
     
     const job = cron.schedule(cronExpression, async () => {
       await this.executeWithErrorHandling('etf-flows', async () => {
-        console.log('🔥 [Background] Cache warming ETF Flows for both periods...');
-        
+        console.log('🔥 [Background] Cache warming ETF Flows (6-hour refresh)...');
+
         const { etfController } = require('../../controllers/etfController');
-        
+
+        // Clear stale ETF cache before fetching fresh data
+        console.log('🧹 [Background] Clearing stale ETF cache entries...');
+        await this.clearStaleETFCache();
+
         // Warm cache for both periods in parallel
         const warmingPromises = ['2W', '1M'].map(async (period) => {
           try {
             console.log(`🔥 Warming ${period} ETF flows cache...`);
-            const dayPeriod = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
-            const cacheKey = `etf_flows_${period}_${dayPeriod}`;
-            
+            const sixHourPeriod = Math.floor(Date.now() / (6 * 60 * 60 * 1000)); // 6-hour periods
+            const cacheKey = `etf_flows_${period}_${sixHourPeriod}`;
+
             // Calculate fresh data
             const result = await etfController.calculateETFFlows(period);
-            
+
             // Store in cache using ETF cache service method
             await cacheService.setETFFlows(cacheKey, result);
             await cacheService.setFallbackData(cacheKey, result, 'etf');
@@ -391,6 +394,42 @@ class BackgroundJobScheduler {
     });
 
     this.jobs.set('health-monitor', job);
+  }
+
+  /**
+   * Clear stale ETF cache entries before fetching fresh data
+   */
+  async clearStaleETFCache() {
+    try {
+      const patterns = [
+        'etf_flows_2W_*',
+        'etf_flows_1M_*',
+        'etf_flows_fallback',
+        'etf_individual_*'
+      ];
+
+      for (const pattern of patterns) {
+        // Clear Redis keys matching pattern
+        if (cacheService.isRedisAvailable()) {
+          const keys = await cacheService.redis.keys(pattern);
+          if (keys.length > 0) {
+            await cacheService.redis.del(...keys);
+            console.log(`🧹 Cleared ${keys.length} Redis keys matching: ${pattern}`);
+          }
+        }
+      }
+
+      // Clear memory cache ETF entries
+      for (const [key] of cacheService.memoryCache.entries()) {
+        if (key.includes('etf_flows_') || key.includes('etf_individual_')) {
+          cacheService.memoryCache.delete(key);
+        }
+      }
+
+      console.log('✅ [Background] Stale ETF cache cleared successfully');
+    } catch (error) {
+      console.error('❌ [Background] Failed to clear stale ETF cache:', error.message);
+    }
   }
 
   /**

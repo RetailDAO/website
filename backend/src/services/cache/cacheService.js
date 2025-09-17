@@ -20,17 +20,17 @@ class CacheService {
       // Real-time data (BTC price via WebSocket)
       tier1_realtime: 60,           // 1 min - only for WebSocket price data
       
-      // Market Overview v2 ultra-conservative caching
+      // Market Overview v2 optimized caching with CoinGlass integration
       leverage_data: 10800,         // 3 hours - State of Leverage (target: 98.6% reduction)
-      etf_flows: 172800,            // 48 hours - ETF Flows (extended for Yahoo Finance blocking protection)
-      futures_basis: 18000,         // 5 hours - Futures Basis calculation  
+      etf_flows: 21600,             // 6 hours - ETF Flows (optimized for CoinGlass premium data)
+      futures_basis: 18000,         // 5 hours - Futures Basis calculation
       rotation_breadth: 36000,      // 10 hours - Rotation analysis (CoinGecko protection)
       liquidity_pulse: 72000,       // 20 hours - US 2Y yield data
       moving_averages: 3600,        // 1 hour - BTC MAs calculation
-      
+
       // Fallback cache tiers (stale-while-revalidate pattern)
       leverage_fallback: 21600,     // 6 hours stale acceptable
-      etf_fallback: 336000,         // 96 hours (4 days) stale acceptable during Yahoo Finance outages
+      etf_fallback: 86400,          // 24 hours stale acceptable (reduced from 96h)
       futures_fallback: 43200,      // 12 hours stale acceptable
       rotation_fallback: 86400,     // 24 hours stale acceptable
       liquidity_fallback: 172800,   // 48 hours stale acceptable

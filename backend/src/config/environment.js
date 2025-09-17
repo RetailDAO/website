@@ -11,6 +11,9 @@ module.exports = {
   COINGLASS_API_KEY: process.env.COINGLASS_API_KEY,
   FRED_API_KEY: process.env.FRED_API_KEY,
   
+  // Authentication
+  TERMINAL_PASSWORD: process.env.TERMINAL_PASSWORD || 'DAOWLS-0925',
+
   // Redis - Railway will provide this automatically in production
   REDIS_URL: process.env.REDIS_URL,
   REDIS_PRIVATE_URL: process.env.REDIS_PRIVATE_URL,

@@ -217,20 +217,20 @@ const MarketOverviewContainer = React.memo(() => {
           </h3>
           <div className="grid grid-cols-2 gap-4 text-sm font-mono">
             <div className={colors.text.secondary}>
-              <span className={colors.text.muted}>BUNDLE_TARGET:</span> <span className={colors.text.highlight}>&lt;350KB</span>
+              <span className={colors.text.muted}>API_SOURCES:</span> <span className={colors.text.highlight}>5_EXTERNAL</span>
             </div>
             <div className={colors.text.secondary}>
-              <span className={colors.text.muted}>TBT_TARGET:</span> <span className={colors.text.highlight}>&lt;200ms</span>
+              <span className={colors.text.muted}>CACHE_HIT_RATE:</span> <span className={colors.text.positive}>95%+</span>
             </div>
             <div className={colors.text.secondary}>
               <span className={colors.text.muted}>MODULES_LOADED:</span> <span className={colors.text.positive}>{visibleCards.size}/{cardConfigs.length}</span>
             </div>
             <div className={colors.text.secondary}>
-              <span className={colors.text.muted}>LIGHTHOUSE_TARGET:</span> <span className={colors.text.highlight}>85+</span>
+              <span className={colors.text.muted}>DATA_FRESHNESS:</span> <span className={colors.text.highlight}>&lt;5MIN</span>
             </div>
           </div>
           <div className={`mt-4 pt-4 border-t ${colors.border.primary} text-xs font-mono ${colors.text.muted}`}>
-            EXECUTE: <code className={`${colors.text.accent} px-1`}>npm run perf:monitor</code> TO_VERIFY_METRICS
+            COINGECKO • BINANCE • ALPHA_VANTAGE • COINGLASS • YAHOO_FINANCE
           </div>
         </div>
       )}

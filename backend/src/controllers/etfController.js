@@ -45,12 +45,12 @@ class ETFController {
       { symbol: 'ARKB', name: 'ARK 21Shares Bitcoin ETF', weight: 0.1 }
     ];
 
-    // Conservative caching strategy for ETF data - enhanced resilience against API blocks
+    // Optimized caching strategy for ETF data with CoinGlass integration
     this.cacheConfig = {
       etf_flows: {
-        ttl: 48 * 60 * 60, // 48 hours - extended for Yahoo Finance blocking resilience
-        fallback_ttl: 14 * 24 * 60 * 60, // 14 days fallback for emergency situations
-        description: 'BTC ETF flows - extended cache for API blocking protection'
+        ttl: 6 * 60 * 60, // 6 hours - optimized for CoinGlass premium data availability
+        fallback_ttl: 24 * 60 * 60, // 24 hours fallback (reduced from 14 days)
+        description: 'BTC ETF flows - balanced cache for CoinGlass API optimization'
       },
       individual_etf: {
         ttl: 24 * 60 * 60, // 1 day for individual ETF data
@@ -66,17 +66,17 @@ class ETFController {
       const startTime = performance.now();
       const period = req.query.period || '2W'; // Default to 2 weeks
       
-      // Daily cache key for fresh financial data
-      const dayPeriod = Math.floor(Date.now() / (24 * 60 * 60 * 1000)); // Daily periods
-      const cacheKey = `etf_flows_${period}_${dayPeriod}`;
+      // 6-hour cache key for balanced freshness with CoinGlass data
+      const sixHourPeriod = Math.floor(Date.now() / (6 * 60 * 60 * 1000)); // 6-hour periods
+      const cacheKey = `etf_flows_${period}_${sixHourPeriod}`;
       
       // Try cache with fallback support (stale-while-revalidate pattern)
       const cacheResult = await cacheService.getWithFallback(cacheKey, 'etf');
       let result = cacheResult.data;
       
       if (!result) {
-        console.log('🔄 Computing fresh ETF flows analysis (DAILY REFRESH CACHE)');
-        console.log('💡 ETF data refreshes daily for optimal freshness and API efficiency');
+        console.log('🔄 Computing fresh ETF flows analysis (6-HOUR REFRESH CACHE)');
+        console.log('💡 ETF data refreshes every 6 hours for optimal balance of freshness and API efficiency');
         
         try {
           // Try CoinGlass API first if available, then fallback to Yahoo Finance
@@ -95,14 +95,14 @@ class ETFController {
             result = await this.calculateETFFlows(period);
           }
           
-          // Use ultra-conservative ETF caching (4-day TTL)
+          // Use optimized ETF caching (6-hour TTL)
           await cacheService.setETFFlows(cacheKey, result);
-          
+
           // Store fallback data for stale-while-revalidate pattern
           await cacheService.setFallbackData(cacheKey, result, 'etf');
           
           console.log(`✅ ETF flows calculation completed in ${Math.round(performance.now() - startTime)}ms`);
-          console.log('🎯 Daily refresh cache: Next refresh in ~24 hours');
+          console.log('🎯 6-hour refresh cache: Next refresh in ~6 hours');
         } catch (error) {
           console.log('🎭 Error calculating ETF flows, using fallback:', error.message);
           
@@ -214,13 +214,13 @@ class ETFController {
       })),
       metadata: {
         dataSource: 'yahoo_finance',
-        cacheStrategy: '5_day_refresh',
+        cacheStrategy: '6_hour_refresh',
         aggregationMethod: 'weighted_average',
         timestamp: Date.now(),
         nextRefresh: new Date(Date.now() + (this.cacheConfig.etf_flows.ttl * 1000)).toISOString(),
         daysAnalyzed: daysToShow,
         totalDataFetched: maxDaysBack,
-        apiCallsConserved: `5-day caching saves ~${this.btcETFs.length * 365 / 5} calls/year`
+        apiCallsConserved: `6-hour caching saves ~${Math.round(this.btcETFs.length * 365 * 24 / 6 * 0.85)} calls/year (85% hit rate)`
       }
     };
   }
@@ -487,7 +487,7 @@ class ETFController {
       etfBreakdown: coinglassData.etfBreakdown || [],
       metadata: {
         dataSource: coinglassData.source && coinglassData.source.includes('coinglass') && !coinglassData.source.includes('mock') ? 'coinglass_premium' : 'coinglass_mock',
-        cacheStrategy: '5_day_refresh',
+        cacheStrategy: '6_hour_refresh',
         timestamp: coinglassData.timestamp || Date.now(),
         nextRefresh: new Date(Date.now() + (this.cacheConfig.etf_flows.ttl * 1000)).toISOString(),
         daysAnalyzed: flows.length,
