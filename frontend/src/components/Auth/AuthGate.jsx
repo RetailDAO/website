@@ -231,7 +231,6 @@ const AuthGate = () => {
           <div className="mt-8 pt-6 border-t border-gray-700/50">
             <div className={`text-center text-xs ${colors.text.muted} font-mono space-y-1`}>
               <p>🔒 Secure session-based authentication</p>
-              <p>⏰ 24-hour session duration</p>
               <p className="text-orange-400">🦉 Powered by Retail DAO Core</p>
             </div>
           </div>

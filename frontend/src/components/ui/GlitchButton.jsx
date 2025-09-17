@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import './GlitchButton.css';
 
@@ -12,6 +12,13 @@ const GlitchButton = ({
   const [displayText, setDisplayText] = useState(text);
   const [isGlitching, setIsGlitching] = useState(false);
   const intervalRef = useRef(null);
+
+  // Update display text when text prop changes (unless currently glitching)
+  useEffect(() => {
+    if (!isGlitching) {
+      setDisplayText(text);
+    }
+  }, [text, isGlitching]);
 
   // Status color mapping based on state
   const getStatusColors = () => {
