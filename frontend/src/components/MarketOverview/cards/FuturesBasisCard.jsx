@@ -169,7 +169,7 @@ const FuturesBasisCard = React.memo(() => {
       {/* Compact Header */}
       <div className="flex justify-between items-center mb-2">
         <div>
-          <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
+          <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
             [FUTURES_BASIS]
           </h3>
           <p className={`text-xs ${colors.text.secondary} mt-1`}>
@@ -227,7 +227,7 @@ const FuturesBasisCard = React.memo(() => {
         </div>
 
         {/* Compact Description & Expiry */}
-        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} rounded-lg mb-2`}>
+        <div className={`mt-auto p-2 w-full ${colors.bg.tertiary} rounded-lg mb-3`}>
           <div className={`text-xs ${colors.text.primary} text-center mb-1`}>
             {regimeConfig.description}
           </div>

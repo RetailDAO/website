@@ -56,8 +56,8 @@ class LeverageController {
           if (coinGlassService.isApiAvailable()) {
             console.log('🔑 [CoinGlass] Using premium API for leverage data');
             try {
-              const comprehensiveData = await coinGlassService.getComprehensiveLeverageData();
-              result = this.processCoinGlassData(comprehensiveData);
+              const leverageData = await coinGlassService.calculateLeverageState();
+              result = leverageData;
             } catch (coinglassError) {
               console.log('⚠️ [CoinGlass] API failed, falling back to individual exchanges:', coinglassError.message);
               const [openInterestData, fundingRatesData] = await Promise.allSettled([

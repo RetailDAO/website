@@ -13,6 +13,7 @@ const axios = require('axios');
 const { performance } = require('perf_hooks');
 const rateLimitedApiService = require('../services/rateLimitedApi');
 const cacheService = require('../services/cache/cacheService');
+const { coinGlassService } = require('../services/dataProviders/coinglassService');
 
 class ETFController {
   constructor() {
@@ -78,7 +79,21 @@ class ETFController {
         console.log('💡 ETF data refreshes daily for optimal freshness and API efficiency');
         
         try {
-          result = await this.calculateETFFlows(period);
+          // Try CoinGlass API first if available, then fallback to Yahoo Finance
+          if (coinGlassService.isApiAvailable()) {
+            console.log('🔑 [CoinGlass] Trying premium ETF data first');
+            try {
+              const coinglassData = await coinGlassService.getETFFlows(period === '2W' ? '14d' : '30d');
+              result = this.processCoinGlassETFData(coinglassData, period);
+              console.log('✅ [CoinGlass] ETF data obtained successfully');
+            } catch (coinglassError) {
+              console.log('⚠️ [CoinGlass] ETF data unavailable, falling back to Yahoo Finance:', coinglassError.message);
+              result = await this.calculateETFFlows(period);
+            }
+          } else {
+            console.log('🔓 [CoinGlass] API key not configured, using Yahoo Finance');
+            result = await this.calculateETFFlows(period);
+          }
           
           // Use ultra-conservative ETF caching (4-day TTL)
           await cacheService.setETFFlows(cacheKey, result);
@@ -446,6 +461,40 @@ class ETFController {
         description: 'Heavy institutional selling - bearish signal'
       };
     }
+  }
+
+  // Process CoinGlass ETF data into expected format
+  processCoinGlassETFData(coinglassData, period) {
+    console.log('🔍 [CoinGlass] Processing ETF flows data');
+    console.log('🔍 [CoinGlass] Source field:', coinglassData.source);
+
+    // Transform CoinGlass data to match expected format
+    const flows = coinglassData.flows || [];
+
+    // Calculate 5D flows from CoinGlass data
+    const flows5D = this.calculate5DayFlows(flows);
+    const status = this.determineFlowStatus(flows5D.totalFlow);
+
+    return {
+      period,
+      flows: flows,
+      inflow5D: coinglassData.inflow5D || flows5D.totalFlow,
+      status: status.label,
+      statusColor: status.color,
+      terminalLabel: status.terminalLabel,
+      description: status.description,
+      etfsAnalyzed: coinglassData.etfsAnalyzed || 12,
+      etfBreakdown: coinglassData.etfBreakdown || [],
+      metadata: {
+        dataSource: coinglassData.source && coinglassData.source.includes('coinglass') && !coinglassData.source.includes('mock') ? 'coinglass_premium' : 'coinglass_mock',
+        cacheStrategy: '5_day_refresh',
+        timestamp: coinglassData.timestamp || Date.now(),
+        nextRefresh: new Date(Date.now() + (this.cacheConfig.etf_flows.ttl * 1000)).toISOString(),
+        daysAnalyzed: flows.length,
+        coinglassMetadata: coinglassData.metadata,
+        apiCallsConserved: 'Using CoinGlass premium data'
+      }
+    };
   }
 
   // Fallback data for graceful degradation

@@ -157,7 +157,7 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
         axisTicks: { show: false },
         forceNiceScale: false,
         decimalsInFloat: 2,
-        tickAmount: 6,
+        tickAmount: 2,
         min: yAxisMin,
         max: yAxisMax,
       },
@@ -436,8 +436,8 @@ const LiquidityPulseCard = React.memo(() => {
       </div>
 
       {/* Main Content - US 2Y Treasury Chart */}
-      <div className="flex-1 mb-2">
-        <div className="mb-2">
+      <div className="flex-1 mb-1">
+        <div className="mb-1">
           <h4 className={`text-lg font-semibold ${colors.text.primary}`}>
             US 2Y Treasury Yield
           </h4>
@@ -459,7 +459,7 @@ const LiquidityPulseCard = React.memo(() => {
           </div>
         </div>
         {chartData && (
-          <div className="w-full mb-2">
+          <div className="w-full mb-1">
             <US2YChart
               data={chartData}
               height={185}

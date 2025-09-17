@@ -65,11 +65,9 @@ const GlitchButton = ({
         '--status-text': statusColors.text
       }}
     >
-      <span className="text">
-        <span className="text-decoration">_</span>
+      <span>
         {text}
       </span>
-      <span className="decoration">{'<='}</span>
     </button>
   );
 };
