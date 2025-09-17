@@ -6,44 +6,14 @@ import { usePerformanceTracking } from '../../../utils/performance';
 import apiService from '../../../services/api';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
-// Mock data with realistic positive and negative flows
-const generateMockETFData = (period) => {
-  const days = period === '2W' ? 14 : 30;
-  const flows = [];
 
-  // More realistic flow patterns - some days positive, some negative
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-
-    // Create more realistic flow patterns
-    const baseFlow = Math.random() < 0.7 ? 1 : -1; // 70% chance positive, 30% negative
-    const magnitude = Math.random() * 1500 + 200; // 200-1700M magnitude
-    const inflow = Math.round(baseFlow * magnitude);
-
-    flows.push({
-      date: date.toISOString().split('T')[0],
-      inflow: inflow,
-      netFlow: inflow,
-      cumulative: flows.length > 0 ? flows[flows.length - 1].cumulative + inflow : inflow
-    });
-  }
-
-  const inflow5D = flows.slice(-5).reduce((sum, day) => sum + day.inflow, 0);
-
-  return {
-    period,
-    flows,
-    inflow5D: Math.round(inflow5D),
-    timestamp: Date.now()
-  };
-};
-
-// Get ETF status based on 5D net flows according to Kevin's requirements
+// Get ETF status based on 5D net flows - Updated to match backend logic
 const getETFStatus = (inflow5D) => {
-  if (inflow5D >= 1500) return 'INFLOWS';
-  if (inflow5D <= -750) return 'OUTFLOWS';
-  return 'MIXED';
+  if (inflow5D > 500) return 'STRONG';
+  if (inflow5D > 50) return 'POSITIVE';
+  if (inflow5D > -50) return 'MIXED';
+  if (inflow5D > -200) return 'WEAK';
+  return 'OUTFLOWS';
 };
 
 // Terminal-style status configuration - Updated for Kevin's requirements
@@ -51,23 +21,23 @@ const getStatusConfig = (inflow5D, colors) => {
   const status = getETFStatus(inflow5D);
 
   const configs = {
-    'INFLOWS': {
+    'STRONG': {
       color: colors.text.positive,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
-      terminalLabel: '[INFLOWS]',
-      label: 'Inflows',
-      description: 'Strong institutional buying',
+      terminalLabel: '[STRONG]',
+      label: 'Strong Inflows',
+      description: 'Strong institutional buying pressure',
       icon: '🔥'
     },
-    'OUTFLOWS': {
-      color: colors.text.negative,
+    'POSITIVE': {
+      color: colors.text.positive,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
-      terminalLabel: '[OUTFLOWS]',
-      label: 'Outflows',
-      description: 'Heavy institutional selling',
-      icon: '📉'
+      terminalLabel: '[POSITIVE]',
+      label: 'Positive Flows',
+      description: 'Moderate institutional accumulation',
+      icon: '📈'
     },
     'MIXED': {
       color: colors.text.secondary,
@@ -75,141 +45,167 @@ const getStatusConfig = (inflow5D, colors) => {
       border: colors.border.secondary,
       terminalLabel: '[MIXED]',
       label: 'Mixed',
-      description: 'Balanced flows',
+      description: 'Balanced institutional sentiment',
       icon: '⚖️'
+    },
+    'WEAK': {
+      color: colors.text.accent,
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
+      terminalLabel: '[WEAK]',
+      label: 'Negative Flows',
+      description: 'Moderate institutional caution',
+      icon: '📉'
+    },
+    'OUTFLOWS': {
+      color: colors.text.negative,
+      bg: colors.bg.secondary,
+      border: colors.border.secondary,
+      terminalLabel: '[OUTFLOWS]',
+      label: 'Sustained Outflows',
+      description: 'Heavy institutional selling pressure',
+      icon: '🔻'
     }
   };
 
   return configs[status];
 };
 
-// Clean column chart component for ETF flows - Improved visualization
-const ETFFlowChart = React.memo(({ flows, colors, period }) => {
+// Professional ETF flows chart matching CoinGlass style
+const ETFFlowChart = React.memo(({ flows, period }) => {
   if (!flows || flows.length === 0) return (
-    <div className="w-full h-40 flex items-center justify-center">
-      <span className={`text-sm ${colors.text.secondary}`}>No flow data available</span>
+    <div className="w-full h-40 flex items-center justify-center bg-gray-900 rounded-lg">
+      <span className="text-sm text-gray-400">No flow data available</span>
     </div>
   );
-  
+
   // Display all data returned by backend (2W = 14 days, 1M = 30 days)
   const displayFlows = flows;
-  
-  const maxInflow = Math.max(...displayFlows.map(f => f.inflow));
-  const minInflow = Math.min(...displayFlows.map(f => f.inflow));
-  
-  // Calculate optimal bar dimensions based on data length
-  const containerWidth = 320;
   const totalBars = displayFlows.length;
-  const barSpacing = totalBars > 20 ? 1 : 2; // Reduce spacing for more bars
-  const barWidth = Math.max(3, Math.floor((containerWidth - (totalBars - 1) * barSpacing) / totalBars));
+
+  // Professional chart dimensions
   const chartHeight = 120;
-  
-  // Create value scale with some padding
-  const valueRange = maxInflow - Math.min(minInflow, 0);
-  const scalePadding = valueRange * 0.1;
-  const scaleMax = maxInflow + scalePadding;
-  const scaleMin = Math.min(minInflow - scalePadding, 0);
-  
+  const chartWidth = 360;
+
+  // Dynamic scale based on actual data for better visibility
+  const maxInflow = Math.max(...displayFlows.map(f => Math.abs(f.inflow || 0)));
+  const minInflow = Math.min(...displayFlows.map(f => f.inflow || 0));
+  const maxValue = Math.max(maxInflow, Math.abs(minInflow));
+
+  // Professional scale with appropriate padding for visibility
+  const scalePadding = maxValue * 0.25; // 25% padding for better visual clarity
+  const scaleMax = maxValue + scalePadding;
+  const scaleMin = -(maxValue + scalePadding);
+  const totalRange = scaleMax - scaleMin;
+  const zeroLinePosition = Math.abs(scaleMin) / totalRange;
+
+  // Optimized bar width with proper spacing
+  const barWidth = 10; // Increased to 10px for better visibility
+  const barSpacing = Math.max(2, Math.floor((chartWidth - (totalBars * barWidth)) / Math.max(1, totalBars - 1)));
+
   return (
-    <div className="w-full h-40 flex flex-col">
-      {/* Chart container */}
-      <div className="flex-1 relative px-4">
-        {/* Background grid lines */}
-        <div className="absolute inset-0 flex flex-col justify-between opacity-20">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className={`w-full h-px ${colors.border.primary}`} />
-          ))}
+    <div className="w-full h-44 flex flex-col">
+      {/* Professional chart container with transparent background */}
+      <div className="flex-1 relative bg-transparent rounded-lg p-4">
+        {/* Y-axis labels */}
+        <div className="absolute left-1 top-2 bottom-8 flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400 font-mono">
+          <span>+{formatFlowValue(scaleMax).replace('+', '')}</span>
+          <span>0</span>
+          <span>{formatFlowValue(scaleMin)}</span>
         </div>
-        
-        {/* Zero line if needed */}
-        {scaleMin < 0 && (
-          <div
-            className={`absolute w-full h-px ${colors.border.primary} opacity-50 z-10`}
-            style={{
-              bottom: `${(Math.abs(scaleMin) / (scaleMax - scaleMin)) * chartHeight}px`
-            }}
-          />
-        )}
-        
-        {/* Bars container */}
-        <div className="flex items-end justify-center h-full space-x-0.5 relative pt-4">
-          {displayFlows.map((flow, index) => {
-            const flowValue = flow.inflow || flow.netFlow || flow.flow || 0;
-            const isPositive = flowValue >= 0;
-            
-            // Corrected bar height calculation for proper positive/negative positioning
-            const totalRange = scaleMax - scaleMin;
-            const zeroLinePosition = Math.abs(scaleMin) / totalRange * chartHeight;
 
-            let barHeight, barBottom;
+        {/* Chart area */}
+        <div className="ml-8 mr-2 h-full relative">
+          {/* Grid lines */}
+          <div className="absolute inset-0 flex flex-col justify-between">
+            {/* Top line */}
+            <div className="w-full h-px bg-gray-400 dark:bg-gray-600 opacity-40"></div>
+            {/* Zero line */}
+            <div className="w-full h-px bg-gray-600 dark:bg-gray-400 opacity-60"></div>
+            {/* Bottom line */}
+            <div className="w-full h-px bg-gray-400 dark:bg-gray-600 opacity-40"></div>
+          </div>
 
-            if (isPositive) {
-              // Positive bars: grow upward from zero line
-              const heightRatio = flowValue / totalRange;
-              barHeight = Math.max(3, heightRatio * chartHeight);
-              barBottom = zeroLinePosition; // Start at zero line going up
-            } else {
-              // Negative bars: grow downward from zero line
-              const heightRatio = Math.abs(flowValue) / totalRange;
-              barHeight = Math.max(3, heightRatio * chartHeight);
-              barBottom = zeroLinePosition - barHeight; // Start below zero line
-            }
-            
-            // Color intensity based on flow size
-            const intensity = Math.abs(flowValue) / maxInflow;
-            const opacityClass = intensity > 0.8 ? 'opacity-100' : intensity > 0.6 ? 'opacity-80' : 'opacity-65';
-            
-            return (
-              <div
-                key={index}
-                className="relative group cursor-pointer"
-                style={{ width: `${barWidth}px` }}
-              >
-                {/* Tooltip */}
-                <div className={`
-                  absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2
-                  bg-gray-900 text-white text-xs px-2 py-1 rounded
-                  opacity-0 group-hover:opacity-100 transition-opacity z-20
-                  whitespace-nowrap
-                `}>
-                  {new Date(flow.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: {formatFlowValue(flowValue)}
-                </div>
-                
-                {/* Bar */}
+          {/* Bars container */}
+          <div className="absolute inset-0 flex items-end justify-start pt-2 pb-6">
+            {displayFlows.map((flow, index) => {
+              const flowValue = flow.inflow || flow.netFlow || flow.flow || 0;
+              const isPositive = flowValue >= 0;
+
+              // Calculate bar position and height with fixed scale
+              const valueRatio = Math.abs(flowValue) / totalRange;
+              const barHeight = Math.max(1, valueRatio * (chartHeight - 24));
+
+              // Position from bottom for negative, from zero line for positive
+              let barBottom;
+              if (isPositive) {
+                barBottom = zeroLinePosition * (chartHeight - 24);
+              } else {
+                barBottom = zeroLinePosition * (chartHeight - 24) - barHeight;
+              }
+
+              const xPosition = index * (barWidth + barSpacing);
+
+              return (
                 <div
-                  className={`
-                    absolute
-                    ${isPositive
-                      ? 'bg-green-500 dark:bg-green-400'
-                      : 'bg-red-500 dark:bg-red-400'
-                    }
-                    ${opacityClass} group-hover:opacity-100
-                    transition-all duration-200 group-hover:scale-105
-                    ${isPositive ? 'rounded-t-sm' : 'rounded-b-sm'}
-                  `}
+                  key={index}
+                  className="absolute group cursor-pointer"
                   style={{
-                    height: `${barHeight}px`,
-                    minHeight: '3px',
-                    bottom: `${barBottom}px`,
-                    width: '100%'
+                    left: `${xPosition}px`,
+                    width: `${barWidth}px`,
+                    bottom: '24px'
                   }}
-                />
-                
-                {/* Date label - show only for every few days if many bars */}
-                {(totalBars <= 14 || index % Math.ceil(totalBars / 10) === 0) && (
-                  <div className={`text-xs text-center mt-1 ${colors.text.muted}`}>
-                    {new Date(flow.date).toLocaleDateString('en-US', { day: 'numeric' })}
+                >
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-20 whitespace-nowrap">
+                    {new Date(flow.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: {formatFlowValue(flowValue)}
                   </div>
-                )}
-              </div>
-            );
-          })}
+
+                  {/* Professional thin bar */}
+                  <div
+                    className={`absolute transition-all duration-200 group-hover:opacity-100 ${
+                      isPositive
+                        ? 'bg-green-400 opacity-80 hover:bg-green-300'
+                        : 'bg-red-400 opacity-80 hover:bg-red-300'
+                    }`}
+                    style={{
+                      height: `${barHeight}px`,
+                      width: '100%',
+                      bottom: `${barBottom}px`
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* X-axis date labels */}
+          <div className="absolute bottom-0 left-0 right-0 h-6 flex justify-start">
+            {displayFlows.map((flow, index) => {
+              const xPosition = index * (barWidth + barSpacing);
+              const shouldShow = totalBars <= 14 ? index % 2 === 0 : index % Math.ceil(totalBars / 8) === 0;
+
+              return shouldShow ? (
+                <div
+                  key={index}
+                  className="absolute text-xs text-gray-400"
+                  style={{
+                    left: `${xPosition - 8}px`,
+                    width: '20px',
+                    textAlign: 'center'
+                  }}
+                >
+                  {new Date(flow.date).toLocaleDateString('en-US', { day: 'numeric' })}
+                </div>
+              ) : null;
+            })}
+          </div>
         </div>
       </div>
-      
+
       {/* Timeline label */}
-      <div className="flex justify-center items-center mt-2 px-4">
-        <span className={`text-xs ${colors.text.muted}`}>
+      <div className="flex justify-center items-center mt-1">
+        <span className="text-xs text-gray-500 dark:text-gray-400">
           {period === '2W' ? 'Last 2 weeks (14 days)' : 'Last month (30 days)'}
         </span>
       </div>
@@ -218,11 +214,14 @@ const ETFFlowChart = React.memo(({ flows, colors, period }) => {
 });
 
 // Helper function to format millions to billions
+// Backend returns values in millions, so we need to convert appropriately
 const formatFlowValue = (value) => {
+  // Backend values are already in millions, so display as billions if >= 1000M
   if (Math.abs(value) >= 1000) {
     return `${(value > 0 ? '+' : '')}${(value / 1000).toFixed(1)}B`;
   }
-  return `${(value > 0 ? '+' : '')}${value.toFixed(0)}M`;
+  // For values < 1000M, display in millions with proper formatting
+  return `${(value > 0 ? '+' : '')}${Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1)}M`;
 };
 
 // Helper function to format cache age
@@ -263,7 +262,7 @@ const ETFFlowsCard = React.memo(() => {
     if (apiResponse?.success && apiResponse?.data) {
       const dataTimestamp = apiResponse.data.metadata?.timestamp || apiResponse.data.timestamp || Date.now();
       const cacheAge = Date.now() - dataTimestamp;
-      
+
       // Transform API flows data for proper chart rendering
       const transformedFlows = (apiResponse.data.flows || []).map(flow => ({
         date: flow.date,
@@ -273,7 +272,17 @@ const ETFFlowsCard = React.memo(() => {
         cumulative: flow.cumulative || 0,
         etfsContributing: flow.etfsContributing || flow.etfBreakdown?.length || 5
       }));
-      
+
+      // DEBUG: Log data for inconsistency investigation
+      console.log('🔍 [ETF DEBUG] Raw API Response:', {
+        inflow5D: apiResponse.data.inflow5D,
+        flowsCount: transformedFlows.length,
+        last5Flows: transformedFlows.slice(-5).map(f => ({ date: f.date, inflow: f.inflow })),
+        manualCalc5D: transformedFlows.slice(-5).reduce((sum, f) => sum + f.inflow, 0),
+        status: apiResponse.data.status,
+        terminalLabel: apiResponse.data.terminalLabel
+      });
+
       return {
         flows: transformedFlows,
         inflow5D: apiResponse.data.inflow5D || 0,
@@ -301,7 +310,7 @@ const ETFFlowsCard = React.memo(() => {
       cacheAgeFormatted: 'No data',
       isEmpty: true
     };
-  }, [apiResponse, period]);
+  }, [apiResponse]);
   
   // Memoized status configuration based on 5D flow value
   const statusConfig = useMemo(() => {
@@ -324,112 +333,103 @@ const ETFFlowsCard = React.memo(() => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header - First Hierarchy - Moved to top */}
-      <div className="flex justify-between items-center mb-3">
-        <div>
-          <h3 className={`text-md font-mono uppercase tracking-wider ${colors.text.primary}`}>
-            [ETF_FLOWS]
-          </h3>
-          <p className={`text-xs ${colors.text.secondary} mt-1`}>
-            Bitcoin ETF Daily Net Flows
-          </p>
-        </div>
-        <div className="flex items-center space-x-1">
-          {/* Period Selector */}
-          <div className={`flex border ${colors.border.primary} rounded-lg overflow-hidden`}>
-            {['2W', '1M'].map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`
-                  px-2 py-1 text-xs font-mono
-                  ${period === p 
-                    ? `${colors.text.primary} ${colors.bg.tertiary}` 
-                    : `${colors.text.muted} hover:${colors.text.secondary} hover:${colors.bg.hover}`
-                  }
-                  transition-colors duration-200
-                `}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-          <div className={`
-            px-2 py-1 text-xs font-mono uppercase tracking-wider rounded-lg border
-            ${statusConfig.bg} ${statusConfig.border}
-            ${statusConfig.color}
-          `}>
-            <span>{statusConfig.terminalLabel}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Chart - Second Hierarchy - Increased size */}
-      <div className="mb-3">
-        <ETFFlowChart flows={data.flows} colors={colors} period={period} />
-      </div>
-
-      {/* Stats and Status - Third Hierarchy */}
-      <div className="space-y-2">
-        {/* 5D Net Display with integrated status */}
-        <div className="text-center">
-          <div className="flex items-baseline justify-center space-x-2 mb-1">
-            <span className={`text-xs ${colors.text.secondary}`}>5D Net:</span>
-            <div className={`text-xl font-bold ${statusConfig.color}`}>
-              {formatFlowValue(data.inflow5D)}
+      {/* Optimized Header with horizontal layout */}
+      <div className="flex justify-between items-start mb-1">
+        <div className="flex-1">
+          <div className="flex items-center space-x-2 mb-1">
+            <h3 className={`text-sm font-mono uppercase tracking-wider ${colors.text.primary}`}>
+              [ETF_FLOWS]
+            </h3>
+            <div className={`
+              px-2 py-0.5 text-xs font-mono uppercase tracking-wider rounded border
+              ${statusConfig.bg} ${statusConfig.border} ${statusConfig.color}
+            `}>
+              {statusConfig.terminalLabel}
             </div>
-            <span className={`text-xs ${statusConfig.color} font-medium`}>
-              {statusConfig.icon} {statusConfig.label}
-            </span>
           </div>
-          <div className={`text-xs ${colors.text.secondary}`}>
-            {statusConfig.description}
+
+          {/* Horizontal stats layout with larger main indicators */}
+          <div className="flex items-center space-x-6 text-sm">
+            <div className="flex items-baseline space-x-2">
+              <span className={`text-sm ${colors.text.secondary}`}>5D Net:</span>
+              <span className={`text-xl font-bold ${statusConfig.color}`}>
+                {formatFlowValue(data.inflow5D)}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-lg">{statusConfig.icon}</span>
+              <span className={`text-lg font-medium ${statusConfig.color}`}>{statusConfig.label}</span>
+            </div>
           </div>
         </div>
 
+        {/* Period Selector - Compact */}
+        <div className={`flex border ${colors.border.primary} rounded overflow-hidden`}>
+          {['2W', '1M'].map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`
+                px-2 py-1 text-xs font-mono
+                ${period === p
+                  ? `${colors.text.primary} ${colors.bg.tertiary}`
+                  : `${colors.text.muted} hover:${colors.text.secondary} hover:${colors.bg.hover}`
+                }
+                transition-colors duration-200
+              `}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Spacer for better layout */}
-      <div className="flex-1"></div>
+      {/* Professional Chart - Main visual element */}
+      <div className="flex-1 mb-1">
+        <ETFFlowChart flows={data.flows} period={period} />
+      </div>
 
-      {/* Data Source Footer */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center space-x-2">
-            {data?._fromCache && (
-              <span
-                className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`}
-                title={generateTransparencyTooltip({
-                  ...extractTransparencyData(data),
-                  existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
-                })}
-              >
-                [{data._isStale ? 'CACHE*' : 'CACHE'}]
-              </span>
-            )}
+      {/* Compact Footer */}
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center space-x-2">
+          {data?._fromCache && (
+            <span
+              className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`}
+              title={generateTransparencyTooltip({
+                ...extractTransparencyData(data),
+                existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
+              })}
+            >
+              [{data._isStale ? 'CACHE*' : 'CACHE'}]
+            </span>
+          )}
 
-            {isFetching && (
-              <span className={`font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
-                [UPD...]
-              </span>
-            )}
+          {isFetching && (
+            <span className={`font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
+              [UPD...]
+            </span>
+          )}
 
-            {!data?._fromCache && !isFetching && data.flows?.length > 0 && (
-              <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
-                [LIVE]
-              </span>
-            )}
+          {!data?._fromCache && !isFetching && data.flows?.length > 0 && (
+            <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
+              [LIVE]
+            </span>
+          )}
 
-            {error && (
-              <span className={`font-mono ${colors.text.negative}`} title="Using fallback data">
-                [FALLBACK]
-              </span>
-            )}
-          </div>
+          {error && (
+            <span className={`font-mono ${colors.text.negative}`} title="Using fallback data">
+              [FALLBACK]
+            </span>
+          )}
 
-          <div className={`${colors.text.muted}`}>
-            {data.flows?.length > 0 ? 'Yahoo Finance' : 'Mock'} • {data?.cacheAgeFormatted || 'Just now'}
-          </div>
+          <span className={colors.text.muted}>
+            {data.flows?.length > 0 ? 'CoinGlass' : 'Mock'}
+          </span>
+        </div>
+
+        <div className={`${colors.text.muted} flex items-center space-x-1`}>
+          <span>{data?.cacheAgeFormatted || 'Just now'}</span>
+          <span className={colors.text.secondary}>• {statusConfig.description}</span>
         </div>
       </div>
     </div>

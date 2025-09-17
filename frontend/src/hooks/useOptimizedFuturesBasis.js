@@ -160,14 +160,14 @@ export const useOptimizedFuturesBasis = (options = {}) => {
     daysToExpiry: queryResult.data?.daysToExpiry || 90,
     
     // Metadata accessors
-    dataSource: queryResult.data?._metadata?.dataSource || 'unknown',
+    dataSource: queryResult.data?._metadata?.dataSource || queryResult.data?.metadata?.dataSource || 'unknown',
     lastUpdate: queryResult.data?._metadata?.timestamp || null,
     fetchTime: queryResult.data?._metadata?.fetchTime || null,
     nextUpdate: queryResult.data?._metadata?.nextUpdate || null,
     
     // Helper methods
     isUsingMockData: () => {
-      const source = queryResult.data?._metadata?.dataSource;
+      const source = queryResult.data?._metadata?.dataSource || queryResult.data?.metadata?.dataSource;
       return source === 'mock' || source === 'fallback' || source === 'cached_fallback';
     },
     

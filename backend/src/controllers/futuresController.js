@@ -79,7 +79,8 @@ class FuturesController {
           regimeData: basisData.regimeData,
           expiry: basisData.expiry,
           metadata: {
-            dataSource: cacheResult?.source || basisData.dataSource,
+            dataSource: basisData.dataSource || 'deribit',
+            cacheSource: cacheResult?.source || 'api',
             timestamp: basisData.timestamp,
             processingTime: `${processingTime}ms`,
             cacheStrategy: 'ultra_conservative_5h',

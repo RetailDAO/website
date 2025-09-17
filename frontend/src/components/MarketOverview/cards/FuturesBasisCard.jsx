@@ -134,6 +134,7 @@ const FuturesBasisCard = React.memo(() => {
     refetchOnWindowFocus: false,
     retry: 2
   });
+
   
   // Memoized regime configuration - use regimeData from API if available
   const regimeConfig = useMemo(() => {
@@ -273,7 +274,7 @@ const FuturesBasisCard = React.memo(() => {
           </div>
 
           <div className={`${colors.text.muted}`}>
-            {dataSource || (isUsingMockData ? 'Mock' : 'Deribit')} • {lastUpdate ? formatCacheAge(Date.now() - new Date(lastUpdate).getTime()) : 'Just now'}
+            {dataSource && dataSource !== 'unknown' && dataSource !== 'none' ? dataSource : (isUsingMockData ? 'Mock' : 'Deribit')} • {lastUpdate ? formatCacheAge(Date.now() - new Date(lastUpdate).getTime()) : 'Just now'}
           </div>
         </div>
       </div>
