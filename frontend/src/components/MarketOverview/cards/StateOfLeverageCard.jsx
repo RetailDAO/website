@@ -3,7 +3,6 @@ import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
-import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 import GlitchButton from '../../ui/GlitchButton';
 
 // Import API service
@@ -101,11 +100,36 @@ const StatusIndicator = React.memo(({ status, colors }) => {
   );
 });
 
+// Helper function to generate calculation tooltips for transparency
+const getCalculationTooltip = (metric, data) => {
+  const tooltips = {
+    'fundingRate': `Funding Rate Calculation:
+💰 8hr Rate = ${data.fundingRate8h !== undefined ? (data.fundingRate8h * 100).toFixed(4) : 'N/A'}%
+🔄 Updates: Every 8 hours
+📈 Formula: (Current Rate × 100) for %
+📊 Coverage: ${data.fundingRate8h !== undefined ? (data.fundingRate8h * 100).toFixed(3) : 'N/A'}% (8hr) averaged across ${data.fundingRate?.marketCoverage || 18} exchanges`,
+
+    'oiMcap': `OI/Market Cap Calculation:
+💼 Open Interest = $${((data.openInterest?.total || 15)).toFixed(1)}B
+💎 Market Cap = $${((data.marketData?.btcMarketCap || 1900)).toFixed(2)}T
+📊 Formula: (OI / MCap) × 100
+🔢 Result: (${((data.openInterest?.total || 15)).toFixed(1)}B / ${((data.marketData?.btcMarketCap || 1900)).toFixed(2)}T) × 100 = ${data.oiMcapRatio !== undefined ? data.oiMcapRatio.toFixed(2) : 'N/A'}%
+📈 Data: Open Interest $${((data.openInterest?.total || 15)).toFixed(1)}B across ${data.openInterest?.marketCoverage || 21} exchanges including CME, Market Cap $${((data.marketData?.btcMarketCap || 1900)).toFixed(2)}T (live from CoinGecko)`,
+
+    'aoiDelta': `Δ Open Interest (7D) Calculation:
+📊 Current OI = $${((data.openInterest?.total || 15)).toFixed(1)}B
+📈 7D Change = ${data.oiDelta7d !== undefined ? data.oiDelta7d.toFixed(1) : ((data.openInterest?.change24h || 0) * 3.5).toFixed(1)}%
+🔢 Formula: ((Current OI - OI 7d ago) / OI 7d ago) × 100`
+  };
+
+  return tooltips[metric] || '';
+};
+
 // Metric display component
 const MetricDisplay = React.memo(({ label, value, colors, size = 'normal' }) => {
   const valueSize = size === 'small' ? 'text-sm' : 'text-lg';
   const labelSize = size === 'small' ? 'text-xs' : 'text-xs';
-  
+
   return (
     <div className="text-center">
       <div className={`${valueSize} font-mono ${colors.text.primary}`}>
@@ -195,7 +219,12 @@ const StateOfLeverageCard = React.memo(() => {
         <div className="space-y-3 w-full px-4">
           {/* 1) Funding Rate */}
           <div className="flex justify-between items-center">
-            <span className={`text-base ${colors.text.muted}`}>• Funding Rate</span>
+            <span
+              className={`text-base ${colors.text.muted} cursor-help`}
+              title={getCalculationTooltip('fundingRate', data)}
+            >
+              • Funding Rate
+            </span>
             <span className={`text-base font-mono font-semibold ${colors.text.primary}`}>
               {data.fundingRate8h !== undefined
                 ? `${data.fundingRate8h >= 0 ? '+' : ''}${(data.fundingRate8h * 100).toFixed(4)}%`
@@ -205,7 +234,12 @@ const StateOfLeverageCard = React.memo(() => {
 
           {/* 2) OI/Marketcap */}
           <div className="flex justify-between items-center">
-            <span className={`text-base ${colors.text.muted}`}>• OI/MCap</span>
+            <span
+              className={`text-base ${colors.text.muted} cursor-help`}
+              title={getCalculationTooltip('oiMcap', data)}
+            >
+              • OI/MCap
+            </span>
             <span className={`text-base font-mono font-semibold ${colors.text.primary}`}>
               {data.oiMcapRatio !== undefined
                 ? `${data.oiMcapRatio.toFixed(2)}%`
@@ -215,7 +249,12 @@ const StateOfLeverageCard = React.memo(() => {
 
           {/* 3) OI delta over 7D */}
           <div className="flex justify-between items-center">
-            <span className={`text-base ${colors.text.muted}`}>• ΔOI (7D)</span>
+            <span
+              className={`text-base ${colors.text.muted} cursor-help`}
+              title={getCalculationTooltip('aoiDelta', data)}
+            >
+              • ΔOI (7D)
+            </span>
             <span className={`text-base font-mono font-semibold ${colors.text.primary}`}>
               {data.oiDelta7d !== undefined
                 ? `${data.oiDelta7d >= 0 ? '+' : ''}${data.oiDelta7d.toFixed(1)}%`

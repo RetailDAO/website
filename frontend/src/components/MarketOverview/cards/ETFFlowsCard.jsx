@@ -434,7 +434,6 @@ const ETFFlowsCard = React.memo(() => {
 
         <div className={`${colors.text.muted} flex items-center space-x-1`}>
           <span>{data?.cacheAgeFormatted || 'Just now'}</span>
-          <span className={colors.text.secondary}>• {statusConfig.description}</span>
         </div>
       </div>
     </div>
