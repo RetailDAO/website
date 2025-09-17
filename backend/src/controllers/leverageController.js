@@ -52,26 +52,52 @@ class LeverageController {
         console.log('🔄 Computing fresh leverage state data');
         
         try {
-          // Try CoinGlass API first if available, then fallback to individual exchanges
+          // Try CoinGlass API with hierarchical fallback for institutional-grade data
           if (coinGlassService.isApiAvailable()) {
             console.log('🔑 [CoinGlass] Using premium API for leverage data');
+
+            // TIER 1: Complete market coverage (preferred)
             try {
               const leverageData = await coinGlassService.calculateLeverageState();
+              console.log('✅ [CoinGlass] Complete market-wide leverage state calculated');
               result = leverageData;
-            } catch (coinglassError) {
-              console.log('⚠️ [CoinGlass] API failed, falling back to individual exchanges:', coinglassError.message);
-              const [openInterestData, fundingRatesData] = await Promise.allSettled([
-                this.getOpenInterestData(),
-                this.getFundingRatesData()
-              ]);
+            } catch (tier1Error) {
+              console.log('⚠️ [CoinGlass] Complete calculation failed, trying market-wide endpoints:', tier1Error.message);
 
-              if (openInterestData.status === 'fulfilled' || fundingRatesData.status === 'fulfilled') {
-                const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
-                const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
-                result = this.calculateLeverageState(oiData, frData);
-              } else {
-                console.log('🎭 All APIs failed, using fallback data');
-                result = this.generateFallbackData();
+              // TIER 2: Market-wide endpoints separately (institutional coverage)
+              try {
+                const [marketOI, marketFunding] = await Promise.allSettled([
+                  coinGlassService.getMarketWideOpenInterest('BTC'),
+                  coinGlassService.getMarketWideFundingRates('BTC', '4h')
+                ]);
+
+                if (marketOI.status === 'fulfilled' || marketFunding.status === 'fulfilled') {
+                  const oiData = marketOI.status === 'fulfilled' ? this.convertCoinGlassOIData(marketOI.value) : null;
+                  const frData = marketFunding.status === 'fulfilled' ? this.convertCoinGlassFundingData(marketFunding.value) : null;
+
+                  console.log(`✅ [CoinGlass] Market-wide data: OI=${oiData ? 'OK' : 'FAIL'}, Funding=${frData ? 'OK' : 'FAIL'}`);
+                  result = this.calculateLeverageState(oiData, frData);
+                } else {
+                  throw new Error('Both market-wide endpoints failed');
+                }
+              } catch (tier2Error) {
+                console.log('⚠️ [CoinGlass] Market-wide endpoints failed, falling back to individual exchanges:', tier2Error.message);
+
+                // TIER 3: Individual exchange APIs (limited coverage)
+                const [openInterestData, fundingRatesData] = await Promise.allSettled([
+                  this.getOpenInterestData(),
+                  this.getFundingRatesData()
+                ]);
+
+                if (openInterestData.status === 'fulfilled' || fundingRatesData.status === 'fulfilled') {
+                  const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
+                  const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
+                  console.log('⚡ Using limited exchange data (Bybit + OKX only)');
+                  result = this.calculateLeverageState(oiData, frData);
+                } else {
+                  console.log('🎭 All APIs failed, using fallback data');
+                  result = this.generateFallbackData();
+                }
               }
             }
           } else {
@@ -484,6 +510,50 @@ class LeverageController {
     const oiDelta7d = (Math.random() - 0.5) * 10; // Random delta for fallback
     
     return this.determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d);
+  }
+
+  /**
+   * Convert CoinGlass market-wide OI data to format expected by calculateLeverageState
+   */
+  convertCoinGlassOIData(coinglassOI) {
+    return {
+      total: coinglassOI.totalMarketOI, // Already in billions
+      change24h: coinglassOI.change24h,
+      change4h: coinglassOI.change4h,
+      change1h: coinglassOI.change1h,
+      exchanges: coinglassOI.exchanges.map(ex => ({
+        exchange: ex.exchange,
+        value: ex.openInterestUSD / 1e9, // Convert to billions
+        marketShare: ex.marketShare
+      })),
+      metadata: {
+        source: 'coinglass_v4_market_wide',
+        coverage: 'complete_market_including_cme',
+        exchangeCount: coinglassOI.exchanges.length,
+        timestamp: coinglassOI.timestamp
+      }
+    };
+  }
+
+  /**
+   * Convert CoinGlass market-wide funding data to format expected by calculateLeverageState
+   */
+  convertCoinGlassFundingData(coinglassFunding) {
+    return {
+      averageRate: coinglassFunding.averageRate,
+      exchanges: coinglassFunding.stablecoinRates.map(ex => ({
+        exchange: ex.exchange,
+        rate: ex.fundingRate,
+        interval: ex.interval,
+        nextFundingTime: ex.nextFundingTime
+      })),
+      metadata: {
+        source: 'coinglass_v4_market_wide',
+        coverage: 'all_major_exchanges',
+        exchangeCount: coinglassFunding.marketCoverage,
+        timestamp: coinglassFunding.timestamp
+      }
+    };
   }
 
   /**

@@ -157,7 +157,7 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
         axisTicks: { show: false },
         forceNiceScale: false,
         decimalsInFloat: 2,
-        tickAmount: 2,
+        tickAmount: 1,
         min: yAxisMin,
         max: yAxisMax,
       },
@@ -393,43 +393,7 @@ const LiquidityPulseCard = React.memo(() => {
           </div>
         
         <div className="flex items-center space-x-1">
-          <div className="flex items-center space-x-2">
-            {data?._fromCache && (
-              <span
-                className={`text-xs font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`}
-                title={generateTransparencyTooltip({
-                  ...extractTransparencyData(data),
-                  existingTooltip: data._isStale ? "Showing cached data, updating..." : "Fresh cached data"
-                })}
-              >
-                [{data._isStale ? 'CACHE*' : 'CACHE'}]
-              </span>
-            )}
-
-            {isFetching && (
-              <span className={`text-xs font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
-                [UPD...]
-              </span>
-            )}
-
-            {!data?._fromCache && !isFetching && (
-              <span className={`text-xs font-mono ${colors.text.positive}`} title="Live data from server">
-                [SERVER LIVE]
-              </span>
-            )}
-
-            {error && (
-              <span className={`text-xs font-mono ${colors.text.negative}`} title="Using fallback data">
-                [FALLBACK]
-              </span>
-            )}
-
-            {data && (
-              <div className={`text-xs ${colors.text.muted}`}>
-                {data.cacheAgeFormatted || 'Just now'}
-              </div>
-            )}
-          </div>
+          
         </div>
       </div>
 
@@ -491,7 +455,7 @@ const LiquidityPulseCard = React.memo(() => {
 
             {!data?._fromCache && !isFetching && data && (
               <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
-                [SERVER LIVE]
+                [LIVE]
               </span>
             )}
 

@@ -125,7 +125,7 @@ const StateOfLeverageCard = React.memo(() => {
   usePerformanceTracking('StateOfLeverageCard');
   
   // Optimized data fetching with intelligent caching
-  const { data, isLoading, error } = useQuery({
+  const { data: apiResponse, isLoading, error, isFetching } = useQuery({
     queryKey: ['leverage-state'],
     queryFn: fetchLeverageState,
     staleTime: 3 * 60 * 1000, // 3 minutes - leverage changes frequently
@@ -134,6 +134,18 @@ const StateOfLeverageCard = React.memo(() => {
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
+
+  // Extract data from API response with cache information
+  const data = useMemo(() => {
+    if (apiResponse) {
+      return {
+        ...apiResponse,
+        _fromCache: apiResponse._fromCache,
+        _isStale: apiResponse._isStale
+      };
+    }
+    return null;
+  }, [apiResponse]);
 
   // Memoized state configuration
   const stateConfig = useMemo(() => {
@@ -235,6 +247,50 @@ const StateOfLeverageCard = React.memo(() => {
             }
             size="sm"
           />
+        </div>
+      </div>
+
+      {/* Data Source Footer */}
+      <div className="space-y-0.3">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-2">
+            {data?._fromCache && (
+              <span
+                className={`font-mono ${data._isStale ? colors.text.accent : colors.text.positive} cursor-help`}
+                title={data._isStale ? "Showing cached data, updating..." : "Fresh cached data"}
+              >
+                [{data._isStale ? 'CACHE*' : 'CACHE'}]
+              </span>
+            )}
+
+            {isFetching && (
+              <span className={`font-mono ${colors.text.highlight} animate-pulse`} title="Updating data in background">
+                [UPD...]
+              </span>
+            )}
+
+            {!data?._fromCache && !isFetching && data && (
+              <span className={`font-mono ${colors.text.positive}`} title="Live data from server">
+                [LIVE]
+              </span>
+            )}
+
+            {error && (
+              <span className={`font-mono ${colors.text.negative}`} title="Using fallback data">
+                [FALLBACK]
+              </span>
+            )}
+          </div>
+
+          <div className={`${colors.text.muted}`}>
+            {data?.metadata?.dataSource === 'coinglass_v4_complete_market' ? 'CoinGlass' :
+             data?.metadata?.dataSource === 'mixed' ? 'Mixed APIs' :
+             data ? 'Exchange APIs' : 'Mock'} • {data?.metadata?.calculatedAt ?
+             new Date(data.metadata.calculatedAt).toLocaleTimeString('en-US', {
+               hour: '2-digit',
+               minute: '2-digit'
+             }) : 'Just now'}
+          </div>
         </div>
       </div>
 
