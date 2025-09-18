@@ -529,7 +529,8 @@ class LeverageController {
     }
 
     // Long-Crowded → Flush Risk (Red)
-    // Rules: Funding ≥ +0.02% AND (OI/MCap ≥ 2.5% BTC or ΔOI ≥ +10% in 7d)
+    // Rules: Funding ≥ +0.02% AND ((OI/MCap ≥ 2.5% BTC) OR (ΔOI ≥ +10% AND Price_7d ≥ +8%))
+    // Note: Price_7d condition not implemented yet, using ΔOI ≥ +10% only for now
     if (fundingPercent >= 0.02 && (oiMcapRatio >= 2.5 || oiDelta7d >= 10.0)) {
       console.log('✅ State: Long-Crowded (Flush Risk conditions met)');
       return {

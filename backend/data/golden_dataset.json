@@ -891,8 +891,8 @@
       ]
     },
     "timestamp": "2025-09-17T21:39:01.597Z",
-    "tier": "stale",
-    "expiresAt": "2025-09-17T23:37:22.167Z",
+    "tier": "archived",
+    "expiresAt": "2025-09-19T19:34:25.854Z",
     "source": "api_success",
     "dataPoints": 221
   }

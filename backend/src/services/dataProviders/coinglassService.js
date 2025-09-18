@@ -855,8 +855,8 @@ class CoinGlassService {
       let color = 'yellow';
       let description = 'No Squeeze or Flush Risk Currently';
 
-      // Convert funding rate to percentage for comparison
-      const funding8hPercent = fundingRate8h * 100;
+      // Funding rate is already in percentage format from API (0.00462 = 0.00462%)
+      const funding8hPercent = fundingRate8h;
 
       // Short-Crowded → Squeeze Risk (Green)
       if (funding8hPercent <= -0.02 && oiDelta7d >= 5.0) {
@@ -866,6 +866,8 @@ class CoinGlassService {
         description = 'Shorts Crowded, Potential Squeeze Coming';
       }
       // Long-Crowded → Flush Risk (Red)
+      // Rules: Funding ≥ +0.02% AND ((OI/MCap ≥ 2.5% BTC) OR (ΔOI ≥ +10% AND Price_7d ≥ +8%))
+      // Note: Price_7d condition not implemented yet, using ΔOI ≥ +10% only for now
       else if (funding8hPercent >= 0.02 && (oiMcapRatio >= 2.5 || oiDelta7d >= 10.0)) {
         status = 'Flush Risk';
         stateLabel = 'Longs Crowded';

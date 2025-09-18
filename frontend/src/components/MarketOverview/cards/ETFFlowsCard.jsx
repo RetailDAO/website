@@ -1,5 +1,5 @@
 // ETF Flows Card (Priority 6) - Real data integration for Market Overview v2
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../../context/ThemeContext';
 import { usePerformanceTracking } from '../../../utils/performance';
@@ -72,7 +72,7 @@ const getStatusConfig = (inflow5D, colors) => {
 };
 
 // Professional ETF flows chart matching CoinGlass style
-const ETFFlowChart = React.memo(({ flows, period }) => {
+const ETFFlowChart = React.memo(({ flows }) => {
   if (!flows || flows.length === 0) return (
     <div className="w-full h-40 flex items-center justify-center bg-gray-900 rounded-lg">
       <span className="text-sm text-gray-400">No flow data available</span>
@@ -211,7 +211,7 @@ const ETFFlowChart = React.memo(({ flows, period }) => {
       {/* Timeline label */}
       <div className="flex justify-center items-center mt-1">
         <span className="text-xs text-gray-500 dark:text-gray-400">
-          {period === '2W' ? 'Last 2 weeks (14 days)' : 'Last month (30 days)'}
+          Last month (30 days)
         </span>
       </div>
     </div>
@@ -244,7 +244,7 @@ const formatCacheAge = (ageMs) => {
 
 const ETFFlowsCard = React.memo(() => {
   const { colors } = useTheme();
-  const [period, setPeriod] = useState('2W');
+  const period = '1M'; // Fixed to 1M only
   
   // Performance tracking
   usePerformanceTracking('ETFFlowsCard');
@@ -368,30 +368,15 @@ const ETFFlowsCard = React.memo(() => {
           </div>
         </div>
 
-        {/* Period Selector - Compact */}
-        <div className={`flex border ${colors.border.primary} rounded overflow-hidden`}>
-          {['2W', '1M'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`
-                px-2 py-1 text-xs font-mono
-                ${period === p
-                  ? `${colors.text.primary} ${colors.bg.tertiary}`
-                  : `${colors.text.muted} hover:${colors.text.secondary} hover:${colors.bg.hover}`
-                }
-                transition-colors duration-200
-              `}
-            >
-              {p}
-            </button>
-          ))}
+        {/* Period Indicator */}
+        <div className={`px-2 py-1 text-xs font-mono ${colors.text.muted}`}>
+          1M
         </div>
       </div>
 
       {/* Professional Chart - Main visual element */}
       <div className="flex-1 mb-1">
-        <ETFFlowChart flows={data.flows} period={period} />
+        <ETFFlowChart flows={data.flows} />
       </div>
 
       {/* Compact Footer */}

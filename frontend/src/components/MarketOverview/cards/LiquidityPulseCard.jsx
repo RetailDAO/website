@@ -401,14 +401,11 @@ const LiquidityPulseCard = React.memo(() => {
       <div className="flex-1 mb-0.5">
         <div className="mb-1">
           <h4 className={`text-lg font-semibold ${colors.text.primary}`}>
-            US 2Y Treasury Yield
+            2Y Treasury Yield: {currentYield}%
           </h4>
           <div className="flex items-center justify-between">
-            <div className={`text-2xl font-bold ${colors.text.primary}`}>
-              {currentYield}%
-              <span className={`text-base font-normal ${colors.text.secondary} ml-3`}>
-                30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
-              </span>
+            <div className={`text-base font-normal ${colors.text.secondary}`}>
+              30D: {change30Day > 0 ? '+' : ''}{change30Day}bps
             </div>
 
             {data && (

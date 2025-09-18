@@ -119,7 +119,7 @@ const getCalculationTooltip = (metric, data) => {
 
     'aoiDelta': `Δ Open Interest (7D) Calculation:
 📊 Current OI = $${((data.openInterest?.total || 15)).toFixed(1)}B
-📈 7D Change = ${data.oiDelta7d !== undefined ? data.oiDelta7d.toFixed(1) : ((data.openInterest?.change24h || 0) * 3.5).toFixed(1)}%
+📈 7D Change = ${data.oiDelta7d !== undefined ? data.oiDelta7d.toFixed(2) : ((data.openInterest?.change24h || 0) * 3.5).toFixed(2)}%
 🔢 Formula: ((Current OI - OI 7d ago) / OI 7d ago) × 100`
   };
 
@@ -258,8 +258,8 @@ const StateOfLeverageCard = React.memo(() => {
             </span>
             <span className={`text-base font-mono font-semibold ${colors.text.primary}`}>
               {data.oiDelta7d !== undefined
-                ? `${data.oiDelta7d >= 0 ? '+' : ''}${data.oiDelta7d.toFixed(1)}%`
-                : `${(data.openInterest?.change24h || 0) >= 0 ? '+' : ''}${((data.openInterest?.change24h || 0) * 3.5).toFixed(1)}%`}
+                ? `${data.oiDelta7d >= 0 ? '+' : ''}${data.oiDelta7d.toFixed(2)}%`
+                : `${(data.openInterest?.change24h || 0) >= 0 ? '+' : ''}${((data.openInterest?.change24h || 0) * 3.5).toFixed(2)}%`}
             </span>
           </div>
 
