@@ -845,7 +845,7 @@ class CoinGlassService {
       const oiMcapRatio = (totalMarketOI / btcMarketCapBillions) * 100;
 
       // Calculate 7-day OI delta from real market data
-      const oiDelta7d = this.calculateOIDelta7d(oiData);
+      const oiDelta7d = await this.calculateOIDelta7d(oiData, symbol);
 
       console.log(`🎯 Key Metrics: OI=${totalMarketOI.toFixed(2)}B, MCap=${btcMarketCapBillions.toFixed(0)}B, OI/MCap=${oiMcapRatio.toFixed(2)}%, Funding=${(fundingRate8h * 100).toFixed(4)}%`);
 
@@ -879,8 +879,8 @@ class CoinGlassService {
         statusColor: color,
         description: description,
 
-        // Key metrics for display (keep full precision for small funding rates)
-        fundingRate8h: Number(fundingRate8h.toFixed(6)),
+        // Key metrics for display (convert to percentage format for proper display)
+        fundingRate8h: Number((fundingRate8h * 100).toFixed(6)), // Convert to percentage (0.008375 becomes 0.008375%)
         oiMcapRatio: Math.round(oiMcapRatio * 100) / 100,
         oiDelta7d: Math.round(oiDelta7d * 100) / 100,
 
@@ -998,18 +998,93 @@ class CoinGlassService {
   }
 
   /**
-   * Calculate 7-day OI delta from current change percentages
+   * Calculate 7-day OI delta using real historical data or improved estimation
    */
-  calculateOIDelta7d(oiData) {
-    // Use 24h change as base and extrapolate to 7d
-    // This is an approximation since we don't have historical 7d data
-    const change24h = oiData.change24h || 0;
+  async calculateOIDelta7d(oiData, symbol = 'BTC') {
+    try {
+      // Try to get actual 7-day historical OI data
+      const historicalOI = await this.getHistoricalOpenInterest(symbol, '7d');
 
-    // Estimate 7d change as 7x daily change with some variance
-    // In reality, this would be calculated from actual 7-day historical data
-    const estimatedChange7d = change24h * 3.5; // Conservative estimate
+      if (historicalOI && historicalOI.length >= 2) {
+        const latest = historicalOI[historicalOI.length - 1];
+        const sevenDaysAgo = historicalOI[0];
+
+        const change7d = ((latest.value - sevenDaysAgo.value) / sevenDaysAgo.value) * 100;
+        console.log(`📊 Real 7-day OI change calculated: ${change7d.toFixed(2)}% (from ${sevenDaysAgo.value.toFixed(2)}B to ${latest.value.toFixed(2)}B)`);
+
+        return change7d;
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to fetch historical OI data, using conservative estimation:', error.message);
+    }
+
+    // Fallback: Use more conservative estimation based on recent trends
+    const change24h = oiData.change24h || 0;
+    const change4h = oiData.change4h || 0;
+    const change1h = oiData.change1h || 0;
+
+    // Better estimation using multiple timeframes
+    let estimatedChange7d;
+
+    if (Math.abs(change24h) > Math.abs(change4h * 6)) {
+      // If 24h change is significantly different from 4h trend, use damped 24h
+      estimatedChange7d = change24h * 2.5; // More conservative than previous 3.5x
+    } else {
+      // Use 4h trend extrapolated (more accurate for consistent trends)
+      estimatedChange7d = change4h * 42; // 7 days = 42 four-hour periods
+    }
+
+    // Apply realistic bounds (OI rarely changes more than ±30% in 7 days)
+    estimatedChange7d = Math.max(-30, Math.min(30, estimatedChange7d));
+
+    console.log(`📊 Estimated 7-day OI change: ${estimatedChange7d.toFixed(2)}% (based on 24h: ${change24h.toFixed(2)}%, 4h: ${change4h.toFixed(2)}%)`);
 
     return estimatedChange7d;
+  }
+
+  /**
+   * Get historical Open Interest data for better 7-day calculations
+   */
+  async getHistoricalOpenInterest(symbol = 'BTC', period = '7d') {
+    if (!this.isApiAvailable()) {
+      throw new Error('CoinGlass API key not configured');
+    }
+
+    try {
+      // Try v4 futures OI history endpoint
+      const response = await this.limiter.schedule(async () => {
+        return await axios.get(`${this.baseURLv4}/api/futures/open-interest/history`, {
+          headers: {
+            'accept': 'application/json',
+            'CG-API-KEY': this.apiKey
+          },
+          params: {
+            symbol: symbol,
+            interval: '1d',
+            limit: 8 // Get 8 days to ensure we have 7 full days
+          },
+          timeout: 8000
+        });
+      });
+
+      if (response.data.code === "0" && response.data.data && response.data.data.length > 0) {
+        const data = response.data.data;
+
+        return data.map(item => ({
+          timestamp: item.time,
+          value: parseFloat(item.close) / 1e9, // Convert to billions
+          high: parseFloat(item.high) / 1e9,
+          low: parseFloat(item.low) / 1e9,
+          open: parseFloat(item.open) / 1e9
+        }));
+      }
+
+      throw new Error('No historical OI data available');
+
+    } catch (error) {
+      console.warn(`⚠️ Historical OI endpoint failed: ${error.message}`);
+      throw error;
+    }
   }
 
   /**

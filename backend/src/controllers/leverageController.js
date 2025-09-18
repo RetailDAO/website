@@ -455,8 +455,8 @@ class LeverageController {
       statusColor: state.color,
       description: state.description,
 
-      // Key metrics for display (keep full precision for small funding rates)
-      fundingRate8h: Number(funding8h.toFixed(6)), // Keep 6 decimal places for small rates like 0.0036%
+      // Key metrics for display (convert to percentage format for proper display)
+      fundingRate8h: Number((funding8h * 100).toFixed(6)), // Convert to percentage (0.008375 becomes 0.008375%)
       oiMcapRatio: Math.round(oiMcapRatio * 100) / 100, // 2 decimal places for percentage
       oiDelta7d: Math.round(oiDelta7d * 100) / 100, // 2 decimal places for percentage
 
@@ -704,8 +704,8 @@ class LeverageController {
     const oiMcapRatio = Math.random() * 4 + 1; // 1% to 5%
     const oiDelta7d = (Math.random() - 0.5) * 20; // -10% to +10%
     
-    // Determine state based on new criteria
-    const state = this.determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d);
+    // Determine state based on new criteria (convert funding to percentage)
+    const state = this.determineLeverageStateNew(funding8h * 100, oiMcapRatio, oiDelta7d);
     
     return {
       // Status indicators
@@ -713,8 +713,8 @@ class LeverageController {
       statusColor: state.color,
       description: state.description,
       
-      // Key metrics for display
-      fundingRate8h: Number(funding8h.toFixed(6)),
+      // Key metrics for display (convert to percentage format)
+      fundingRate8h: Number((funding8h * 100).toFixed(6)), // Convert to percentage
       oiMcapRatio: Math.round(oiMcapRatio * 100) / 100,
       oiDelta7d: Math.round(oiDelta7d * 100) / 100,
       
