@@ -139,6 +139,10 @@ class CacheService {
     }
   }
 
+  async setWithTTL(key, data, ttl) {
+    return this.set(key, data, ttl);
+  }
+
   async del(key) {
     try {
       if (this.isRedisAvailable()) {
