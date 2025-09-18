@@ -180,7 +180,8 @@ const btcController = {
                 }
               },
               metadata: {
-                calculatedAt: goldenMAs.metadata.timestamp,
+                calculatedAt: new Date().toISOString(), // Use current timestamp when serving
+                timestamp: new Date().toISOString(), // Add timestamp field for frontend compatibility
                 dataPoints: prices.length,
                 source: 'golden',
                 fresh: true,
@@ -211,6 +212,9 @@ const btcController = {
         const freshness = cacheResult.fresh ? 'fresh' : 'stale';
         const source = cacheResult.source;
         result.metadata.fresh = cacheResult.fresh;
+        // Update timestamp to current time when serving any cached data
+        result.metadata.timestamp = new Date().toISOString();
+        result.metadata.calculatedAt = new Date().toISOString();
         console.log(`⚡ Serving ${freshness} MA data from ${source} (${Math.round(performance.now() - startTime)}ms)`);
         if (!cacheResult.fresh) {
           console.log(`🔄 Stale MA data acceptable - will refresh in background`);
