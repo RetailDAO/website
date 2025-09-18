@@ -40,50 +40,64 @@ class LeverageController {
     try {
       const startTime = performance.now();
       
+      // CACHE BYPASS: Add ?fresh=true to API call to get immediate fresh data
+      const bypassCache = req.query.fresh === 'true';
+
       // Use ultra-conservative 3-hour cache for leverage data (98.6% API reduction)
       const hourPeriod = Math.floor(Date.now() / (3 * 60 * 60 * 1000)); // 3-hour periods
       const cacheKey = `market:leverage:btc_${hourPeriod}`;
-      
-      // Try cache with fallback support (stale-while-revalidate pattern)
-      const cacheResult = await this.cacheService.getWithFallback(cacheKey, 'leverage');
-      let result = cacheResult.data;
+
+      // Try cache with fallback support (stale-while-revalidate pattern) unless bypassed
+      let result = null;
+      let cacheResult = null;
+      if (!bypassCache) {
+        cacheResult = await this.cacheService.getWithFallback(cacheKey, 'leverage');
+        result = cacheResult.data;
+      } else {
+        console.log('🔄 Cache bypassed via ?fresh=true - forcing fresh CoinGlass data retrieval');
+      }
       
       if (!result) {
         console.log('🔄 Computing fresh leverage state data');
         
         try {
-          // Try CoinGlass API with hierarchical fallback for institutional-grade data
+          // PRIORITY 1: Force CoinGlass API usage when available (complete market coverage)
           if (coinGlassService.isApiAvailable()) {
-            console.log('🔑 [CoinGlass] Using premium API for leverage data');
+            console.log('🔑 [CoinGlass] API key configured - forcing premium API usage for complete market coverage');
 
-            // TIER 1: Complete market coverage (preferred)
             try {
-              const leverageData = await coinGlassService.calculateLeverageState();
-              console.log('✅ [CoinGlass] Complete market-wide leverage state calculated');
-              result = leverageData;
-            } catch (tier1Error) {
-              console.log('⚠️ [CoinGlass] Complete calculation failed, trying market-wide endpoints:', tier1Error.message);
+              // Use the comprehensive calculateLeverageState method which provides complete market coverage
+              result = await coinGlassService.calculateLeverageState('BTC');
+              console.log('✅ [CoinGlass] Complete market-wide leverage state calculated with full coverage');
+              console.log(`📊 Data Quality: ${result.openInterest.marketCoverage} exchanges, ${result.fundingRate.marketCoverage} funding sources`);
+            } catch (coinglassError) {
+              console.log('⚠️ [CoinGlass] Primary method failed, trying alternative approach:', coinglassError.message);
 
-              // TIER 2: Market-wide endpoints separately (institutional coverage)
+              // Alternative: Use market-wide endpoints directly
               try {
                 const [marketOI, marketFunding] = await Promise.allSettled([
                   coinGlassService.getMarketWideOpenInterest('BTC'),
-                  coinGlassService.getMarketWideFundingRates('BTC', '4h')
+                  coinGlassService.getMarketWideFundingRates('BTC', '8h')
                 ]);
 
-                if (marketOI.status === 'fulfilled' || marketFunding.status === 'fulfilled') {
-                  const oiData = marketOI.status === 'fulfilled' ? this.convertCoinGlassOIData(marketOI.value) : null;
-                  const frData = marketFunding.status === 'fulfilled' ? this.convertCoinGlassFundingData(marketFunding.value) : null;
+                if (marketOI.status === 'fulfilled' && marketFunding.status === 'fulfilled') {
+                  const oiData = this.convertCoinGlassOIData(marketOI.value);
+                  const frData = this.convertCoinGlassFundingData(marketFunding.value);
 
-                  console.log(`✅ [CoinGlass] Market-wide data: OI=${oiData ? 'OK' : 'FAIL'}, Funding=${frData ? 'OK' : 'FAIL'}`);
+                  console.log(`✅ [CoinGlass] Market-wide endpoints successful: OI=$${oiData.total.toFixed(2)}B, Funding=${(frData.averageRate * 100).toFixed(4)}%`);
                   result = this.calculateLeverageState(oiData, frData);
-                } else {
-                  throw new Error('Both market-wide endpoints failed');
-                }
-              } catch (tier2Error) {
-                console.log('⚠️ [CoinGlass] Market-wide endpoints failed, falling back to individual exchanges:', tier2Error.message);
 
-                // TIER 3: Individual exchange APIs (limited coverage)
+                  // Mark as CoinGlass source
+                  result.metadata.dataSource = 'coinglass_v4_market_wide';
+                  result.metadata.coverage = 'complete_market_including_cme';
+                } else {
+                  throw new Error('CoinGlass market-wide endpoints failed');
+                }
+              } catch (marketWideError) {
+                console.log('❌ [CoinGlass] All premium endpoints failed:', marketWideError.message);
+                console.log('⚠️ Falling back to limited exchange data - this will show incomplete market coverage');
+
+                // Only fall back to individual exchanges as last resort
                 const [openInterestData, fundingRatesData] = await Promise.allSettled([
                   this.getOpenInterestData(),
                   this.getFundingRatesData()
@@ -92,8 +106,10 @@ class LeverageController {
                 if (openInterestData.status === 'fulfilled' || fundingRatesData.status === 'fulfilled') {
                   const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
                   const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
-                  console.log('⚡ Using limited exchange data (Bybit + OKX only)');
+                  console.log('⚡ WARNING: Using limited exchange data (Bybit + OKX only) - will not match CoinGlass dashboard');
                   result = this.calculateLeverageState(oiData, frData);
+                  result.metadata.dataSource = 'limited_exchanges';
+                  result.metadata.warning = 'Incomplete market coverage - consider checking CoinGlass API configuration';
                 } else {
                   console.log('🎭 All APIs failed, using fallback data');
                   result = this.generateFallbackData();
@@ -101,8 +117,10 @@ class LeverageController {
               }
             }
           } else {
-            // No CoinGlass API key, use existing exchange APIs
-            console.log('🔓 [CoinGlass] API key not configured, using individual exchange APIs');
+            console.log('❌ [CoinGlass] API key not configured - cannot provide accurate market coverage');
+            console.log('⚠️ Using limited exchange APIs - results will NOT match CoinGlass dashboard');
+
+            // Use existing exchange APIs only when CoinGlass is not available
             const [openInterestData, fundingRatesData] = await Promise.allSettled([
               this.getOpenInterestData(),
               this.getFundingRatesData()
@@ -112,6 +130,8 @@ class LeverageController {
               const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
               const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
               result = this.calculateLeverageState(oiData, frData);
+              result.metadata.dataSource = 'limited_exchanges';
+              result.metadata.warning = 'Configure COINGLASS_API_KEY for complete market coverage';
             } else {
               console.log('🎭 Exchange APIs failed, using fallback data');
               result = this.generateFallbackData();
@@ -130,7 +150,7 @@ class LeverageController {
         
         console.log(`✅ Leverage calculation completed in ${Math.round(performance.now() - startTime)}ms`);
         console.log('🎯 Ultra-conservative cache: Next refresh in 3 hours (98.6% API reduction)');
-      } else {
+      } else if (cacheResult) {
         const freshness = cacheResult.fresh ? 'fresh' : 'stale';
         const source = cacheResult.source;
         console.log(`⚡ Serving ${freshness} leverage data from ${source} (${Math.round(performance.now() - startTime)}ms)`);
@@ -398,47 +418,75 @@ class LeverageController {
     const openInterest = oiData || { total: 15, change24h: 0 };
     const fundingRates = frData || { averageRate: 0.01 };
 
-    // Get BTC market cap (approximate $1.9T as of 2024)
-    const btcMarketCap = 1900; // $1.9T in billions
+    // Get live BTC market cap or use fallback
+    let btcMarketCap = 1900; // $1.9T fallback
+
+    // Check if we have live market cap data from CoinGlass integration
+    if (openInterest.metadata?.btcMarketCap) {
+      btcMarketCap = openInterest.metadata.btcMarketCap;
+      console.log(`💰 Using live BTC market cap: $${btcMarketCap.toFixed(0)}B`);
+    } else {
+      console.log(`💰 Using fallback BTC market cap: $${btcMarketCap}B`);
+    }
+
     const oiMcapRatio = (openInterest.total / btcMarketCap) * 100; // OI/MCap as percentage
 
-    // Funding rate is already in percentage form (8h rate)
-    // Most exchanges provide 8-hour funding rates as percentage
-    const funding8h = fundingRates.averageRate; // Keep as-is, should be like 0.01 for 0.01%
-    
-    // Calculate 7-day OI delta (mock for now - in production, get historical data)
-    const oiDelta7d = openInterest.change24h * 3.5; // Approximate 7-day from 24h change
+    // Handle funding rate conversion based on data source
+    let funding8h = fundingRates.averageRate;
 
-    // Determine leverage state based on new criteria
-    const state = this.determineLeverageStateNew(funding8h * 100, oiMcapRatio, oiDelta7d); // Convert to percentage for comparison
+    // If the funding rate is already in decimal format (CoinGlass v4 API), use as-is
+    // If it's in percentage format, convert to decimal
+    if (Math.abs(funding8h) > 1) {
+      // Likely percentage format, convert to decimal
+      funding8h = funding8h / 100;
+      console.log(`🔄 Converted funding rate from percentage to decimal: ${funding8h.toFixed(6)}`);
+    }
+
+    // Calculate 7-day OI delta - use real data if available
+    let oiDelta7d;
+    if (openInterest.change7d !== undefined) {
+      oiDelta7d = openInterest.change7d; // Real 7-day data from CoinGlass
+    } else {
+      oiDelta7d = openInterest.change24h * 3.5; // Approximate from 24h change
+    }
+
+    console.log(`📊 Calculated Metrics: OI=${openInterest.total.toFixed(2)}B, MCap=${btcMarketCap.toFixed(0)}B, OI/MCap=${oiMcapRatio.toFixed(2)}%, Funding8h=${(funding8h * 100).toFixed(4)}%`);
+
+    // Determine leverage state based on criteria (convert funding to percentage for comparison)
+    const state = this.determineLeverageStateNew(funding8h * 100, oiMcapRatio, oiDelta7d);
 
     return {
       // Status indicators
       status: state.status,
       statusColor: state.color,
       description: state.description,
-      
+
       // Key metrics for display (keep full precision for small funding rates)
       fundingRate8h: Number(funding8h.toFixed(6)), // Keep 6 decimal places for small rates like 0.0036%
       oiMcapRatio: Math.round(oiMcapRatio * 100) / 100, // 2 decimal places for percentage
       oiDelta7d: Math.round(oiDelta7d * 100) / 100, // 2 decimal places for percentage
-      
+
       // Additional data for display
       openInterest: {
         total: Math.round(openInterest.total * 10) / 10,
-        change24h: Math.round(openInterest.change24h * 10) / 10,
-        change7d: Math.round(oiDelta7d * 10) / 10
+        change24h: Math.round((openInterest.change24h || 0) * 10) / 10,
+        change4h: Math.round((openInterest.change4h || 0) * 10) / 10,
+        change1h: Math.round((openInterest.change1h || 0) * 10) / 10,
+        change7d: Math.round(oiDelta7d * 10) / 10,
+        marketCoverage: openInterest.metadata?.exchangeCount || openInterest.exchanges?.length || 2
       },
       fundingRate: {
         current8h: funding8h,
-        annualized: fundingRates.averageRate * 1095, // Approximate annual rate
-        trend: fundingRates.averageRate > 0 ? 'positive' : 'negative'
+        annualized: funding8h * 1095, // Approximate annual rate (8h * 3 * 365)
+        trend: funding8h > 0 ? 'positive' : 'negative',
+        marketCoverage: fundingRates.metadata?.exchangeCount || fundingRates.exchanges?.length || 2
       },
       marketData: {
         btcMarketCap: btcMarketCap,
-        oiMcapRatio: oiMcapRatio
+        oiMcapRatio: oiMcapRatio,
+        dataSource: openInterest.metadata?.source || 'mixed'
       },
-      
+
       // Legacy fields for compatibility
       state: state.key,
       stateLabel: state.label,
@@ -449,8 +497,10 @@ class LeverageController {
       },
       metadata: {
         calculatedAt: new Date().toISOString(),
-        dataSource: 'mixed',
-        fresh: true
+        dataSource: openInterest.metadata?.source || frData.metadata?.source || 'mixed',
+        coverage: openInterest.metadata?.coverage || 'limited',
+        fresh: true,
+        timestamp: Date.now()
       }
     };
   }
@@ -516,21 +566,27 @@ class LeverageController {
    * Convert CoinGlass market-wide OI data to format expected by calculateLeverageState
    */
   convertCoinGlassOIData(coinglassOI) {
+    console.log(`🔄 Converting CoinGlass OI data: $${coinglassOI.totalMarketOI.toFixed(2)}B total across ${coinglassOI.exchanges.length} exchanges`);
+
     return {
-      total: coinglassOI.totalMarketOI, // Already in billions
-      change24h: coinglassOI.change24h,
-      change4h: coinglassOI.change4h,
-      change1h: coinglassOI.change1h,
+      total: coinglassOI.totalMarketOI, // Already in billions from CoinGlass
+      change24h: coinglassOI.change24h || 0,
+      change4h: coinglassOI.change4h || 0,
+      change1h: coinglassOI.change1h || 0,
       exchanges: coinglassOI.exchanges.map(ex => ({
         exchange: ex.exchange,
-        value: ex.openInterestUSD / 1e9, // Convert to billions
-        marketShare: ex.marketShare
+        value: ex.openInterestUSD ? ex.openInterestUSD / 1e9 : ex.value, // Handle both formats
+        marketShare: ex.marketShare,
+        change24h: ex.change24h
       })),
       metadata: {
         source: 'coinglass_v4_market_wide',
         coverage: 'complete_market_including_cme',
         exchangeCount: coinglassOI.exchanges.length,
-        timestamp: coinglassOI.timestamp
+        timestamp: coinglassOI.timestamp,
+        totalMarketOI: coinglassOI.totalMarketOI,
+        cmeIncluded: coinglassOI.exchanges.some(ex => ex.exchange === 'CME'),
+        binanceIncluded: coinglassOI.exchanges.some(ex => ex.exchange === 'Binance')
       }
     };
   }
@@ -539,19 +595,25 @@ class LeverageController {
    * Convert CoinGlass market-wide funding data to format expected by calculateLeverageState
    */
   convertCoinGlassFundingData(coinglassFunding) {
+    const avgRate = coinglassFunding.averageRate;
+    console.log(`🔄 Converting CoinGlass funding data: ${(avgRate * 100).toFixed(4)}% average across ${coinglassFunding.marketCoverage} exchanges`);
+
     return {
-      averageRate: coinglassFunding.averageRate,
-      exchanges: coinglassFunding.stablecoinRates.map(ex => ({
+      averageRate: avgRate, // Keep in decimal format (e.g., 0.0008 for 0.08%)
+      exchanges: (coinglassFunding.stablecoinRates || []).map(ex => ({
         exchange: ex.exchange,
         rate: ex.fundingRate,
-        interval: ex.interval,
-        nextFundingTime: ex.nextFundingTime
+        interval: ex.interval || 8,
+        nextFundingTime: ex.nextFundingTime,
+        type: 'stablecoin_margin'
       })),
       metadata: {
         source: 'coinglass_v4_market_wide',
         coverage: 'all_major_exchanges',
-        exchangeCount: coinglassFunding.marketCoverage,
-        timestamp: coinglassFunding.timestamp
+        exchangeCount: coinglassFunding.marketCoverage || coinglassFunding.stablecoinRates?.length || 0,
+        timestamp: coinglassFunding.timestamp,
+        totalExchanges: coinglassFunding.totalExchanges,
+        dataFormat: 'decimal_rate'
       }
     };
   }

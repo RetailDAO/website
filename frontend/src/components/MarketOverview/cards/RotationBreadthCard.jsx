@@ -222,7 +222,7 @@ const RotationBreadthCard = React.memo(() => {
         <div className="text-center">
           <GlitchButton
             text={seasonConfig.label}
-            statusType={marketSeason === 'altseason' || marketSeason === 'frothy' ? 'easing' : marketSeason === 'btc-season' ? 'tightening' : 'neutral'}
+            statusType={marketSeason === 'altseason' ? 'easing' : marketSeason === 'frothy' ? 'tightening' : marketSeason === 'btc-season' ? 'tightening' : 'neutral'}
             size="md"
           />
         </div>
