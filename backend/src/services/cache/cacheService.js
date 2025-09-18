@@ -21,7 +21,7 @@ class CacheService {
       tier1_realtime: 60,           // 1 min - only for WebSocket price data
       
       // Market Overview v2 optimized caching with CoinGlass integration
-      leverage_data: 10800,         // 3 hours - State of Leverage (target: 98.6% reduction)
+      leverage_data: 14400,         // 4 hours - State of Leverage (target: 98.6% reduction)
       etf_flows: 21600,             // 6 hours - ETF Flows (optimized for CoinGlass premium data)
       futures_basis: 18000,         // 5 hours - Futures Basis calculation
       rotation_breadth: 36000,      // 10 hours - Rotation analysis (CoinGecko protection)

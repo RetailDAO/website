@@ -10,7 +10,7 @@ const cryptoService = new CryptoDataService();
  * 
  * Implements ultra-conservative caching with volatility-based tiers:
  * - Moving Averages: 1-hour (high volatility)
- * - Leverage State: 3-hour (medium volatility) 
+ * - Leverage State: 4-hour (medium volatility) 
  * - Futures Basis: 5-hour (medium volatility)
  * - ETF Flows: 24-hour (daily refresh for freshness)
  * - Rotation Breadth: 10-hour (low volatility)
@@ -142,10 +142,16 @@ class BackgroundJobScheduler {
   }
 
   /**
-   * Tier 2: Leverage State (Every 3 hours at minute 0)
+   * Tier 2: Leverage State (Every 4 hours with randomization - Anti-pattern detection)
    */
   scheduleLeverageStateJob() {
-    const job = cron.schedule('0 */3 * * *', async () => {
+    // Randomize execution minute (0-59) to avoid predictable patterns
+    const randomMinute = Math.floor(Math.random() * 60);
+    const cronExpression = `${randomMinute} */4 * * *`;
+
+    console.log(`🔀 Leverage State job scheduled at random minute: :${randomMinute.toString().padStart(2, '0')} every 4 hours`);
+
+    const job = cron.schedule(cronExpression, async () => {
       await this.executeWithErrorHandling('leverage-state', async () => {
         console.log('🔄 [Background] Updating Leverage State cache...');
         // Placeholder for leverage state calculation
@@ -158,12 +164,12 @@ class BackgroundJobScheduler {
             calculatedAt: new Date().toISOString(),
             source: 'background_job',
             fresh: true,
-            nextUpdate: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()
+            nextUpdate: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
           }
         };
         
         const cacheKey = 'market:leverage_state:current';
-        await cacheService.setWithTTL(cacheKey, result, 3 * 60 * 60); // 3 hours
+        await cacheService.setWithTTL(cacheKey, result, 4 * 60 * 60); // 4 hours
         
         console.log('✅ [Background] Leverage State cache updated');
         return result;
@@ -494,7 +500,7 @@ class BackgroundJobScheduler {
   printSchedule() {
     console.log('📅 Background Job Schedule:');
     console.log('  Moving Averages: Every hour (Tier 1 - High volatility)');
-    console.log('  Leverage State: Every 3 hours (Tier 2 - Medium volatility)');
+    console.log('  Leverage State: Every 4 hours (Tier 2 - Medium volatility)');
     console.log('  Futures Basis: Every 5 hours (Tier 2 - Medium volatility)');
     console.log('  Rotation Breadth: Every 10 hours (Tier 3 - Low volatility)');
     console.log('  Liquidity Pulse: Every 20 hours (Tier 3 - Low volatility)');

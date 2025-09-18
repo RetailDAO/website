@@ -40,22 +40,16 @@ class LeverageController {
     try {
       const startTime = performance.now();
       
-      // CACHE BYPASS: Add ?fresh=true to API call to get immediate fresh data
-      const bypassCache = req.query.fresh === 'true';
 
-      // Use ultra-conservative 3-hour cache for leverage data (98.6% API reduction)
-      const hourPeriod = Math.floor(Date.now() / (3 * 60 * 60 * 1000)); // 3-hour periods
+      // Use ultra-conservative 4-hour cache for leverage data (98.6% API reduction)
+      const hourPeriod = Math.floor(Date.now() / (4 * 60 * 60 * 1000)); // 4-hour periods
       const cacheKey = `market:leverage:btc_${hourPeriod}`;
 
-      // Try cache with fallback support (stale-while-revalidate pattern) unless bypassed
+      // Try cache with fallback support (stale-while-revalidate pattern)
       let result = null;
       let cacheResult = null;
-      if (!bypassCache) {
-        cacheResult = await this.cacheService.getWithFallback(cacheKey, 'leverage');
-        result = cacheResult.data;
-      } else {
-        console.log('🔄 Cache bypassed via ?fresh=true - forcing fresh CoinGlass data retrieval');
-      }
+      cacheResult = await this.cacheService.getWithFallback(cacheKey, 'leverage');
+      result = cacheResult.data;
       
       if (!result) {
         console.log('🔄 Computing fresh leverage state data');
@@ -142,14 +136,14 @@ class LeverageController {
           result = this.generateFallbackData();
         }
         
-        // Use ultra-conservative leverage caching (3-hour TTL)
+        // Use ultra-conservative leverage caching (4-hour TTL)
         await this.cacheService.setLeverageData(cacheKey, result);
         
         // Store fallback data for stale-while-revalidate pattern
         await this.cacheService.setFallbackData(cacheKey, result, 'leverage');
         
         console.log(`✅ Leverage calculation completed in ${Math.round(performance.now() - startTime)}ms`);
-        console.log('🎯 Ultra-conservative cache: Next refresh in 3 hours (98.6% API reduction)');
+        console.log('🎯 Ultra-conservative cache: Next refresh in 4 hours (98.6% API reduction)');
       } else if (cacheResult) {
         const freshness = cacheResult.fresh ? 'fresh' : 'stale';
         const source = cacheResult.source;
