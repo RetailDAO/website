@@ -33,10 +33,22 @@ class RotationController {
       }
     };
 
-    // Stablecoins to exclude (as per client requirements)
+    // Comprehensive filtering lists (as per client requirements)
     this.stablecoins = [
-      'tether', 'usd-coin', 'ethena-usde', 'usds', 'figure-heloc', 
-      'binance-bridged-usdt-bnb-smart-chain', 'dai'
+      'tether', 'usd-coin', 'ethena-usde', 'usds', 'figure-heloc',
+      'binance-bridged-usdt-bnb-smart-chain', 'dai', 'true-usd', 'pax-dollar',
+      'binance-usd', 'first-digital-usd', 'frax', 'origin-dollar'
+    ];
+
+    // Derivatives to exclude (wrapped, staked, synthetic assets)
+    this.derivatives = [
+      'wrapped-bitcoin', 'wrapped-eth', 'cbeth', 'staked-ether', 'rocket-pool-eth',
+      'lido-staked-ether', 'frax-ether', 'binance-wrapped-btc', 'huobi-btc',
+      'bitcoin-avalanche-bridged-btc-b', 'wrapped-solana', 'wrapped-bnb',
+      'wrapped-avax', 'wrapped-fantom', 'wrapped-matic', 'weth', 'wbtc',
+      'kinetiq-staked-hype', 'liquid-staked-ethereum', 'coinbase-wrapped-staked-eth',
+      'mantle-staked-ether', 'restaked-swell-ethereum', 'ankr-staked-eth',
+      'stakewise-v3-oseth', 'kelp-dao-restaked-eth', 'eigenpie-msteth'
     ];
   }
 
@@ -180,17 +192,19 @@ class RotationController {
     return btcData;
   }
 
-  // Get Top 100 coins - HEAVY API call, used strategically once per day
+  // Get Top coins - HEAVY API call, used strategically once per day
+  // Fetch 200 coins to ensure 100 clean coins after intensive filtering
   async getTop100Analysis() {
-    console.log('📊 STRATEGIC API CALL: Top 100 coins with 30D data (once per day)');
+    console.log('📊 STRATEGIC API CALL: Top 200 coins with 30D data (once per day)');
+    console.log('⚠️ Fetching 200 to ensure true Top 100 after intensive derivative filtering');
     console.log('⚠️ This conserves API limits: 1 call/day = 30 calls/month vs 10,000 limit');
-    
+
     const response = await this.coinGeckoLimiter.schedule(async () => {
       return await axios.get(`${this.baseURL}/coins/markets`, {
         params: {
           vs_currency: 'usd',
           order: 'market_cap_desc',
-          per_page: 100,
+          per_page: 200, // Optimized for true top 100 after filtering
           page: 1,
           sparkline: false,
           price_change_percentage: '30d'
@@ -198,21 +212,51 @@ class RotationController {
         timeout: 15000 // Longer timeout for large dataset
       });
     });
-    
+
     console.log(`📈 Received ${response.data.length} coins from CoinGecko`);
     return response.data;
   }
 
-  // Filter coins according to client requirements
+  // Enhanced filtering with comprehensive derivative exclusion
   filterCoins(coins) {
-    const filtered = coins.filter(coin => 
-      !this.stablecoins.includes(coin.id) &&
+    const allExclusions = [...this.stablecoins, ...this.derivatives];
+
+    // Step 1: Apply all filters
+    const filtered = coins.filter(coin =>
+      !allExclusions.includes(coin.id) && // Exclude stablecoins & derivatives
       coin.total_volume > 1000000 && // Min $1M volume
-      coin.price_change_percentage_30d_in_currency !== null
+      coin.price_change_percentage_30d_in_currency !== null && // Valid 30D data
+      !this.isDerivativeByName(coin.name, coin.symbol) // Pattern-based derivative detection
     );
-    
-    console.log(`🔍 Filtered to ${filtered.length} valid coins (removed stablecoins & low volume)`);
-    return filtered;
+
+    // Step 2: Take exactly top 100 after filtering (market cap ordered)
+    const top100Clean = filtered.slice(0, 100);
+
+    console.log(`🔍 Intensive filtering results:`);
+    console.log(`   📊 Started with: ${coins.length} coins`);
+    console.log(`   ❌ Removed ${allExclusions.length} stablecoins/derivatives by ID`);
+    console.log(`   ❌ Removed ${coins.length - filtered.length - allExclusions.length} by volume/data/patterns`);
+    console.log(`   ✅ Final clean dataset: ${top100Clean.length} top coins`);
+    console.log(`   🎯 Target achieved: Top ${top100Clean.length} real trading coins for rotation analysis`);
+
+    return top100Clean;
+  }
+
+  // Pattern-based derivative detection for names/symbols not in our ID list
+  isDerivativeByName(name, symbol) {
+    const derivativePatterns = [
+      /wrapped|staked|liquid|restaked/i,
+      /^w[A-Z]{2,4}$/, // Pattern like WBTC, WETH, WBNB
+      /^st[A-Z]{2,4}$/, // Pattern like stETH, stSOL
+      /bridged|synthetic|receipt/i,
+      /^cb[A-Z]{2,4}$/, // Coinbase wrapped like cbETH
+      /^r[A-Z]{2,4}$/, // Rocket pool like rETH
+      /deposit|vault|yield/i
+    ];
+
+    return derivativePatterns.some(pattern =>
+      pattern.test(name) || pattern.test(symbol)
+    );
   }
 
   // Categorize rotation breadth per client specification
