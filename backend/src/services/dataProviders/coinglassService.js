@@ -610,6 +610,78 @@ class CoinGlassService {
   }
 
   /**
+   * Get OI-Weighted Funding Rate History from CoinGlass v4 API (confirmed working)
+   * Endpoint: /api/futures/funding-rate/oi-weight-history - Open Interest weighted funding rates
+   */
+  async getOIWeightedFundingRates(symbol = 'BTC', interval = '4h', limit = 30) {
+    if (!this.isApiAvailable()) {
+      throw new Error('CoinGlass API key not configured');
+    }
+
+    return this.limiter.schedule(async () => {
+      const response = await axios.get(`${this.baseURLv4}/api/futures/funding-rate/oi-weight-history`, {
+        headers: {
+          'accept': 'application/json',
+          'CG-API-KEY': this.apiKey
+        },
+        params: {
+          symbol: symbol,
+          interval: interval
+        },
+        timeout: 8000
+      });
+
+      if (response.data.code === "0" && response.data.data && response.data.data.length > 0) {
+        const data = response.data.data;
+
+        // Get the latest data point
+        const latestIndex = data.length - 1;
+        const latest = data[latestIndex];
+        const currentRate = parseFloat(latest.close); // Latest close value
+
+        // Create time series for analysis
+        const timeSeries = data.map(item => ({
+          timestamp: new Date(item.time).toISOString(),
+          time: item.time,
+          open: parseFloat(item.open),
+          high: parseFloat(item.high),
+          low: parseFloat(item.low),
+          close: parseFloat(item.close)
+        }));
+
+        // Calculate 24h change (approximately 6 periods back for 4hr intervals)
+        const periodsBack = Math.min(6, latestIndex);
+        const change24h = periodsBack > 0 ?
+          ((currentRate - parseFloat(data[latestIndex - periodsBack].close)) / parseFloat(data[latestIndex - periodsBack].close)) * 100 : 0;
+
+        return {
+          currentRate: currentRate, // Current OI-weighted funding rate (decimal format)
+          ohlc: {
+            open: parseFloat(latest.open),
+            high: parseFloat(latest.high),
+            low: parseFloat(latest.low),
+            close: currentRate
+          },
+          change24h: change24h,
+          interval: interval,
+          timeSeries: timeSeries.slice(-limit), // Return last N periods
+          metadata: {
+            source: 'coinglass_v4_oi_weighted',
+            symbol: symbol,
+            dataPoints: data.length,
+            lastUpdate: latest.time,
+            weightingMethod: 'open_interest_weighted',
+            format: 'decimal' // Values are in decimal format (0.0008 = 0.08%)
+          },
+          timestamp: Date.now()
+        };
+      }
+
+      throw new Error('Invalid CoinGlass OI-Weighted Funding Rate response');
+    });
+  }
+
+  /**
    * Get Options Open Interest from CoinGlass v4 API (confirmed working)
    * Endpoint: /api/option/exchange-oi-history
    */
@@ -747,7 +819,7 @@ class CoinGlassService {
       // Get comprehensive market data from v4 endpoints in parallel
       const [marketOI, marketFunding, btcMarketCap] = await Promise.allSettled([
         this.getMarketWideOpenInterest(symbol), // Complete market OI including CME
-        this.getMarketWideFundingRates(symbol, '4h'), // All exchange funding rates
+        this.getOIWeightedFundingRates(symbol, '4h'), // OI-weighted funding rates (4hr)
         this.getBTCMarketCapFromCoinGecko() // Live market cap
       ]);
 
@@ -761,11 +833,11 @@ class CoinGlassService {
       }
 
       console.log(`📊 Market Coverage: $${oiData.totalMarketOI.toFixed(2)}B total OI across ${oiData.exchanges.length} exchanges`);
-      console.log(`📈 Funding Coverage: ${fundingData.marketCoverage} exchanges, average rate: ${(fundingData.averageRate * 100).toFixed(4)}%`);
+      console.log(`📈 OI-Weighted Funding: ${(fundingData.currentRate * 100).toFixed(4)}% (4hr, Open Interest weighted)`);
       console.log(`💰 Live BTC Market Cap: $${liveMarketCap.toFixed(0)}B`);
 
       // Calculate key metrics with complete market data
-      const fundingRate8h = fundingData.averageRate;
+      const fundingRate8h = fundingData.currentRate; // OI-weighted rate from 4hr data
       const totalMarketOI = oiData.totalMarketOI; // Already in billions
       const btcMarketCapBillions = liveMarketCap;
 
@@ -825,8 +897,17 @@ class CoinGlassService {
           current8h: fundingRate8h,
           annualized: fundingRate8h * 1095,
           trend: fundingRate8h > 0 ? 'positive' : 'negative',
-          marketCoverage: fundingData.marketCoverage,
-          exchangeData: fundingData.stablecoinRates.slice(0, 10) // Top exchanges
+          marketCoverage: 1, // Single OI-weighted average
+          interval: fundingData.interval,
+          weightingMethod: 'open_interest_weighted',
+          ohlc: fundingData.ohlc,
+          change24h: fundingData.change24h,
+          exchangeData: [{
+            exchange: 'OI-Weighted Market Average',
+            rate: fundingRate8h,
+            interval: fundingData.interval,
+            weightingMethod: 'open_interest_weighted'
+          }]
         },
         marketData: {
           btcMarketCap: btcMarketCapBillions,
@@ -855,7 +936,7 @@ class CoinGlassService {
         },
         metadata: {
           calculatedAt: new Date().toISOString(),
-          dataSource: 'coinglass_v4_complete_market',
+          dataSource: 'coinglass_v4_oi_weighted',
           fresh: true,
           fetchTime: Math.round(performance.now() - startTime),
           timestamp: Date.now(),
@@ -866,17 +947,18 @@ class CoinGlassService {
           },
           calculation: {
             openInterestSource: 'v4_market_wide_real',
-            fundingRateSource: 'v4_market_wide_real',
+            fundingRateSource: 'v4_oi_weighted_4hr',
             marketCapSource: 'coingecko_live',
-            methodology: 'complete_market_coverage',
-            accuracy: '95%+'
+            methodology: 'oi_weighted_funding_4hr',
+            accuracy: '95%+',
+            weightingMethod: 'open_interest_weighted'
           }
         }
       };
 
       const dataSourcesUsed = [marketOI, marketFunding, btcMarketCap].filter(r => r.status === 'fulfilled').length;
-      console.log(`✅ [CoinGlass] Complete market leverage state calculated in ${leverageState.metadata.fetchTime}ms (${dataSourcesUsed}/3 sources)`);
-      console.log(`🎯 Market Coverage: ${leverageState.openInterest.marketCoverage} exchanges, ${leverageState.fundingRate.marketCoverage} funding sources`);
+      console.log(`✅ [CoinGlass] OI-weighted leverage state calculated in ${leverageState.metadata.fetchTime}ms (${dataSourcesUsed}/3 sources)`);
+      console.log(`🎯 Market Coverage: ${leverageState.openInterest.marketCoverage} exchanges, OI-weighted funding (4hr interval)`);
 
       return leverageState;
 

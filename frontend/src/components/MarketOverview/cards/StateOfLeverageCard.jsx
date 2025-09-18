@@ -103,11 +103,12 @@ const StatusIndicator = React.memo(({ status, colors }) => {
 // Helper function to generate calculation tooltips for transparency
 const getCalculationTooltip = (metric, data) => {
   const tooltips = {
-    'fundingRate': `Funding Rate Calculation:
-💰 8hr Rate = ${data.fundingRate8h !== undefined ? (data.fundingRate8h * 100).toFixed(4) : 'N/A'}%
-🔄 Updates: Every 8 hours
-📈 Formula: (Current Rate × 100) for %
-📊 Coverage: ${data.fundingRate8h !== undefined ? (data.fundingRate8h * 100).toFixed(3) : 'N/A'}% (8hr) averaged across ${data.fundingRate?.marketCoverage || 18} exchanges`,
+    'fundingRate': `OI-Weighted Funding Rate Calculation:
+💰 4hr Rate = ${data.fundingRate8h !== undefined ? (data.fundingRate8h * 100).toFixed(4) : 'N/A'}%
+🔄 Updates: Every 4 hours (OI-weighted)
+📈 Formula: Open Interest weighted average across exchanges
+⚖️ Weighting: Higher OI exchanges have more influence on the rate
+📊 Source: CoinGlass v4 OI-weighted endpoint for accurate market representation`,
 
     'oiMcap': `OI/Market Cap Calculation:
 💼 Open Interest = $${((data.openInterest?.total || 15)).toFixed(1)}B
@@ -323,6 +324,7 @@ const StateOfLeverageCard = React.memo(() => {
 
           <div className={`${colors.text.muted}`}>
             {data?.metadata?.dataSource === 'coinglass_v4_complete_market' ? 'CoinGlass' :
+             data?.metadata?.dataSource === 'coinglass_v4_oi_weighted' ? 'CoinGlass OI-Weighted' :
              data?.metadata?.dataSource === 'mixed' ? 'Mixed APIs' :
              data ? 'Exchange APIs' : 'Mock'} • {data?.metadata?.calculatedAt ?
              new Date(data.metadata.calculatedAt).toLocaleTimeString('en-US', {

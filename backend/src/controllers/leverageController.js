@@ -73,23 +73,23 @@ class LeverageController {
             } catch (coinglassError) {
               console.log('⚠️ [CoinGlass] Primary method failed, trying alternative approach:', coinglassError.message);
 
-              // Alternative: Use market-wide endpoints directly
+              // Alternative: Use market-wide endpoints directly with OI-weighted funding rates
               try {
                 const [marketOI, marketFunding] = await Promise.allSettled([
                   coinGlassService.getMarketWideOpenInterest('BTC'),
-                  coinGlassService.getMarketWideFundingRates('BTC', '8h')
+                  coinGlassService.getOIWeightedFundingRates('BTC', '4h')
                 ]);
 
                 if (marketOI.status === 'fulfilled' && marketFunding.status === 'fulfilled') {
                   const oiData = this.convertCoinGlassOIData(marketOI.value);
-                  const frData = this.convertCoinGlassFundingData(marketFunding.value);
+                  const frData = this.convertCoinGlassOIWeightedFundingData(marketFunding.value);
 
-                  console.log(`✅ [CoinGlass] Market-wide endpoints successful: OI=$${oiData.total.toFixed(2)}B, Funding=${(frData.averageRate * 100).toFixed(4)}%`);
+                  console.log(`✅ [CoinGlass] OI-weighted endpoints successful: OI=$${oiData.total.toFixed(2)}B, OI-Weighted Funding=${(frData.averageRate * 100).toFixed(4)}% (4hr)`);
                   result = this.calculateLeverageState(oiData, frData);
 
-                  // Mark as CoinGlass source
-                  result.metadata.dataSource = 'coinglass_v4_market_wide';
-                  result.metadata.coverage = 'complete_market_including_cme';
+                  // Mark as CoinGlass OI-weighted source
+                  result.metadata.dataSource = 'coinglass_v4_oi_weighted';
+                  result.metadata.coverage = 'complete_market_oi_weighted_4hr';
                 } else {
                   throw new Error('CoinGlass market-wide endpoints failed');
                 }
@@ -614,6 +614,37 @@ class LeverageController {
         timestamp: coinglassFunding.timestamp,
         totalExchanges: coinglassFunding.totalExchanges,
         dataFormat: 'decimal_rate'
+      }
+    };
+  }
+
+  /**
+   * Convert CoinGlass OI-weighted funding data to format expected by calculateLeverageState
+   */
+  convertCoinGlassOIWeightedFundingData(oiWeightedFunding) {
+    const currentRate = oiWeightedFunding.currentRate;
+    console.log(`🔄 Converting CoinGlass OI-weighted funding data: ${(currentRate * 100).toFixed(4)}% (4hr interval, OI-weighted)`);
+
+    return {
+      averageRate: currentRate, // Current OI-weighted rate in decimal format
+      ohlc: oiWeightedFunding.ohlc,
+      change24h: oiWeightedFunding.change24h,
+      timeSeries: oiWeightedFunding.timeSeries,
+      exchanges: [{
+        exchange: 'OI-Weighted Average',
+        rate: currentRate,
+        interval: parseInt(oiWeightedFunding.interval.replace('h', '')),
+        type: 'oi_weighted_average'
+      }],
+      metadata: {
+        source: 'coinglass_v4_oi_weighted',
+        coverage: 'oi_weighted_market_average',
+        exchangeCount: 1, // Single weighted average
+        weightingMethod: 'open_interest_weighted',
+        interval: oiWeightedFunding.interval,
+        timestamp: oiWeightedFunding.timestamp,
+        dataFormat: 'decimal_rate',
+        lastUpdate: oiWeightedFunding.metadata.lastUpdate
       }
     };
   }
