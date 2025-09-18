@@ -998,11 +998,45 @@ class CoinGlassService {
   }
 
   /**
-   * Calculate 7-day OI delta using real historical data or improved estimation
+   * Calculate 7-day OI delta using REAL historical data from aggregated-history endpoint
+   * Ultra-conservative approach with cache-first strategy and proper error handling
    */
   async calculateOIDelta7d(oiData, symbol = 'BTC') {
     try {
-      // Try to get actual 7-day historical OI data
+      // PRIORITY 1: Use real historical aggregated data (WORKING endpoint)
+      const historicalData = await this.getHistoricalOpenInterestAggregated(symbol, '4h', 50);
+
+      if (historicalData && historicalData.data && historicalData.data.length >= 42) {
+        // Calculate exact 7-day change using data points 7 days apart
+        // 7 days = 42 intervals at 4h per interval
+        const latest = historicalData.data[historicalData.data.length - 1];
+        const sevenDaysAgo = historicalData.data[historicalData.data.length - 42];
+
+        const realChange7d = ((latest.value - sevenDaysAgo.value) / sevenDaysAgo.value) * 100;
+
+        console.log(`📊 REAL 7-day OI change calculated: ${realChange7d.toFixed(2)}%`);
+        console.log(`   From: ${sevenDaysAgo.value.toFixed(2)}B (${new Date(sevenDaysAgo.timestamp).toISOString().split('T')[0]})`);
+        console.log(`   To: ${latest.value.toFixed(2)}B (${new Date(latest.timestamp).toISOString().split('T')[0]})`);
+        console.log(`   Source: CoinGlass aggregated-history (${historicalData.dataPoints} points, ${historicalData.timespan.days} days)`);
+
+        // Apply reasonable bounds for safety (OI rarely changes more than ±50% in 7 days)
+        const boundedChange = Math.max(-50, Math.min(50, realChange7d));
+
+        if (boundedChange !== realChange7d) {
+          console.warn(`⚠️ 7-day OI change bounded from ${realChange7d.toFixed(2)}% to ${boundedChange.toFixed(2)}%`);
+        }
+
+        return boundedChange;
+      } else {
+        console.warn(`⚠️ Insufficient historical data: ${historicalData?.data?.length || 0} points (need 42+ for 7-day calc)`);
+      }
+    } catch (error) {
+      console.error('❌ Real historical OI calculation failed:', error.message);
+    }
+
+    try {
+      // FALLBACK 1: Try legacy historical endpoint
+      console.log('🔄 Attempting fallback to legacy historical endpoint');
       const historicalOI = await this.getHistoricalOpenInterest(symbol, '7d');
 
       if (historicalOI && historicalOI.length >= 2) {
@@ -1010,34 +1044,42 @@ class CoinGlassService {
         const sevenDaysAgo = historicalOI[0];
 
         const change7d = ((latest.value - sevenDaysAgo.value) / sevenDaysAgo.value) * 100;
-        console.log(`📊 Real 7-day OI change calculated: ${change7d.toFixed(2)}% (from ${sevenDaysAgo.value.toFixed(2)}B to ${latest.value.toFixed(2)}B)`);
+        console.log(`📊 Legacy 7-day OI change: ${change7d.toFixed(2)}% (from ${sevenDaysAgo.value.toFixed(2)}B to ${latest.value.toFixed(2)}B)`);
 
-        return change7d;
+        return Math.max(-50, Math.min(50, change7d));
       }
-    } catch (error) {
-      console.warn('⚠️ Failed to fetch historical OI data, using conservative estimation:', error.message);
+    } catch (fallbackError) {
+      console.warn('⚠️ Legacy historical endpoint also failed:', fallbackError.message);
     }
 
-    // Fallback: Use more conservative estimation based on recent trends
+    // FALLBACK 2: Conservative estimation (much improved)
+    console.log('🔄 Using ultra-conservative estimation as final fallback');
+
     const change24h = oiData.change24h || 0;
     const change4h = oiData.change4h || 0;
-    const change1h = oiData.change1h || 0;
 
-    // Better estimation using multiple timeframes
     let estimatedChange7d;
 
-    if (Math.abs(change24h) > Math.abs(change4h * 6)) {
-      // If 24h change is significantly different from 4h trend, use damped 24h
-      estimatedChange7d = change24h * 2.5; // More conservative than previous 3.5x
+    // Use the most conservative approach: cap 24h change extrapolation
+    if (Math.abs(change24h) > 5) {
+      // If 24h change is extreme (>5%), be very conservative
+      estimatedChange7d = change24h * 1.5; // Very conservative multiplier
+    } else if (Math.abs(change4h) < 1) {
+      // If 4h change is small, use dampened 24h
+      estimatedChange7d = change24h * 2.0;
     } else {
-      // Use 4h trend extrapolated (more accurate for consistent trends)
-      estimatedChange7d = change4h * 42; // 7 days = 42 four-hour periods
+      // Use average of two approaches
+      const approach1 = change24h * 2.0;
+      const approach2 = change4h * 21; // 7 days = 42 periods, but halved for conservatism
+      estimatedChange7d = (approach1 + approach2) / 2;
     }
 
-    // Apply realistic bounds (OI rarely changes more than ±30% in 7 days)
-    estimatedChange7d = Math.max(-30, Math.min(30, estimatedChange7d));
+    // Apply ultra-conservative bounds (±15% max for estimations)
+    estimatedChange7d = Math.max(-15, Math.min(15, estimatedChange7d));
 
-    console.log(`📊 Estimated 7-day OI change: ${estimatedChange7d.toFixed(2)}% (based on 24h: ${change24h.toFixed(2)}%, 4h: ${change4h.toFixed(2)}%)`);
+    console.log(`📊 Ultra-conservative 7-day OI estimation: ${estimatedChange7d.toFixed(2)}%`);
+    console.log(`   Based on: 24h=${change24h.toFixed(2)}%, 4h=${change4h.toFixed(2)}% (bounded to ±15%)`);
+    console.warn('⚠️ This is an ESTIMATION - real data preferred');
 
     return estimatedChange7d;
   }
@@ -1085,6 +1127,99 @@ class CoinGlassService {
       console.warn(`⚠️ Historical OI endpoint failed: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * Get aggregated historical Open Interest data with ultra-conservative caching
+   * Uses /api/futures/open-interest/aggregated-history endpoint (WORKING)
+   * Supports 4h and 6h intervals for accurate 7-day calculations
+   */
+  async getHistoricalOpenInterestAggregated(symbol = 'BTC', interval = '4h', limit = 50) {
+    if (!this.isApiAvailable()) {
+      throw new Error('CoinGlass API key not configured');
+    }
+
+    // Ultra-conservative cache key with 8-hour TTL for historical data
+    const cacheKey = `coinglass:historical_oi:${symbol.toLowerCase()}:${interval}:${limit}`;
+
+    // Check cache first (cache-first strategy)
+    const cacheService = require('../cache/cacheService');
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) {
+      console.log(`📊 [CoinGlass] Serving historical OI from cache: ${symbol} ${interval} (${cachedData.dataPoints} points)`);
+      return cachedData;
+    }
+
+    return this.limiter.schedule(async () => {
+      try {
+        console.log(`🔄 [CoinGlass] Fetching historical OI: ${symbol} ${interval} (${limit} points)`);
+
+        const response = await axios.get(`${this.baseURLv4}/api/futures/open-interest/aggregated-history`, {
+          headers: {
+            'accept': 'application/json',
+            'CG-API-KEY': this.apiKey
+          },
+          params: {
+            symbol: symbol,
+            interval: interval
+          },
+          timeout: 10000
+        });
+
+        if (response.data.code === "0" && response.data.data && response.data.data.length > 0) {
+          const rawData = response.data.data;
+
+          // Take the most recent data points (limit)
+          const limitedData = rawData.slice(-limit);
+
+          const processedData = limitedData.map(item => ({
+            timestamp: item.time,
+            time: new Date(item.time).toISOString(),
+            value: parseFloat(item.close) / 1e9, // Convert to billions (close value)
+            open: parseFloat(item.open) / 1e9,
+            high: parseFloat(item.high) / 1e9,
+            low: parseFloat(item.low) / 1e9,
+            close: parseFloat(item.close) / 1e9
+          }));
+
+          const result = {
+            data: processedData,
+            symbol: symbol,
+            interval: interval,
+            dataPoints: processedData.length,
+            timespan: {
+              from: new Date(processedData[0].timestamp).toISOString().split('T')[0],
+              to: new Date(processedData[processedData.length - 1].timestamp).toISOString().split('T')[0],
+              days: Math.ceil((processedData[processedData.length - 1].timestamp - processedData[0].timestamp) / (24*60*60*1000))
+            },
+            current: {
+              value: processedData[processedData.length - 1].value,
+              timestamp: processedData[processedData.length - 1].timestamp
+            },
+            metadata: {
+              source: 'coinglass_v4_aggregated_history',
+              fetchedAt: new Date().toISOString(),
+              endpoint: 'aggregated-history',
+              intervalHours: parseInt(interval.replace('h', '')),
+              cacheKey: cacheKey
+            }
+          };
+
+          // Ultra-conservative caching: 8-hour TTL for historical data
+          const cacheTTL = 8 * 60 * 60; // 8 hours in seconds
+          await cacheService.set(cacheKey, result, cacheTTL);
+
+          console.log(`✅ [CoinGlass] Historical OI cached: ${symbol} ${interval} (${processedData.length} points, ${result.timespan.days} days, TTL: 8h)`);
+
+          return result;
+        }
+
+        throw new Error('Invalid aggregated history response');
+      } catch (error) {
+        console.error(`❌ [CoinGlass] Aggregated historical OI failed: ${error.response?.data?.msg || error.message}`);
+        throw new Error(`Historical OI aggregated data unavailable: ${error.message}`);
+      }
+    });
   }
 
   /**

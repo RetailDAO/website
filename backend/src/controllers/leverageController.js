@@ -79,7 +79,7 @@ class LeverageController {
                   const frData = this.convertCoinGlassOIWeightedFundingData(marketFunding.value);
 
                   console.log(`✅ [CoinGlass] OI-weighted endpoints successful: OI=$${oiData.total.toFixed(2)}B, OI-Weighted Funding=${(frData.averageRate * 100).toFixed(4)}% (4hr)`);
-                  result = this.calculateLeverageState(oiData, frData);
+                  result = await this.calculateLeverageState(oiData, frData);
 
                   // Mark as CoinGlass OI-weighted source
                   result.metadata.dataSource = 'coinglass_v4_oi_weighted';
@@ -101,7 +101,7 @@ class LeverageController {
                   const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
                   const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
                   console.log('⚡ WARNING: Using limited exchange data (Bybit + OKX only) - will not match CoinGlass dashboard');
-                  result = this.calculateLeverageState(oiData, frData);
+                  result = await this.calculateLeverageState(oiData, frData);
                   result.metadata.dataSource = 'limited_exchanges';
                   result.metadata.warning = 'Incomplete market coverage - consider checking CoinGlass API configuration';
                 } else {
@@ -123,7 +123,7 @@ class LeverageController {
             if (openInterestData.status === 'fulfilled' || fundingRatesData.status === 'fulfilled') {
               const oiData = openInterestData.status === 'fulfilled' ? openInterestData.value : null;
               const frData = fundingRatesData.status === 'fulfilled' ? fundingRatesData.value : null;
-              result = this.calculateLeverageState(oiData, frData);
+              result = await this.calculateLeverageState(oiData, frData);
               result.metadata.dataSource = 'limited_exchanges';
               result.metadata.warning = 'Configure COINGLASS_API_KEY for complete market coverage';
             } else {
@@ -407,7 +407,7 @@ class LeverageController {
   }
 
   // Calculate leverage state from open interest and funding rate data
-  calculateLeverageState(oiData, frData) {
+  async calculateLeverageState(oiData, frData) {
     // Default values if data is missing
     const openInterest = oiData || { total: 15, change24h: 0 };
     const fundingRates = frData || { averageRate: 0.01 };
@@ -425,29 +425,39 @@ class LeverageController {
 
     const oiMcapRatio = (openInterest.total / btcMarketCap) * 100; // OI/MCap as percentage
 
-    // Handle funding rate conversion based on data source
-    let funding8h = fundingRates.averageRate;
+    // Handle funding rate - CoinGlass API returns percentage format (0.007241 = 0.007241%)
+    let funding8hPercent = fundingRates.averageRate;
 
-    // If the funding rate is already in decimal format (CoinGlass v4 API), use as-is
-    // If it's in percentage format, convert to decimal
-    if (Math.abs(funding8h) > 1) {
-      // Likely percentage format, convert to decimal
-      funding8h = funding8h / 100;
-      console.log(`🔄 Converted funding rate from percentage to decimal: ${funding8h.toFixed(6)}`);
-    }
+    // CoinGlass API returns percentage values ready for display (0.007241 = 0.007241%)
+    // No conversion needed - use the value as-is for percentage display
+    console.log(`📊 Raw funding rate from CoinGlass API: ${funding8hPercent}% (ready for display)`);
 
-    // Calculate 7-day OI delta - use real data if available
+    // Convert to decimal for state determination calculations only
+    const fundingDecimal = funding8hPercent / 100;
+
+    // Calculate 7-day OI delta - use CoinGlass service for accurate calculation
     let oiDelta7d;
     if (openInterest.change7d !== undefined) {
       oiDelta7d = openInterest.change7d; // Real 7-day data from CoinGlass
+    } else if (coinGlassService.isApiAvailable()) {
+      // Use CoinGlass service for accurate 7-day calculation (with historical data or better estimation)
+      try {
+        oiDelta7d = await coinGlassService.calculateOIDelta7d(openInterest, 'BTC');
+        console.log(`📊 Using CoinGlass 7-day OI calculation: ${oiDelta7d.toFixed(2)}%`);
+      } catch (error) {
+        console.warn('⚠️ CoinGlass 7-day calculation failed, using fallback:', error.message);
+        oiDelta7d = Math.max(-15, Math.min(15, openInterest.change24h * 2.5)); // Conservative fallback
+      }
     } else {
-      oiDelta7d = openInterest.change24h * 3.5; // Approximate from 24h change
+      // Conservative fallback when CoinGlass not available
+      oiDelta7d = Math.max(-15, Math.min(15, openInterest.change24h * 2.5)); // Much more conservative than 3.5x
+      console.log(`📊 Using conservative 7-day OI estimation: ${oiDelta7d.toFixed(2)}% (limited to ±15%)`);
     }
 
-    console.log(`📊 Calculated Metrics: OI=${openInterest.total.toFixed(2)}B, MCap=${btcMarketCap.toFixed(0)}B, OI/MCap=${oiMcapRatio.toFixed(2)}%, Funding8h=${(funding8h * 100).toFixed(4)}%`);
+    console.log(`📊 Calculated Metrics: OI=${openInterest.total.toFixed(2)}B, MCap=${btcMarketCap.toFixed(0)}B, OI/MCap=${oiMcapRatio.toFixed(2)}%, Funding8h=${funding8hPercent.toFixed(4)}%`);
 
-    // Determine leverage state based on criteria (convert funding to percentage for comparison)
-    const state = this.determineLeverageStateNew(funding8h * 100, oiMcapRatio, oiDelta7d);
+    // Determine leverage state based on criteria (use funding percentage value)
+    const state = this.determineLeverageStateNew(funding8hPercent, oiMcapRatio, oiDelta7d);
 
     return {
       // Status indicators
@@ -455,8 +465,8 @@ class LeverageController {
       statusColor: state.color,
       description: state.description,
 
-      // Key metrics for display (convert to percentage format for proper display)
-      fundingRate8h: Number((funding8h * 100).toFixed(6)), // Convert to percentage (0.008375 becomes 0.008375%)
+      // Key metrics for display (convert decimal to percentage)
+      fundingRate8h: Number(funding8hPercent.toFixed(4)), // Display converted percentage (0.007241 → 0.7241%)
       oiMcapRatio: Math.round(oiMcapRatio * 100) / 100, // 2 decimal places for percentage
       oiDelta7d: Math.round(oiDelta7d * 100) / 100, // 2 decimal places for percentage
 
@@ -470,9 +480,9 @@ class LeverageController {
         marketCoverage: openInterest.metadata?.exchangeCount || openInterest.exchanges?.length || 2
       },
       fundingRate: {
-        current8h: funding8h,
-        annualized: funding8h * 1095, // Approximate annual rate (8h * 3 * 365)
-        trend: funding8h > 0 ? 'positive' : 'negative',
+        current8h: fundingDecimal, // Use decimal version for internal calculations
+        annualized: fundingDecimal * 1095, // Approximate annual rate (8h * 3 * 365)
+        trend: funding8hPercent > 0 ? 'positive' : 'negative',
         marketCoverage: fundingRates.metadata?.exchangeCount || fundingRates.exchanges?.length || 2
       },
       marketData: {
@@ -500,12 +510,12 @@ class LeverageController {
   }
 
   // Determine leverage state based on client's rules from Image #3
-  determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d) {
-    console.log(`🔍 State determination: Funding8h=${funding8h.toFixed(4)}%, OI/MCap=${oiMcapRatio.toFixed(2)}%, ΔOI7d=${oiDelta7d.toFixed(2)}%`);
+  determineLeverageStateNew(fundingPercent, oiMcapRatio, oiDelta7d) {
+    console.log(`🔍 State determination: Funding=${fundingPercent.toFixed(4)}%, OI/MCap=${oiMcapRatio.toFixed(2)}%, ΔOI7d=${oiDelta7d.toFixed(2)}%`);
 
     // Short-Crowded → Squeeze Risk (Green)
-    // Rules: Funding ≤ -0.02% per 8h AND ΔOI ≥ +5% in 7 days AND Price flat/down (≤ +2% in 7d)
-    if (funding8h <= -0.02 && oiDelta7d >= 5.0) {
+    // Rules: Funding ≤ -0.02% AND ΔOI ≥ +5% in 7 days
+    if (fundingPercent <= -0.02 && oiDelta7d >= 5.0) {
       console.log('✅ State: Short-Crowded (Squeeze Risk conditions met)');
       return {
         key: 'green',
@@ -519,8 +529,8 @@ class LeverageController {
     }
 
     // Long-Crowded → Flush Risk (Red)
-    // Rules: Funding ≥ +0.02% per 8h AND (OI/MCap ≥ 2.5% BTC or 3.5% ETH, OR ΔOI ≥ +10% in 7d with price up > +8%)
-    if (funding8h >= 0.02 && (oiMcapRatio >= 2.5 || oiDelta7d >= 10.0)) {
+    // Rules: Funding ≥ +0.02% AND (OI/MCap ≥ 2.5% BTC or ΔOI ≥ +10% in 7d)
+    if (fundingPercent >= 0.02 && (oiMcapRatio >= 2.5 || oiDelta7d >= 10.0)) {
       console.log('✅ State: Long-Crowded (Flush Risk conditions met)');
       return {
         key: 'red',
@@ -553,7 +563,7 @@ class LeverageController {
     const oiMcapRatio = overallScore / 10; // Rough conversion
     const oiDelta7d = (Math.random() - 0.5) * 10; // Random delta for fallback
     
-    return this.determineLeverageStateNew(funding8h, oiMcapRatio, oiDelta7d);
+    return this.determineLeverageStateNew(funding8h * 100, oiMcapRatio, oiDelta7d);
   }
 
   /**
@@ -646,7 +656,7 @@ class LeverageController {
   /**
    * Process comprehensive CoinGlass data into leverage state
    */
-  processCoinGlassData(comprehensiveData) {
+  async processCoinGlassData(comprehensiveData) {
     console.log('🔍 [CoinGlass] Processing comprehensive leverage data');
 
     // Extract data from CoinGlass response
@@ -676,7 +686,7 @@ class LeverageController {
     } : null;
 
     // Use existing calculation method with enhanced data
-    const result = this.calculateLeverageState(openInterest, fundingRates);
+    const result = await this.calculateLeverageState(openInterest, fundingRates);
 
     // Enhance with CoinGlass specific data
     if (longShortRatio) {
