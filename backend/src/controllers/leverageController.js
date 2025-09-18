@@ -465,8 +465,8 @@ class LeverageController {
       statusColor: state.color,
       description: state.description,
 
-      // Key metrics for display (convert decimal to percentage)
-      fundingRate8h: Number(funding8hPercent.toFixed(4)), // Display converted percentage (0.007241 → 0.7241%)
+      // Key metrics for display (send as decimal for frontend percentage display)
+      fundingRate8h: Number(fundingDecimal.toFixed(6)), // Send decimal for frontend to format as percentage (0.005518 → 0.005518%)
       oiMcapRatio: Math.round(oiMcapRatio * 100) / 100, // 2 decimal places for percentage
       oiDelta7d: Math.round(oiDelta7d * 100) / 100, // 2 decimal places for percentage
 
@@ -723,8 +723,8 @@ class LeverageController {
       statusColor: state.color,
       description: state.description,
       
-      // Key metrics for display (convert to percentage format)
-      fundingRate8h: Number((funding8h * 100).toFixed(6)), // Convert to percentage
+      // Key metrics for display (send as decimal for frontend percentage display)
+      fundingRate8h: Number(funding8h.toFixed(6)), // Send decimal for frontend to format as percentage
       oiMcapRatio: Math.round(oiMcapRatio * 100) / 100,
       oiDelta7d: Math.round(oiDelta7d * 100) / 100,
       

@@ -879,8 +879,8 @@ class CoinGlassService {
         statusColor: color,
         description: description,
 
-        // Key metrics for display (convert to percentage format for proper display)
-        fundingRate8h: Number((fundingRate8h * 100).toFixed(6)), // Convert to percentage (0.008375 becomes 0.008375%)
+        // Key metrics for display (send as decimal for frontend percentage display)
+        fundingRate8h: Number(fundingRate8h.toFixed(6)), // Send decimal for frontend to format as percentage (0.008375 → 0.008375%)
         oiMcapRatio: Math.round(oiMcapRatio * 100) / 100,
         oiDelta7d: Math.round(oiDelta7d * 100) / 100,
 

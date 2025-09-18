@@ -104,7 +104,7 @@ const StatusIndicator = React.memo(({ status, colors }) => {
 const getCalculationTooltip = (metric, data) => {
   const tooltips = {
     'fundingRate': `OI-Weighted Funding Rate Calculation:
-💰 4hr Rate = ${data.fundingRate8h !== undefined ? (data.fundingRate8h * 100).toFixed(4) : 'N/A'}%
+💰 4hr Rate = ${data.fundingRate8h !== undefined ? data.fundingRate8h.toFixed(4) : 'N/A'}%
 🔄 Updates: Every 4 hours (OI-weighted)
 📈 Formula: Open Interest weighted average across exchanges
 ⚖️ Weighting: Higher OI exchanges have more influence on the rate
@@ -228,7 +228,7 @@ const StateOfLeverageCard = React.memo(() => {
             </span>
             <span className={`text-base font-mono font-semibold ${colors.text.primary}`}>
               {data.fundingRate8h !== undefined
-                ? `${data.fundingRate8h >= 0 ? '+' : ''}${(data.fundingRate8h * 100).toFixed(4)}%`
+                ? `${data.fundingRate8h >= 0 ? '+' : ''}${data.fundingRate8h.toFixed(4)}%`
                 : `${data.fundingRate?.average >= 0 ? '+' : ''}${((data.fundingRate?.average || 0) * 100).toFixed(4)}%`}
             </span>
           </div>
