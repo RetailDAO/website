@@ -27,12 +27,12 @@ const themes = {
       highlight: 'text-yellow-400'      // Key metrics
     },
     border: {
-      primary: 'border-gray-800',       // Subtle card borders
+      primary: 'border-orange-500',     // Orange card borders for readability
       secondary: 'border-gray-700',     // Section dividers
-      hover: 'hover:border-orange-500/30' // Orange accent on hover
+      hover: 'hover:border-orange-400' // Brighter orange on hover
     },
     shadow: {
-      card: '',                         // No shadows for flat aesthetic
+      card: 'ring-[0.5px] ring-orange-500',   // Thin orange ring borders for card visibility
       glow: 'shadow-orange-500/20'      // Subtle glow for important elements
     },
     chart: {
@@ -111,12 +111,12 @@ const themes = {
       highlight: 'text-green-200'       // Bright green highlight
     },
     border: {
-      primary: 'border-green-800',      // Dark green borders
+      primary: 'border-green-500',      // Green card borders for readability
       secondary: 'border-green-700',    // Slightly brighter
-      hover: 'hover:border-green-500'   // Bright green on hover
+      hover: 'hover:border-green-400'   // Bright green on hover
     },
     shadow: {
-      card: '',                         // No shadows for authentic terminal feel
+      card: 'ring-[0.5px] ring-green-500',    // Thin green ring borders for card visibility
       glow: 'shadow-green-400/30'       // Green terminal glow
     },
     chart: {
