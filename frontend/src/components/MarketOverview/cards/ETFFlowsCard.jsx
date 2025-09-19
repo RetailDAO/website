@@ -161,7 +161,7 @@ const ETFFlowChart = React.memo(({ flows }) => {
                 >
                   {/* Tooltip */}
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-20 whitespace-nowrap">
-                    {new Date(flow.date + 'T00:00:00.000Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}: {formatFlowValue(flowValue)}
+                    {new Date(flow.date + 'T00:00:00.000Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' })}: {formatFlowValue(flowValue)}
                   </div>
 
                   {/* Professional thin bar */}
@@ -199,7 +199,7 @@ const ETFFlowChart = React.memo(({ flows }) => {
                     textAlign: 'center'
                   }}
                 >
-                  {new Date(flow.date + 'T00:00:00.000Z').toLocaleDateString('en-US', { day: 'numeric', timeZone: 'UTC' })}
+                  {new Date(flow.date + 'T00:00:00.000Z').toLocaleDateString('en-US', { day: 'numeric', timeZone: 'America/New_York' })}
                 </div>
               ) : null;
             })}

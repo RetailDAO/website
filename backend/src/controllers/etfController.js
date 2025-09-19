@@ -330,11 +330,13 @@ class ETFController {
 
     // Generate complete date range for requested period (including weekends)
     // This ensures we always return the full calendar period requested
-    // Use UTC to avoid timezone issues
-    const endDate = new Date();
-    endDate.setUTCHours(0, 0, 0, 0); // Start of day in UTC
+    // Use US Eastern Time as reference since ETFs trade in US markets
+    const now = new Date();
+    const usEasternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const endDate = new Date(usEasternTime);
+    endDate.setHours(0, 0, 0, 0); // Start of day in US Eastern
     const startDate = new Date(endDate);
-    startDate.setUTCDate(endDate.getUTCDate() - daysBack + 1);
+    startDate.setDate(endDate.getDate() - daysBack + 1);
 
     // Find the maximum data points available from ETF sources
     const maxDataPoints = Math.max(...validETFs.map(etf => etf.data.dataPoints));
@@ -342,7 +344,7 @@ class ETFController {
     // Create flows for each calendar day in the range
     for (let dayOffset = 0; dayOffset < daysBack; dayOffset++) {
       const currentDate = new Date(startDate);
-      currentDate.setUTCDate(startDate.getUTCDate() + dayOffset);
+      currentDate.setDate(startDate.getDate() + dayOffset);
       const dateString = currentDate.toISOString().split('T')[0];
 
       let dailyAggregatedFlow = 0;
@@ -355,8 +357,10 @@ class ETFController {
         // Look for matching date in ETF timestamps
         const matchingIndex = etf.data.timestamps.findIndex(timestamp => {
           const etfDate = new Date(timestamp * 1000);
-          etfDate.setUTCHours(0, 0, 0, 0); // Normalize to start of day UTC
-          const etfDateString = etfDate.toISOString().split('T')[0];
+          // Convert to US Eastern Time for consistent comparison
+          const etfDateInET = new Date(etfDate.toLocaleString("en-US", {timeZone: "America/New_York"}));
+          etfDateInET.setHours(0, 0, 0, 0);
+          const etfDateString = etfDateInET.toISOString().split('T')[0];
           return etfDateString === dateString;
         });
 
@@ -515,9 +519,12 @@ class ETFController {
     const daysToShow = period === '1M' ? 30 : 14;
     const flows = [];
     for (let i = maxDaysBack - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setUTCDate(date.getUTCDate() - i);
-      date.setUTCHours(0, 0, 0, 0); // Start of day in UTC
+      // Use US Eastern Time for consistent fallback dates
+      const now = new Date();
+      const usEasternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+      const date = new Date(usEasternTime);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0); // Start of day in US Eastern
 
       // More realistic flow patterns - some days positive, some negative
       const isPositiveDay = Math.random() < 0.65; // 65% chance positive
