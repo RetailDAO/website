@@ -231,7 +231,7 @@ const ETFFlowsCard = React.memo(() => {
   usePerformanceTracking('ETFFlowsCard');
   
   // Balanced data loading - allow proper cache invalidation for period toggles
-  const { data: apiResponse, isLoading, error, isFetching } = useQuery({
+  const { data: apiResponse, isLoading, error, isFetching, refetch } = useQuery({
     queryKey: ['etf-flows', period],
     queryFn: () => apiService.getETFFlows(period),
     staleTime: 5 * 60 * 1000, // 5 minutes - allows fresh data when toggling periods
@@ -240,11 +240,14 @@ const ETFFlowsCard = React.memo(() => {
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1, // Allow one retry for better reliability
-    networkMode: 'offlineFirst'
+    networkMode: 'offlineFirst' // Keep original cache-first strategy
   });
+
 
   // Extract data from API response with cache age calculation
   const data = useMemo(() => {
+    console.log('🔍 [ETF DEBUG] useMemo triggered, apiResponse:', apiResponse);
+
     if (apiResponse?.success && apiResponse?.data) {
       const dataTimestamp = apiResponse.data.metadata?.timestamp || apiResponse.data.timestamp || Date.now();
       const cacheAge = Date.now() - dataTimestamp;
@@ -260,16 +263,20 @@ const ETFFlowsCard = React.memo(() => {
       }));
 
       // DEBUG: Log data for inconsistency investigation
-      console.log('🔍 [ETF DEBUG] Raw API Response:', {
+      console.log('🔍 [ETF DEBUG] Processing valid API Response:', {
+        hasSuccess: !!apiResponse.success,
+        hasData: !!apiResponse.data,
         inflow5D: apiResponse.data.inflow5D,
         flowsCount: transformedFlows.length,
         last5Flows: transformedFlows.slice(-5).map(f => ({ date: f.date, inflow: f.inflow })),
         manualCalc5D: transformedFlows.slice(-5).reduce((sum, f) => sum + f.inflow, 0),
         status: apiResponse.data.status,
-        terminalLabel: apiResponse.data.terminalLabel
+        terminalLabel: apiResponse.data.terminalLabel,
+        fromCache: apiResponse._fromCache,
+        isStale: apiResponse._isStale
       });
 
-      return {
+      const processedData = {
         flows: transformedFlows,
         inflow5D: apiResponse.data.inflow5D || 0,
         status: apiResponse.data.status || 'mixed',
@@ -283,11 +290,20 @@ const ETFFlowsCard = React.memo(() => {
         _isStale: apiResponse._isStale,
         timestamp: dataTimestamp,
         cacheAge: cacheAge,
-        cacheAgeFormatted: formatCacheAge(cacheAge)
+        cacheAgeFormatted: formatCacheAge(cacheAge),
+        isEmpty: false
       };
+
+      console.log('✅ [ETF DEBUG] Returning processed data with inflow5D:', processedData.inflow5D);
+      return processedData;
     }
+
     // No API data available - return empty state instead of mock data
-    console.warn('⚠️ No ETF flows data available from API - showing empty state');
+    console.warn('⚠️ No ETF flows data available from API - showing empty state', {
+      apiResponseExists: !!apiResponse,
+      successFlag: apiResponse?.success,
+      dataExists: !!apiResponse?.data
+    });
     return {
       flows: [],
       inflow5D: 0,
@@ -300,7 +316,10 @@ const ETFFlowsCard = React.memo(() => {
   
   // Memoized status configuration based on 5D flow value
   const statusConfig = useMemo(() => {
-    return getStatusConfig(data.inflow5D, colors);
+    console.log('🎯 [ETF DEBUG] Calculating status config with inflow5D:', data.inflow5D);
+    const config = getStatusConfig(data.inflow5D, colors);
+    console.log('🎯 [ETF DEBUG] Status config result:', config.terminalLabel, config.label);
+    return config;
   }, [data.inflow5D, colors]);
 
   // Loading state - only show for initial load with no cached data
