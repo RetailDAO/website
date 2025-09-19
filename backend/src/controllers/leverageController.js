@@ -79,6 +79,19 @@ class LeverageController {
                   const frData = this.convertCoinGlassOIWeightedFundingData(marketFunding.value);
 
                   console.log(`✅ [CoinGlass] OI-weighted endpoints successful: OI=$${oiData.total.toFixed(2)}B, OI-Weighted Funding=${(frData.averageRate * 100).toFixed(4)}% (4hr)`);
+
+                  // CRITICAL FIX: Force accurate 7-day OI calculation for OI-weighted path
+                  // The market-wide OI endpoint doesn't provide change7d, so we must calculate it using historical data
+                  console.log('🔄 [OI-Weighted Path] Forcing accurate 7-day OI calculation with historical data');
+                  try {
+                    const accurate7d = await coinGlassService.calculateOIDelta7d(oiData, 'BTC');
+                    oiData.change7d = accurate7d; // Override with real historical calculation
+                    console.log(`✅ [OI-Weighted Path] Accurate 7-day OI delta: ${accurate7d.toFixed(2)}% (using real historical data)`);
+                  } catch (error) {
+                    console.warn('⚠️ [OI-Weighted Path] 7-day historical calculation failed, will use conservative estimation:', error.message);
+                    // Don't set change7d, let calculateLeverageState handle the fallback
+                  }
+
                   result = await this.calculateLeverageState(oiData, frData);
 
                   // Mark as CoinGlass OI-weighted source
@@ -455,6 +468,7 @@ class LeverageController {
     }
 
     console.log(`📊 Calculated Metrics: OI=${openInterest.total.toFixed(2)}B, MCap=${btcMarketCap.toFixed(0)}B, OI/MCap=${oiMcapRatio.toFixed(2)}%, Funding8h=${funding8hPercent.toFixed(4)}%`);
+    console.log(`📊 7-Day OI Delta Source: ${openInterest.change7d !== undefined ? 'REAL HISTORICAL DATA' : 'ESTIMATION'} = ${oiDelta7d.toFixed(2)}%`);
 
     // Determine leverage state based on criteria (use funding percentage value)
     const state = this.determineLeverageStateNew(funding8hPercent, oiMcapRatio, oiDelta7d);
@@ -578,6 +592,7 @@ class LeverageController {
       change24h: coinglassOI.change24h || 0,
       change4h: coinglassOI.change4h || 0,
       change1h: coinglassOI.change1h || 0,
+      change7d: coinglassOI.change7d, // Pass through 7-day change data
       exchanges: coinglassOI.exchanges.map(ex => ({
         exchange: ex.exchange,
         value: ex.openInterestUSD ? ex.openInterestUSD / 1e9 : ex.value, // Handle both formats
