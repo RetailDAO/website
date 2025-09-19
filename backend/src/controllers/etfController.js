@@ -330,9 +330,11 @@ class ETFController {
 
     // Generate complete date range for requested period (including weekends)
     // This ensures we always return the full calendar period requested
+    // Use UTC to avoid timezone issues
     const endDate = new Date();
+    endDate.setUTCHours(0, 0, 0, 0); // Start of day in UTC
     const startDate = new Date(endDate);
-    startDate.setDate(endDate.getDate() - daysBack + 1);
+    startDate.setUTCDate(endDate.getUTCDate() - daysBack + 1);
 
     // Find the maximum data points available from ETF sources
     const maxDataPoints = Math.max(...validETFs.map(etf => etf.data.dataPoints));
@@ -340,7 +342,7 @@ class ETFController {
     // Create flows for each calendar day in the range
     for (let dayOffset = 0; dayOffset < daysBack; dayOffset++) {
       const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + dayOffset);
+      currentDate.setUTCDate(startDate.getUTCDate() + dayOffset);
       const dateString = currentDate.toISOString().split('T')[0];
 
       let dailyAggregatedFlow = 0;
@@ -352,8 +354,10 @@ class ETFController {
       validETFs.forEach(etf => {
         // Look for matching date in ETF timestamps
         const matchingIndex = etf.data.timestamps.findIndex(timestamp => {
-          const etfDate = new Date(timestamp * 1000).toISOString().split('T')[0];
-          return etfDate === dateString;
+          const etfDate = new Date(timestamp * 1000);
+          etfDate.setUTCHours(0, 0, 0, 0); // Normalize to start of day UTC
+          const etfDateString = etfDate.toISOString().split('T')[0];
+          return etfDateString === dateString;
         });
 
         if (matchingIndex >= 0 &&
@@ -511,7 +515,9 @@ class ETFController {
     const daysToShow = period === '1M' ? 30 : 14;
     const flows = [];
     for (let i = maxDaysBack - 1; i >= 0; i--) {
-      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() - i);
+      date.setUTCHours(0, 0, 0, 0); // Start of day in UTC
 
       // More realistic flow patterns - some days positive, some negative
       const isPositiveDay = Math.random() < 0.65; // 65% chance positive

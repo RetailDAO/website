@@ -150,7 +150,8 @@ class ETFFlowsService {
     // Generate aggregated daily flows - much more efficient than individual ETF calls
     for (let i = days; i >= 0; i--) {
       const date = new Date();
-      date.setDate(date.getDate() - i);
+      date.setUTCDate(date.getUTCDate() - i);
+      date.setUTCHours(0, 0, 0, 0); // Start of day in UTC
       const dateStr = date.toISOString().split('T')[0];
 
       let dailyNetFlow = 0;
@@ -273,7 +274,8 @@ class ETFFlowsService {
     // Generate single aggregated flow data instead of individual ETF data
     for (let i = days; i >= 0; i--) {
       const date = new Date();
-      date.setDate(date.getDate() - i);
+      date.setUTCDate(date.getUTCDate() - i);
+      date.setUTCHours(0, 0, 0, 0); // Start of day in UTC
       const dateStr = date.toISOString().split('T')[0];
 
       // Aggregate flow calculations for all Bitcoin ETFs combined

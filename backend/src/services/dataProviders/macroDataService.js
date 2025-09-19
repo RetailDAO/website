@@ -94,7 +94,7 @@ class MacroDataService {
         .map(obs => ({
           date: obs.date,
           yield: parseFloat(obs.value),
-          timestamp: new Date(obs.date + 'T00:00:00.000Z').toISOString()
+          timestamp: new Date(obs.date + 'T12:00:00.000Z').toISOString() // Use noon UTC to avoid timezone issues
         }))
         .reverse(); // Chronological order (oldest first)
 
@@ -309,7 +309,7 @@ class MacroDataService {
       mockData.push({
         date: this.formatDateForFRED(date),
         yield: parseFloat(Math.max(0.1, baseYield).toFixed(3)),
-        timestamp: new Date(date.toISOString().split('T')[0] + 'T00:00:00.000Z').toISOString()
+        timestamp: new Date(date.toISOString().split('T')[0] + 'T12:00:00.000Z').toISOString()
       });
     }
 

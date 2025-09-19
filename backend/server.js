@@ -1,4 +1,8 @@
 require('dotenv').config();
+
+// Set timezone to UTC to ensure consistent date handling across servers
+process.env.TZ = process.env.TZ || 'UTC';
+
 const app = require('./src/app');
 const WebSocket = require('ws');
 const websocketService = require('./src/services/websocket/websocketService');
