@@ -416,7 +416,8 @@ class CoinGlassService {
         inflow: Math.max(0, netFlow), // Inflows are positive values only
         outflow: Math.max(0, -netFlow), // Outflows are positive values only
         netFlow: netFlow, // Net can be positive or negative
-        cumulative: flows.length > 0 ? flows[flows.length - 1].cumulative + netFlow : netFlow
+        cumulative: flows.length > 0 ? flows[flows.length - 1].cumulative + netFlow : netFlow,
+        isMarketOpen: true // Mark mock data as having market data to prevent filtering issues
       });
     }
 

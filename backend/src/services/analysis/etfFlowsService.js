@@ -305,7 +305,8 @@ class ETFFlowsService {
         netFlow: dailyNetFlow * 1000000,
         volume: (dailyInflow + dailyOutflow) * 1000000 * 45, // Estimated volume
         aggregated: true,
-        mock: true
+        mock: true,
+        isMarketOpen: true // Mark mock data as having market data to prevent filtering issues
       });
     }
 

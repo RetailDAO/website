@@ -417,15 +417,37 @@ class ETFController {
 
   // Calculate 5-day flows sum
   calculate5DayFlows(flows) {
-    // Get last 5 trading days (exclude weekends/holidays with 0 confidence)
-    const tradingDays = flows.filter(flow => flow.isMarketOpen);
-    const last5TradingDays = tradingDays.slice(-5);
-    const totalFlow = last5TradingDays.reduce((sum, day) => sum + day.inflow, 0);
+    // Get last 5 calendar days, prioritizing trading days but including today even if incomplete
+    // This fixes the 1-day lag issue where today's data appears under yesterday's date
+    const today = new Date().toISOString().split('T')[0];
+    const lastFlows = flows.slice(-7); // Get last 7 days to ensure we have 5 valid days
+
+    // Separate trading days and today (if today is not a trading day yet)
+    const tradingDays = lastFlows.filter(flow => flow.isMarketOpen);
+    const todayFlow = lastFlows.find(flow => flow.date === today);
+
+    let last5FlowDays;
+
+    if (todayFlow && !todayFlow.isMarketOpen && tradingDays.length >= 5) {
+      // Today exists but no trading data yet - use last 4 trading days + today with partial data
+      last5FlowDays = [...tradingDays.slice(-4), todayFlow];
+      console.log(`📊 5D calculation: Using last 4 trading days + today (${today}) with partial data`);
+    } else if (tradingDays.length >= 5) {
+      // Standard case: use last 5 trading days
+      last5FlowDays = tradingDays.slice(-5);
+      console.log(`📊 5D calculation: Using last 5 trading days (${last5FlowDays[0].date} to ${last5FlowDays[last5FlowDays.length-1].date})`);
+    } else {
+      // Fallback: use whatever days we have
+      last5FlowDays = lastFlows.filter(flow => flow.isMarketOpen || flow.date === today).slice(-5);
+      console.log(`📊 5D calculation: Using ${last5FlowDays.length} available days (including partial data)`);
+    }
+
+    const totalFlow = last5FlowDays.reduce((sum, day) => sum + (day.inflow || 0), 0);
 
     return {
       totalFlow: Math.round(totalFlow * 10) / 10,
-      dailyBreakdown: last5TradingDays,
-      averageDaily: Math.round((totalFlow / last5TradingDays.length) * 10) / 10
+      dailyBreakdown: last5FlowDays,
+      averageDaily: Math.round((totalFlow / last5FlowDays.length) * 10) / 10
     };
   }
 
