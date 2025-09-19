@@ -109,8 +109,8 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
       xaxis: {
         type: 'category',
         categories: historicalData.map(item => {
-          const date = new Date(item.date);
-          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          const date = new Date(item.date + 'T12:00:00.000Z');
+          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
         }),
         labels: {
           show: true,
@@ -324,7 +324,7 @@ const LiquidityPulseCard = React.memo(() => {
     return {
       chartData: chartDataArray,
       historicalData: recentData.map(item => ({
-        date: item.date ? new Date(item.date).toLocaleDateString() : 'Unknown',
+        date: item.date ? new Date(item.date + 'T12:00:00.000Z').toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'Unknown',
         yield: item.yield
       }))
     };
