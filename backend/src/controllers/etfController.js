@@ -448,42 +448,28 @@ class ETFController {
     };
   }
 
-  // Determine flow status per client requirements
+  // Determine flow status per client's new 3-state requirements
   determineFlowStatus(totalFlow5D) {
-    if (totalFlow5D > 500) {
+    if (totalFlow5D >= 1000) {
       return {
-        label: 'Sustained Inflows',
+        label: 'Strong Inflows',
         color: 'green',
-        terminalLabel: '[STRONG]',
-        description: 'Strong institutional buying pressure - bullish signal'
+        terminalLabel: '[BUYING]',
+        description: 'Strong institutional buying pressure'
       };
-    } else if (totalFlow5D > 50) {
+    } else if (totalFlow5D <= -750) {
       return {
-        label: 'Positive Flows',
-        color: 'green',
-        terminalLabel: '[POSITIVE]',
-        description: 'Moderate inflows - healthy accumulation'
-      };
-    } else if (totalFlow5D > -50) {
-      return {
-        label: 'Mixed',
-        color: 'yellow',
-        terminalLabel: '[MIXED]',
-        description: 'Balanced flows - sideways institutional sentiment'
-      };
-    } else if (totalFlow5D > -200) {
-      return {
-        label: 'Negative Flows',
-        color: 'orange',
-        terminalLabel: '[WEAK]',
-        description: 'Moderate outflows - institutional caution'
+        label: 'Strong Outflows',
+        color: 'red',
+        terminalLabel: '[SELLING]',
+        description: 'Heavy institutional selling pressure'
       };
     } else {
       return {
-        label: 'Sustained Outflows',
-        color: 'red',
-        terminalLabel: '[OUTFLOWS]',
-        description: 'Heavy institutional selling - bearish signal'
+        label: 'Mixed/Weak Flows',
+        color: 'yellow',
+        terminalLabel: '[NEUTRAL]',
+        description: 'Balanced institutional sentiment'
       };
     }
   }

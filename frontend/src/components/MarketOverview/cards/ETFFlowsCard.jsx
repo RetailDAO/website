@@ -7,62 +7,42 @@ import apiService from '../../../services/api';
 import { generateTransparencyTooltip, extractTransparencyData } from '../../../utils/transparencyUtils';
 
 
-// Get ETF status based on 5D net flows - Updated to match backend logic
+// Get ETF status based on 5D net flows - Client's new 3-state system
 const getETFStatus = (inflow5D) => {
-  if (inflow5D > 500) return 'STRONG';
-  if (inflow5D > 50) return 'POSITIVE';
-  if (inflow5D > -50) return 'MIXED';
-  if (inflow5D > -200) return 'WEAK';
-  return 'OUTFLOWS';
+  if (inflow5D >= 1000) return 'BUYING';     // +1B or more
+  if (inflow5D <= -750) return 'SELLING';   // -750M or less (more negative)
+  return 'NEUTRAL';                         // In between
 };
 
-// Terminal-style status configuration - Updated for Kevin's requirements
+// Terminal-style status configuration - Client's new 3-state system
 const getStatusConfig = (inflow5D, colors) => {
   const status = getETFStatus(inflow5D);
 
   const configs = {
-    'STRONG': {
+    'BUYING': {
       color: colors.text.positive,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
-      terminalLabel: '[STRONG]',
+      terminalLabel: '[BUYING]',
       label: 'Strong Inflows',
       description: 'Strong institutional buying pressure',
       icon: '🔥'
     },
-    'POSITIVE': {
-      color: colors.text.positive,
-      bg: colors.bg.secondary,
-      border: colors.border.secondary,
-      terminalLabel: '[POSITIVE]',
-      label: 'Positive Flows',
-      description: 'Moderate institutional accumulation',
-      icon: '📈'
-    },
-    'MIXED': {
+    'NEUTRAL': {
       color: colors.text.secondary,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
-      terminalLabel: '[MIXED]',
-      label: 'Mixed',
+      terminalLabel: '[NEUTRAL]',
+      label: 'Mixed/Weak Flows',
       description: 'Balanced institutional sentiment',
       icon: '⚖️'
     },
-    'WEAK': {
-      color: colors.text.accent,
-      bg: colors.bg.secondary,
-      border: colors.border.secondary,
-      terminalLabel: '[WEAK]',
-      label: 'Negative Flows',
-      description: 'Moderate institutional caution',
-      icon: '📉'
-    },
-    'OUTFLOWS': {
+    'SELLING': {
       color: colors.text.negative,
       bg: colors.bg.secondary,
       border: colors.border.secondary,
-      terminalLabel: '[OUTFLOWS]',
-      label: 'Sustained Outflows',
+      terminalLabel: '[SELLING]',
+      label: 'Strong Outflows',
       description: 'Heavy institutional selling pressure',
       icon: '🔻'
     }
