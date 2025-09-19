@@ -334,7 +334,7 @@ class CoinGlassService {
 
         flows.push({
           date: date,
-          inflow: Math.max(0, netFlow), // Positive flows only
+          inflow: netFlow, // Use actual net flow (can be positive or negative)
           outflow: Math.max(0, -netFlow), // Negative flows as positive outflows
           netFlow: netFlow, // Can be positive or negative
           cumulative: flows.length > 0 ? flows[flows.length - 1].cumulative + netFlow : netFlow,

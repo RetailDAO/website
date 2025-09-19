@@ -401,13 +401,17 @@ class ETFController {
         }
       });
 
+      // Check if this is a trading day (Monday-Friday, excluding major holidays)
+      const dayOfWeek = currentDate.getUTCDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+      const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+
       // Always include the day, even if no trading data (weekends/holidays get 0 flow)
       flows.push({
         date: dateString,
         inflow: hasValidData ? Math.round(dailyAggregatedFlow * 10) / 10 : 0, // 0 for non-trading days
         etfsContributing: validETFsForDay,
         confidence: hasValidData ? (weightUsed / totalWeight) : 0, // 0 confidence for non-trading days
-        isMarketOpen: hasValidData // Flag to indicate if this was a trading day
+        isMarketOpen: isWeekday // ETF markets open Monday-Friday
       });
     }
 
@@ -417,30 +421,23 @@ class ETFController {
 
   // Calculate 5-day flows sum
   calculate5DayFlows(flows) {
-    // Get last 5 calendar days, prioritizing trading days but including today even if incomplete
-    // This fixes the 1-day lag issue where today's data appears under yesterday's date
+    // EXCLUDE today completely from 5D calculation as data is incomplete until end of day
     const today = new Date().toISOString().split('T')[0];
-    const lastFlows = flows.slice(-7); // Get last 7 days to ensure we have 5 valid days
+    const flowsExcludingToday = flows.filter(flow => flow.date !== today);
 
-    // Separate trading days and today (if today is not a trading day yet)
-    const tradingDays = lastFlows.filter(flow => flow.isMarketOpen);
-    const todayFlow = lastFlows.find(flow => flow.date === today);
+    // Get trading days (weekdays) excluding today
+    const tradingDays = flowsExcludingToday.filter(flow => flow.isMarketOpen);
 
-    let last5FlowDays;
+    // Use last 5 trading days (completed days only)
+    const last5FlowDays = tradingDays.slice(-5);
 
-    if (todayFlow && !todayFlow.isMarketOpen && tradingDays.length >= 5) {
-      // Today exists but no trading data yet - use last 4 trading days + today with partial data
-      last5FlowDays = [...tradingDays.slice(-4), todayFlow];
-      console.log(`📊 5D calculation: Using last 4 trading days + today (${today}) with partial data`);
-    } else if (tradingDays.length >= 5) {
-      // Standard case: use last 5 trading days
-      last5FlowDays = tradingDays.slice(-5);
-      console.log(`📊 5D calculation: Using last 5 trading days (${last5FlowDays[0].date} to ${last5FlowDays[last5FlowDays.length-1].date})`);
-    } else {
-      // Fallback: use whatever days we have
-      last5FlowDays = lastFlows.filter(flow => flow.isMarketOpen || flow.date === today).slice(-5);
-      console.log(`📊 5D calculation: Using ${last5FlowDays.length} available days (including partial data)`);
-    }
+    console.log(`📊 5D calculation: Using last 5 trading days (excluding today ${today})`);
+    console.log(`📊 Trading days used: ${last5FlowDays[0]?.date || 'none'} to ${last5FlowDays[last5FlowDays.length-1]?.date || 'none'}`);
+
+    // Log each day for debugging
+    last5FlowDays.forEach((day, index) => {
+      console.log(`📊   ${index + 1}. ${day.date}: ${day.inflow}M`);
+    });
 
     const totalFlow = last5FlowDays.reduce((sum, day) => sum + (day.inflow || 0), 0);
 
@@ -496,17 +493,31 @@ class ETFController {
     console.log('🔍 [CoinGlass] Processing ETF flows data');
     console.log('🔍 [CoinGlass] Source field:', coinglassData.source);
 
-    // Transform CoinGlass data to match expected format
-    const flows = coinglassData.flows || [];
+    // Transform CoinGlass data to match expected format and fix isMarketOpen
+    const flows = (coinglassData.flows || []).map(flow => {
+      // Fix isMarketOpen flag based on weekday detection
+      const flowDate = new Date(flow.date + 'T12:00:00.000Z');
+      const dayOfWeek = flowDate.getUTCDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+      const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+
+      return {
+        ...flow,
+        isMarketOpen: isWeekday // Override CoinGlass isMarketOpen with correct weekday logic
+      };
+    });
 
     // Calculate 5D flows from CoinGlass data
     const flows5D = this.calculate5DayFlows(flows);
-    const status = this.determineFlowStatus(flows5D.totalFlow);
+
+    // Use our corrected calculation instead of CoinGlass pre-calculated value
+    // Our calculation properly handles trading days and weekend exclusions
+    const finalInflow5D = flows5D.totalFlow;
+    const status = this.determineFlowStatus(finalInflow5D);
 
     return {
       period,
       flows: flows,
-      inflow5D: coinglassData.inflow5D || flows5D.totalFlow,
+      inflow5D: finalInflow5D,
       status: status.label,
       statusColor: status.color,
       terminalLabel: status.terminalLabel,

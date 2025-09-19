@@ -342,12 +342,12 @@ class MacroDataService {
 
   timeframeToDays(timeframe) {
     const mapping = {
-      '7D': 10,   // Buffer for weekends
-      '30D': 45,  // Buffer for weekends/holidays
-      '90D': 120, // Buffer for weekends/holidays
-      '1Y': 400   // Buffer for weekends/holidays
+      '7D': 7,   // Exactly 7 calendar days
+      '30D': 30, // Exactly 30 calendar days
+      '90D': 90, // Exactly 90 calendar days
+      '1Y': 365  // Exactly 365 calendar days
     };
-    return mapping[timeframe] || 45;
+    return mapping[timeframe] || 30;
   }
 
   formatDateForFRED(date) {

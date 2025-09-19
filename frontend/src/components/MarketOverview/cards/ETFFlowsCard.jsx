@@ -79,8 +79,9 @@ const ETFFlowChart = React.memo(({ flows }) => {
     </div>
   );
 
-  // Display all data returned by backend (2W = 14 days, 1M = 30 days)
-  const displayFlows = flows;
+  // Filter out today's date to show only past days (up to yesterday)
+  const today = new Date().toISOString().split('T')[0];
+  const displayFlows = flows.filter(flow => flow.date !== today);
   const totalBars = displayFlows.length;
 
   // Responsive chart dimensions
