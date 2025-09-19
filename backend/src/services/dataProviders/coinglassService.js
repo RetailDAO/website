@@ -325,7 +325,8 @@ class CoinGlassService {
       const recentData = sortedData.slice(0, daysToProcess);
 
       recentData.reverse().forEach(dayData => {
-        // Use UTC dates to align with CoinGlass dashboard and frontend expectations
+        // Standardize ETF dates to UTC to ensure consistent display for all users
+        // CoinGlass timestamps represent trading days, so we maintain UTC consistency
         const utcDate = new Date(dayData.timestamp);
         const date = utcDate.toISOString().split('T')[0];
         const flowUSD = dayData.flow_usd || 0;
@@ -400,7 +401,7 @@ class CoinGlassService {
 
     // Generate realistic Bitcoin ETF flow patterns
     for (let i = days - 1; i >= 0; i--) {
-      // Use UTC dates to align with CoinGlass dashboard and frontend expectations
+      // Standardize mock ETF dates to UTC to match real data processing
       const date = new Date();
       date.setUTCDate(date.getUTCDate() - i);
       date.setUTCHours(0, 0, 0, 0); // Start of day in UTC
