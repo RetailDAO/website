@@ -304,7 +304,7 @@ const ETFFlowsCard = React.memo(() => {
   }, [data.inflow5D, colors]);
 
   // Loading state - only show for initial load with no cached data
-  if (isLoading && !data) {
+  if (isLoading && !apiResponse) {
     return (
       <div className="h-full flex flex-col p-4">
         <div className="flex items-center justify-center h-full">
