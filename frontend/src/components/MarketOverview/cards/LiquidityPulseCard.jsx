@@ -109,7 +109,8 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
       xaxis: {
         type: 'category',
         categories: historicalData.map(item => {
-          const date = new Date(item.date + 'T12:00:00.000Z');
+          // Use the UTC timestamp from backend to ensure proper timezone handling
+          const date = new Date(item.timestamp || item.date);
           return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
         }),
         labels: {
@@ -170,7 +171,21 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
         },
         custom: function({ series, seriesIndex, dataPointIndex }) {
           const value = series[seriesIndex][dataPointIndex];
-          const date = historicalData[dataPointIndex]?.date || `Point ${dataPointIndex + 1}`;
+          const dataPoint = historicalData[dataPointIndex];
+
+          // Use UTC timestamp for consistent date display across all timezones
+          let dateDisplay = `Point ${dataPointIndex + 1}`;
+          if (dataPoint?.timestamp) {
+            const date = new Date(dataPoint.timestamp);
+            dateDisplay = date.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              timeZone: 'UTC'
+            });
+          } else if (dataPoint?.date) {
+            dateDisplay = dataPoint.date;
+          }
 
           // Theme-specific tooltip styling
           const tooltipStyle = currentTheme === 'retro'
@@ -183,7 +198,7 @@ const US2YChart = React.memo(({ data, height = 120, historicalData = [] }) => {
             <div class="${tooltipStyle} rounded-lg p-3 shadow-lg">
               <div class="text-xs font-medium opacity-70 mb-1">US 2Y Treasury</div>
               <div class="text-sm font-semibold">${value.toFixed(3)}%</div>
-              <div class="text-xs opacity-60 mt-1">${date}</div>
+              <div class="text-xs opacity-60 mt-1">${dateDisplay}</div>
             </div>
           `;
         },
@@ -324,7 +339,8 @@ const LiquidityPulseCard = React.memo(() => {
     return {
       chartData: chartDataArray,
       historicalData: recentData.map(item => ({
-        date: item.date ? new Date(item.date + 'T12:00:00.000Z').toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'Unknown',
+        date: item.date || 'Unknown',
+        timestamp: item.timestamp, // Include UTC timestamp for proper date handling
         yield: item.yield
       }))
     };

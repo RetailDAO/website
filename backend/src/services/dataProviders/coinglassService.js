@@ -325,10 +325,9 @@ class CoinGlassService {
       const recentData = sortedData.slice(0, daysToProcess);
 
       recentData.reverse().forEach(dayData => {
-        // Fix timezone issue for real CoinGlass data - align with US Eastern Time
+        // Use UTC dates to align with CoinGlass dashboard and frontend expectations
         const utcDate = new Date(dayData.timestamp);
-        const easternDate = new Date(utcDate.toLocaleString("en-US", {timeZone: "America/New_York"}));
-        const date = easternDate.toISOString().split('T')[0];
+        const date = utcDate.toISOString().split('T')[0];
         const flowUSD = dayData.flow_usd || 0;
         const netFlow = flowUSD / 1000000; // Convert to millions
 
@@ -401,10 +400,10 @@ class CoinGlassService {
 
     // Generate realistic Bitcoin ETF flow patterns
     for (let i = days - 1; i >= 0; i--) {
-      // Fix Amsterdam server timezone issue - use US Eastern Time for ETF market alignment
+      // Use UTC dates to align with CoinGlass dashboard and frontend expectations
       const date = new Date();
-      const easternTime = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
-      easternTime.setDate(easternTime.getDate() - i);
+      date.setUTCDate(date.getUTCDate() - i);
+      date.setUTCHours(0, 0, 0, 0); // Start of day in UTC
 
       // Create realistic flow patterns (mostly positive with some negative days)
       const baseFlow = Math.random() < 0.75 ? 1 : -1; // 75% positive, 25% negative
@@ -412,7 +411,7 @@ class CoinGlassService {
       const netFlow = Math.round(baseFlow * magnitude);
 
       flows.push({
-        date: easternTime.toISOString().split('T')[0],
+        date: date.toISOString().split('T')[0],
         inflow: Math.max(0, netFlow), // Inflows are positive values only
         outflow: Math.max(0, -netFlow), // Outflows are positive values only
         netFlow: netFlow, // Net can be positive or negative
