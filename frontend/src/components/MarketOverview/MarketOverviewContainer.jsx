@@ -6,7 +6,8 @@ import useIntersectionObserver from './hooks/useIntersectionObserver';
 import GridLayout from './layout/GridLayout';
 import CardContainer from './layout/CardContainer';
 import Sidebarv2 from './Sidebarv2';
-import { 
+import ThemeToggle from '../ui/ThemeToggle';
+import {
   MovingAveragesSkeleton
 } from './layout/OptimizedSkeletons';
 
@@ -19,7 +20,7 @@ const RotationBreadthCard = lazy(() => import('./cards/RotationBreadthCard'));
 const ETFFlowsCard = lazy(() => import('./cards/ETFFlowsCard'));
 
 const MarketOverviewContainer = React.memo(() => {
-  const { colors, cycleTheme, themeName } = useTheme();
+  const { colors } = useTheme();
   const [visibleCards, setVisibleCards] = useState(new Set());
   const [performanceMetrics, setPerformanceMetrics] = useState({});
 
@@ -124,36 +125,19 @@ const MarketOverviewContainer = React.memo(() => {
           </div>
           
           {/* Terminal theme switcher and performance indicator */}
-          <div className="flex items-center space-x-6">
-            {/* Theme switcher with clear description */}
-            <div className="text-center">
-              <button
-                onClick={cycleTheme}
-                className={`
-                  px-4 py-2 text-xs font-mono uppercase tracking-wider
-                  ${colors.border.primary} border-2 rounded-none
-                  ${colors.text.accent} ${colors.bg.hover}
-                  transition-all duration-200 hover:scale-105
-                  focus:outline-none focus:ring-2 focus:ring-orange-500/50
-                `}
-                title={`Toggle Terminal Theme (Current: ${themeName})\nCycle: Traditional → High Contrast → Retro Terminal`}
-              >
-                <div className="flex flex-col items-center space-y-1">
-                  <span className="text-[10px] opacity-60">TOGGLE THEME</span>
-                  <span className="font-semibold">[{themeName.toUpperCase()}]</span>
-                </div>
-              </button>
-            </div>
+          <div className="flex items-center space-x-2 md:space-x-6">
+            {/* 3D Theme Toggle */}
+            <ThemeToggle />
             
-            {/* Performance indicator */}
+            {/* Performance indicator - hidden on mobile */}
             {Object.keys(performanceMetrics).length > 0 && (
-              <div className={`text-xs ${colors.text.muted} flex items-center space-x-3 font-mono`}>
+              <div className={`hidden md:flex text-xs ${colors.text.muted} items-center space-x-3 font-mono`}>
                 <div className="flex space-x-1">
                   {cardConfigs.map(config => (
                     <div
                       key={config.id}
                       className={`w-2 h-2 rounded-none ${
-                        visibleCards.has(config.id) 
+                        visibleCards.has(config.id)
                           ? colors.text.positive.replace('text-', 'bg-')
                           : 'bg-gray-700'
                       }`}
