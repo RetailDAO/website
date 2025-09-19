@@ -349,7 +349,7 @@ const ETFFlowsCard = React.memo(() => {
               px-2 py-0.5 text-xs font-mono uppercase tracking-wider rounded border
               ${statusConfig.bg} ${statusConfig.border} ${statusConfig.color}
             `}>
-              {statusConfig.label}
+              {statusConfig.terminalLabel}
             </div>
           </div>
 
@@ -363,7 +363,7 @@ const ETFFlowsCard = React.memo(() => {
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-lg">{statusConfig.icon}</span>
-              <span className={`text-lg font-medium ${statusConfig.color}`}>{statusConfig.terminalLabel}</span>
+              <span className={`text-lg font-medium ${statusConfig.color}`}>{statusConfig.label}</span>
             </div>
           </div>
         </div>
